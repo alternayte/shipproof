@@ -102,7 +102,12 @@ func inferDocumentKind(path string) document.Kind {
 	}
 }
 
+var RunOverrides = map[string]string{}
+
 func findRepositoryRoot(path string) (string, error) {
+	if overridden, ok := RunOverrides[path]; ok {
+		return overridden, nil
+	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return "", err

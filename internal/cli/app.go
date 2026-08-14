@@ -26,6 +26,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runChange(args[1:], stdout, stderr)
 	case "skill":
 		return runSkill(args[1:], stdout, stderr)
+	case "evidence":
+		return runEvidence(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, "shipproof 0.2.0-dev")
 		return 0
@@ -58,5 +60,6 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof change check <change-id>")
 	fmt.Fprintln(w, "  shipproof skill check [catalog-directory]")
 	fmt.Fprintln(w, "  shipproof skill eval <check|list|show> ...")
+	fmt.Fprintln(w, "  shipproof evidence pack <change-id> [--base <rev>] [--head <rev>]")
 	fmt.Fprintln(w, "  shipproof version")
 }

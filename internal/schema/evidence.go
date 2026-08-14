@@ -15,11 +15,27 @@ const (
 )
 
 type EvidencePack struct {
-	SchemaVersion string               `json:"schema_version"`
-	ChangeID      string               `json:"change_id"`
-	Intent        IntentEvidence       `json:"intent"`
-	Verification  VerificationEvidence `json:"verification"`
-	Provenance    PackProvenance       `json:"provenance"`
+	SchemaVersion  string                 `json:"schema_version"`
+	ChangeID       string                 `json:"change_id"`
+	Intent         IntentEvidence         `json:"intent"`
+	Implementation ImplementationEvidence `json:"implementation"`
+	Verification   VerificationEvidence   `json:"verification"`
+	Provenance     PackProvenance         `json:"provenance"`
+}
+
+type ImplementationEvidence struct {
+	Commits      []ImplementationCommit `json:"commits"`
+	ChangedFiles []string               `json:"changed_files"`
+	Additions    int                    `json:"additions"`
+	Deletions    int                    `json:"deletions"`
+	DiffStat     string                 `json:"diff_stat"`
+}
+
+type ImplementationCommit struct {
+	Hash      string `json:"hash"`
+	Author    string `json:"author"`
+	Timestamp string `json:"timestamp"`
+	Subject   string `json:"subject"`
 }
 
 type IntentEvidence struct {
