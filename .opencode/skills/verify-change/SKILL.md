@@ -7,12 +7,29 @@ metadata:
 
 # Verify a change
 
-1. Read the verification plan.
-2. Run the repository-owned verification entry point, normally `just verify`.
-3. Run change-specific checks that are not part of the default contract.
-4. Map observed results to requirements and invariants.
-5. Record pass, fail, skip, or unknown exactly as observed.
-6. Preserve raw evidence references.
+## Run verification
+
+Execute the repository-owned verification contract:
+
+```bash
+shipproof verification run <change-id>
+```
+
+Confirm the intent snapshot is intact:
+
+```bash
+shipproof change check <change-id>
+```
+
+## Map results
+
+1. Read the verification plan from `.shipproof/changes/<change-id>/verification.json`.
+2. Read the run result from `.shipproof/runs/<change-id>/run.json`.
+3. Map observed results to requirements and invariants.
+4. Record pass, fail, skip, or unknown exactly as observed.
+5. Preserve raw evidence references.
+
+## Rules
 
 A deterministic failure remains a failure.
 An unavailable check remains unknown.

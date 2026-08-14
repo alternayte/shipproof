@@ -49,6 +49,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof shape <prd|sdd|issue> <subject> [--id id] [--source path]")
 	fmt.Fprintln(w, "  shipproof shape status <id> [--json]")
 	fmt.Fprintln(w, "  shipproof shape check <id-or-file>")
+	fmt.Fprintln(w, "  shipproof verification run <change-id>")
 	fmt.Fprintln(w, "  shipproof verification init <change-id>")
 	fmt.Fprintln(w, "  shipproof verification check <change-id-or-file>")
 	fmt.Fprintln(w, "  shipproof harness install <claude|cursor|codex|opencode|agents> [directory] [--force]")

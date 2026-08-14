@@ -7,12 +7,36 @@ metadata:
 
 # Implement a change
 
+## Before writing code
+
+Confirm the change record and verification plan exist:
+
+```bash
+shipproof change status <change-id>
+shipproof verification check <change-id>
+```
+
+If the change record does not exist, use the `prepare-change` skill first.
+If the verification plan does not exist or is empty, use the `plan-verification` skill first.
+
+## Implementation
+
 1. Read the exact intent snapshot, approved change scope, and verification plan.
 2. Inspect the existing implementation before editing.
 3. Make the smallest coherent change that satisfies the approved scope.
 4. Follow existing repository architecture and conventions unless the design explicitly changes them.
 5. Run fast relevant checks while working.
-6. Run the repository verification contract before declaring completion.
+6. Run the repository verification contract before declaring completion:
+
+```bash
+shipproof verification run <change-id>
+```
+
+7. Confirm the intent snapshot is intact:
+
+```bash
+shipproof change check <change-id>
+```
 
 ## Hard rules
 

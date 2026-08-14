@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/shipproof/shipproof/internal/change"
 	"github.com/shipproof/shipproof/internal/verification"
+	"github.com/shipproof/shipproof/internal/verify"
 )
 
 func runVerification(args []string, stdout, stderr io.Writer) int {
@@ -15,6 +17,39 @@ func runVerification(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	switch args[0] {
+	case "run":
+		if len(args) != 2 {
+			fmt.Fprintln(stderr, "usage: shipproof verification run <change-id>")
+			return 2
+		}
+		root, err := findRepositoryRoot(".")
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		cfg, err := verify.LoadConfig(root)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if _, err := change.Load(root, args[1]); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		result, err := verify.Run(root, args[1], cfg.Command)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		status := "passed"
+		if result.ExitCode != 0 {
+			status = "failed"
+		}
+		fmt.Fprintf(stdout, "Verification %s (exit %d, %dms)\n", status, result.ExitCode, result.DurationMs)
+		fmt.Fprintf(stdout, "stdout: %s\n", result.StdoutPath)
+		fmt.Fprintf(stdout, "stderr: %s\n", result.StderrPath)
+		fmt.Fprintf(stdout, "result: .shipproof/runs/%s/run.json\n", result.ChangeID)
+		return 0
 	case "init":
 		if len(args) != 2 {
 			fmt.Fprintln(stderr, "usage: shipproof verification init <change-id>")
