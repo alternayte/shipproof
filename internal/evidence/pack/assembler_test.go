@@ -490,6 +490,69 @@ func runGitCmd(t *testing.T, dir string, args ...string) {
 	}
 }
 
+func TestAssembleLoadsAgentRun(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-008", "abc123")
+	setupVerificationPlan(t, root, "SP-008")
+	setupAgentRun(t, root, "SP-008")
+
+	pack, err := Assemble(root, "SP-008", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.AgentRun == nil {
+		t.Fatal("agent_run must not be nil when agent-run.json exists")
+	}
+	if pack.AgentRun.Provider != "claude" {
+		t.Errorf("agent_run.provider = %q, want claude", pack.AgentRun.Provider)
+	}
+	if pack.AgentRun.SessionID != "test-session-123" {
+		t.Errorf("agent_run.session_id = %q, want test-session-123", pack.AgentRun.SessionID)
+	}
+	if pack.AgentRun.Model != "claude-opus-4" {
+		t.Errorf("agent_run.model = %q, want claude-opus-4", pack.AgentRun.Model)
+	}
+}
+
+func TestAssembleWithoutAgentRun(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-008", "abc123")
+	setupVerificationPlan(t, root, "SP-008")
+
+	pack, err := Assemble(root, "SP-008", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.AgentRun != nil {
+		t.Error("agent_run must be nil when agent-run.json does not exist")
+	}
+}
+
+func setupAgentRun(t *testing.T, root, changeID string) {
+	t.Helper()
+	dir := filepath.Join(root, ".shipproof", "runs", changeID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create runs dir: %v", err)
+	}
+	record := map[string]interface{}{
+		"provider":      "claude",
+		"agent_version": "1.0.0",
+		"model":         "claude-opus-4",
+		"session_id":    "test-session-123",
+		"started_at":    "2026-08-14T20:00:00Z",
+		"ended_at":      "2026-08-14T20:30:00Z",
+	}
+	data, _ := json.MarshalIndent(record, "", "  ")
+	data = append(data, '\n')
+	if err := os.WriteFile(filepath.Join(dir, "agent-run.json"), data, 0o644); err != nil {
+		t.Fatalf("write agent-run.json: %v", err)
+	}
+}
+
 func revParseHead(t *testing.T, dir string) string {
 	t.Helper()
 	cmd := exec.Command("git", "rev-parse", "HEAD")

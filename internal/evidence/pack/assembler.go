@@ -81,6 +81,10 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 		}
 	}
 
+	if agentRun, err := loadAgentRun(root, changeID); err == nil {
+		pack.AgentRun = agentRun
+	}
+
 	pack.Provenance = schema.PackProvenance{
 		GeneratedAt:      time.Now().UTC().Format(time.RFC3339),
 		ShipProofVersion: schema.CurrentVersion,
@@ -177,6 +181,21 @@ func loadRunChecks(root, changeID string) ([]schema.Check, error) {
 			Provenance: schema.ProvenanceObserved,
 		},
 	}, nil
+}
+
+func loadAgentRun(root, changeID string) (*schema.AgentRunMetadata, error) {
+	runPath := filepath.Join(root, ".shipproof", "runs", changeID, "agent-run.json")
+	data, err := os.ReadFile(runPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var run schema.AgentRunMetadata
+	if err := json.Unmarshal(data, &run); err != nil {
+		return nil, fmt.Errorf("parse agent run record: %w", err)
+	}
+
+	return &run, nil
 }
 
 func implementationFromGit(meta git.Metadata) schema.ImplementationEvidence {
