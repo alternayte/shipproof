@@ -1,46 +1,65 @@
 # ShipProof change workflow
 
-This document describes the steps to implement one bounded change.
+This document describes how to implement a change with ShipProof.
 
 ## Prerequisites
 
-Build ShipProof and initialize the repository:
+Install ShipProof and initialize the repository:
 
 ```bash
-go build -o bin/shipproof ./cmd/shipproof
-./bin/shipproof init
+go install ./cmd/shipproof
+shipproof init
 ```
 
-Install skills for your agent harness:
+Install skills for the agent harness:
 
 ```bash
-./bin/shipproof harness install claude
+shipproof harness install claude
+shipproof harness install opencode
 ```
+
+## Entry paths
+
+ShipProof supports two entry paths. Choose the one that fits the work.
+
+### Path A — Change from an existing design
+
+Use this path when a PRD, SDD, or approved design document already describes the work. The backlog contains ordered change IDs and one-line descriptions.
+
+Start at Step 1.
+
+### Path B — Ad-hoc feature or fix
+
+Use this path when the work does not come from a formal design document. The change starts from a bug report, a feature idea, a user request, or an issue tracker entry.
+
+1. Decide the ceremony level:
+   - **Level 0** — the change is clear enough to implement directly. Write a short change description and start at Step 1.
+   - **Level 1** — the change has unclear behavior or acceptance. Use the `shape-prd` skill with `shipproof shape issue` to clarify intent through a short interview, then start at Step 1.
+   - **Level 2** — the change is large enough to need a PRD or SDD. Use `shape-prd` or `shape-sdd` to produce the document, then use `decompose-plan` to break it into bounded changes, then start at Step 1 for each change.
+
+2. For Level 0 and Level 1, the agent writes the change description directly. No formal PRD or SDD is needed.
 
 ## Step 1 — Prepare the change
 
-Use the `prepare-change` skill. The agent reads the SDD or PRD, extracts the requirements for this change, and writes the scoped change description.
+**Skill:** `prepare-change`
 
-The result is a document at `docs/changes/<change-id>-<slug>.md` and a recorded change with an intent snapshot:
+The agent reads the design document (or writes a short change description for ad-hoc work), extracts the requirements for this specific change, and writes `docs/changes/<change-id>-<slug>.md`.
+
+The agent then records the change:
 
 ```bash
 shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md
 shipproof change status <change-id>
 ```
 
-Skip this step when the change description already exists.
-
 ## Step 2 — Plan verification
 
-Use the `plan-verification` skill for material changes. The agent creates a verification plan and maps requirements to proof types.
+**Skill:** `plan-verification`
+
+For material changes, the agent creates and populates the verification plan.
 
 ```bash
 shipproof verification init <change-id>
-```
-
-The agent populates `.shipproof/changes/<change-id>/verification.json` and validates it:
-
-```bash
 shipproof verification check <change-id>
 ```
 
@@ -48,36 +67,91 @@ Skip this step for trivial or low-risk changes.
 
 ## Step 3 — Implement
 
-Use the `implement-change` skill. The agent reads the intent snapshot and verification plan, then makes the smallest coherent change that satisfies the approved scope.
+**Skill:** `implement-change`
+
+The agent reads the intent snapshot and verification plan, then makes the smallest coherent change that satisfies the approved scope.
+
+Before writing code, the agent confirms the change is ready:
+
+```bash
+shipproof change status <change-id>
+shipproof verification check <change-id>
+```
 
 ## Step 4 — Verify
 
-Use the `verify-change` skill. The agent runs the repository verification contract and confirms the intent snapshot is intact:
+**Skill:** `verify-change`
+
+The agent runs the repository verification contract and confirms the intent snapshot is intact:
 
 ```bash
 shipproof verification run <change-id>
 shipproof change check <change-id>
 ```
 
-## Step 5 — Review
+## Step 5 — Produce evidence
 
-Use the `review-change` skill for a code review against the approved intent.
+**Skill:** `produce-evidence`
 
-Use the `prepare-human-review` skill to identify the smallest meaningful human-review surface.
+The agent assembles the evidence pack from intent, implementation, and verification data:
 
-## Step 6 — Commit
+```bash
+shipproof evidence pack <change-id>
+```
 
-Commit the implementation, the change record, and any verification artifacts.
+## Step 6 — Prepare human review
 
-## Which skills to use
+**Skill:** `prepare-human-review`
+
+The agent generates a focused review packet that separates proven areas from areas that need human attention:
+
+```bash
+shipproof review prepare <change-id>
+```
+
+## Step 7 — Code review and commit
+
+**Skill:** `review-change`
+
+The agent reviews the implementation against the approved intent. After review, commit the implementation, change record, and evidence artifacts.
+
+## Optional — Sync to Linear
+
+When the change maps to a Linear issue or project:
+
+```bash
+shipproof linear issue <identifier>
+shipproof linear project <name>
+shipproof linear sync <plan-file>
+```
+
+Linear sync requires `LINEAR_API_KEY` and `LINEAR_TEAM_ID` environment variables.
+
+## Which skill to use at each step
 
 | Step | Skill | CLI commands |
 |---|---|---|
 | Prepare | `prepare-change` | `change start`, `change status` |
 | Plan verification | `plan-verification` | `verification init`, `verification check` |
-| Implement | `implement-change` | `verification run`, `change check` |
+| Implement | `implement-change` | `change status`, `verification check` |
 | Verify | `verify-change` | `verification run`, `change check` |
-| Review | `review-change`, `prepare-human-review` | none |
+| Evidence | `produce-evidence` | `evidence pack` |
+| Human review | `prepare-human-review` | `review prepare` |
+| Code review | `review-change` | none |
+| Linear sync | none | `linear issue`, `linear project`, `linear sync` |
+
+## Shaping skills
+
+Use these skills before Step 1 when the intent needs clarification:
+
+| Skill | Purpose |
+|---|---|
+| `shape-prd` | Shape product intent through a bounded interview |
+| `shape-sdd` | Shape technical design through a bounded interview |
+| `review-prd` | Independent review of a PRD |
+| `review-sdd` | Independent review of an SDD |
+| `decompose-plan` | Break a large document into independently verifiable changes |
+| `record-decision` | Record a durable architectural decision as an ADR |
 
 ## Starting a new session
 

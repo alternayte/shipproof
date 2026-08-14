@@ -15,7 +15,13 @@ Build narrative from recorded evidence, never the reverse.
 4. Collect automated review findings and human-review requirements.
 5. Label each value by provenance: observed, derived, inferred, or human.
 6. Keep missing values unknown.
-7. Generate a concise summary that cites the underlying evidence identifiers.
+7. Generate the evidence pack:
+
+```bash
+shipproof evidence pack <change-id> [--base <rev>] [--head <rev>]
+```
+
+8. Generate a concise summary that cites the underlying evidence identifiers.
 
 Do not estimate missing provider cost and present it as observed.
 Do not convert agent confidence into proof.
