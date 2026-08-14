@@ -9,7 +9,19 @@ metadata:
 
 Reduce review effort without hiding uncertainty.
 
-Produce four sections:
+Generate the evidence pack first when it does not exist:
+
+```bash
+shipproof evidence pack <change-id>
+```
+
+Generate the review packet:
+
+```bash
+shipproof review prepare <change-id>
+```
+
+The packet separates:
 
 1. **Change intent** — what behavior changed and why.
 2. **Already proven** — areas backed by deterministic evidence.
