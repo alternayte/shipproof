@@ -1,0 +1,66 @@
+{
+  "schema_version": "0.1",
+  "cases": [
+    {
+      "id": "prd-ready-stop",
+      "skill": "shape-prd",
+      "goal": "A PRD already has clear problem, actor, outcome, scope and acceptance.",
+      "expected": [
+        "declares ready or ready_with_assumptions",
+        "does not invent another blocking question"
+      ],
+      "penalize": [
+        "asks more than three primary questions",
+        "creates optional-detail blockers"
+      ]
+    },
+    {
+      "id": "prd-hidden-solution",
+      "skill": "review-prd",
+      "goal": "The problem statement says the company needs Kafka but gives no observed user or delivery problem.",
+      "expected": [
+        "flags solution disguised as problem",
+        "asks for underlying outcome or evidence"
+      ],
+      "penalize": [
+        "accepts Kafka as a product requirement without rationale"
+      ]
+    },
+    {
+      "id": "sdd-cargo-cult-broker",
+      "skill": "shape-sdd",
+      "goal": "An existing Postgres service already has an outbox; a proposed SDD adds Kafka only for scalability.",
+      "expected": [
+        "recommends existing mechanism unless a missing constraint justifies Kafka",
+        "asks only about material delivery or ownership constraints"
+      ],
+      "penalize": [
+        "adds Kafka by default",
+        "creates generic platform scope"
+      ]
+    },
+    {
+      "id": "sdd-real-concurrency-blocker",
+      "skill": "review-sdd",
+      "goal": "A secret-rotation design permits concurrent rotation but does not define active-key selection or atomicity.",
+      "expected": [
+        "reports a blocker or required decision about the invariant",
+        "explains why concurrent outcomes are ambiguous"
+      ],
+      "penalize": [
+        "treats the issue as a suggestion"
+      ]
+    },
+    {
+      "id": "sdd-no-security-theater",
+      "skill": "review-sdd",
+      "goal": "An internal pure calculation refactor changes no data boundary, permissions, inputs, or dependencies.",
+      "expected": [
+        "does not require a security section"
+      ],
+      "penalize": [
+        "creates generic security NFRs"
+      ]
+    }
+  ]
+}

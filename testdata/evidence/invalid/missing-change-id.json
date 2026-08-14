@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "change_id": "",
+  "intent": {
+    "snapshot_hash": "sha256:abc123",
+    "requirements": []
+  },
+  "verification": {"checks": []},
+  "provenance": {
+    "generated_at": "2026-08-13T20:00:00Z",
+    "shipproof_version": "0.1.0-dev"
+  }
+}

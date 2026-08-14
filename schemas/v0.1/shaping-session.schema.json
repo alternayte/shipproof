@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipproof.dev/schemas/v0.1/shaping-session.schema.json",
+  "title": "ShipProof shaping session",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "subject",
+    "document_kind",
+    "state",
+    "current_model",
+    "decisions",
+    "assumptions",
+    "risks",
+    "unknowns"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1
+    },
+    "document_kind": {
+      "enum": [
+        "prd",
+        "sdd",
+        "issue"
+      ]
+    },
+    "state": {
+      "enum": [
+        "shaping",
+        "blocked",
+        "ready_with_assumptions",
+        "ready"
+      ]
+    },
+    "current_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "problem": {
+          "type": "string"
+        },
+        "desired_outcome": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "recommendation": {
+          "type": "string"
+        }
+      }
+    },
+    "decisions": {
+      "$ref": "#/$defs/entries"
+    },
+    "assumptions": {
+      "$ref": "#/$defs/entries"
+    },
+    "risks": {
+      "$ref": "#/$defs/entries"
+    },
+    "unknowns": {
+      "$ref": "#/$defs/entries"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source": {
+      "type": "string"
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blockers",
+        "decisions_required"
+      ],
+      "properties": {
+        "blockers": {
+          "$ref": "#/$defs/entries"
+        },
+        "decisions_required": {
+          "$ref": "#/$defs/entries"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  }
+}

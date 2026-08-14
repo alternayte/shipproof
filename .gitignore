@@ -1,0 +1,10 @@
+shipproof
+bin/
+docs/design/
+.shipproof
+.claude
+.agents
+.DS_Store
+*.out
+*.test
+coverage.*
