@@ -32,12 +32,14 @@ Start at Step 1.
 
 Use this path when the work does not come from a formal design document. The change starts from a bug report, a feature idea, a user request, or an issue tracker entry.
 
-1. Decide the ceremony level:
-   - **Level 0** — the change is clear enough to implement directly. Write a short change description and start at Step 1.
-   - **Level 1** — the change has unclear behavior or acceptance. Use the `shape-prd` skill with `shipproof shape issue` to clarify intent through a short interview, then start at Step 1.
-   - **Level 2** — the change is large enough to need a PRD or SDD. Use `shape-prd` or `shape-sdd` to produce the document, then use `decompose-plan` to break it into bounded changes, then start at Step 1 for each change.
+Use the `triage-change` skill. The agent assesses the work and recommends a ceremony level:
 
-2. For Level 0 and Level 1, the agent writes the change description directly. No formal PRD or SDD is needed.
+- **Level 0** — the change is clear enough to implement directly. Use `prepare-change` to write a short change description and start at Step 1.
+- **Level 1** — the change has unclear behavior or acceptance. Use `shape-prd` with `shipproof shape issue` to clarify intent through a short interview, then start at Step 1.
+- **Level 2** — the change needs a PRD or SDD. Use `shape-prd` or `shape-sdd` to produce the document, then use `decompose-plan` to break it into bounded changes, then start at Step 1 for each change.
+- **Level 3** — the change needs both a PRD and an SDD. Shape both documents before decomposition.
+
+The user can override the recommendation.
 
 ## Step 1 — Prepare the change
 
@@ -146,6 +148,7 @@ Use these skills before Step 1 when the intent needs clarification:
 
 | Skill | Purpose |
 |---|---|
+| `triage-change` | Assess work and recommend a ceremony level |
 | `shape-prd` | Shape product intent through a bounded interview |
 | `shape-sdd` | Shape technical design through a bounded interview |
 | `review-prd` | Independent review of a PRD |

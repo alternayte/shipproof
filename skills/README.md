@@ -12,6 +12,7 @@ The files in this directory are the source packages distributed by ShipProof. Ha
 - `review-sdd`
 - `record-decision`
 - `decompose-plan`
+- `triage-change`
 - `plan-verification`
 - `prepare-change`
 - `implement-change`
