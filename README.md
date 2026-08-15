@@ -82,6 +82,17 @@ shipproof verification check SP-002
 
 Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target.
 
+### Reports
+
+```bash
+shipproof report change SP-002
+shipproof report change SP-002 --output report.html
+shipproof report pr-summary SP-002
+shipproof report project my-project
+```
+
+Each report includes provenance badges on every metric. HTML change reports show intent, verification, implementation, and agent-run metadata. Markdown PR summaries answer the five SDD review questions. Project aggregate reports derive pass rates, agent usage, and cost across all changes.
+
 ### Skills
 
 ```bash

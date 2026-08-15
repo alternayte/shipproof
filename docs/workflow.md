@@ -111,7 +111,19 @@ The agent generates a focused review packet that separates proven areas from are
 shipproof review prepare <change-id>
 ```
 
-## Step 7 — Code review and commit
+## Step 7 — Generate reports
+
+Generate human-readable reports from the evidence pack and review packet:
+
+```bash
+shipproof report change <change-id>
+shipproof report pr-summary <change-id>
+shipproof report project <name>
+```
+
+Use `--output <path>` to write to a file instead of stdout.
+
+## Step 8 — Code review and commit
 
 **Skill:** `review-change`
 
@@ -139,6 +151,7 @@ Linear sync requires `LINEAR_API_KEY` and `LINEAR_TEAM_ID` environment variables
 | Verify | `verify-change` | `verification run`, `change check` |
 | Evidence | `produce-evidence` | `evidence pack` |
 | Human review | `prepare-human-review` | `review prepare` |
+| Reports | none | `report change`, `report pr-summary`, `report project` |
 | Code review | `review-change` | none |
 | Linear sync | none | `linear issue`, `linear project`, `linear sync` |
 

@@ -12,7 +12,7 @@ import (
 
 func runReport(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: shipproof report <change|pr-summary> ...")
+		fmt.Fprintln(stderr, "usage: shipproof report <change|pr-summary|project> ...")
 		return 2
 	}
 
