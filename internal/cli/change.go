@@ -120,6 +120,17 @@ func runChangeStatus(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "Captured: %s\n", record.CapturedAt)
 	fmt.Fprintf(stdout, "Verification plan: %s\n", planStatus)
+
+	stale, err := record.Staleness(root)
+	if err != nil {
+		fmt.Fprintf(stdout, "Intent source: unknown (%v)\n", err)
+		return 0
+	}
+	if stale.Stale {
+		fmt.Fprintf(stdout, "Intent source: stale (snapshot %s, current %s)\n", stale.SnapshotHash, stale.CurrentHash)
+	} else {
+		fmt.Fprintln(stdout, "Intent source: current")
+	}
 	return 0
 }
 
@@ -147,5 +158,16 @@ func runChangeCheck(args []string, stdout, stderr io.Writer) int {
 	}
 
 	fmt.Fprintf(stdout, "Change %s is valid: snapshot hash matches.\n", record.ChangeID)
+
+	stale, err := record.Staleness(root)
+	if err != nil {
+		fmt.Fprintf(stdout, "Intent source: unknown (%v)\n", err)
+		return 0
+	}
+	if stale.Stale {
+		fmt.Fprintf(stdout, "Intent source: stale. Re-verify this change before using its evidence.\n")
+	} else {
+		fmt.Fprintln(stdout, "Intent source: current.")
+	}
 	return 0
 }

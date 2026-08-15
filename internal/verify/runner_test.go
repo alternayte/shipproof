@@ -253,3 +253,58 @@ func setupRepo(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 }
+
+func TestRunAdhoc(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	setupRepo(t, root)
+
+	result, err := RunAdhoc(root, "echo adhoc")
+	if err != nil {
+		t.Fatalf("RunAdhoc() error = %v", err)
+	}
+	if result.ExitCode != 0 {
+		t.Fatalf("exit_code = %d, want 0", result.ExitCode)
+	}
+
+	logPath := filepath.Join(root, ".shipproof", "runs", "adhoc", "stdout.log")
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read adhoc stdout: %v", err)
+	}
+	if string(content) != "adhoc\n" {
+		t.Fatalf("stdout = %q, want %q", string(content), "adhoc\n")
+	}
+
+	runJSON := filepath.Join(root, ".shipproof", "runs", "adhoc", "run.json")
+	if _, err := os.Stat(runJSON); !errors.Is(err, os.ErrNotExist) {
+		t.Error("expected no run.json for an adhoc run")
+	}
+}
+
+func TestRunAdhocFailureExitCode(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	setupRepo(t, root)
+
+	result, err := RunAdhoc(root, "exit 3")
+	if err != nil {
+		t.Fatalf("RunAdhoc() error = %v", err)
+	}
+	if result.ExitCode != 3 {
+		t.Fatalf("exit_code = %d, want 3", result.ExitCode)
+	}
+}
+
+func TestRunAdhocMissingCommand(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	setupRepo(t, root)
+
+	if _, err := RunAdhoc(root, "  "); !errors.Is(err, ErrCommandMissing) {
+		t.Fatalf("expected ErrCommandMissing, got %v", err)
+	}
+}

@@ -20,10 +20,14 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runShape(args[1:], stdout, stderr)
 	case "verification":
 		return runVerification(args[1:], stdout, stderr)
+	case "verify":
+		return runVerify(args[1:], stdout, stderr)
 	case "harness":
 		return runHarness(args[1:], stdout, stderr)
 	case "change":
 		return runChange(args[1:], stdout, stderr)
+	case "plan":
+		return runPlan(args[1:], stdout, stderr)
 	case "skill":
 		return runSkill(args[1:], stdout, stderr)
 	case "evidence":
@@ -62,12 +66,16 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof verification run <change-id>")
 	fmt.Fprintln(w, "  shipproof verification init <change-id>")
 	fmt.Fprintln(w, "  shipproof verification check <change-id-or-file>")
+	fmt.Fprintln(w, "  shipproof verify [change-id]")
 	fmt.Fprintln(w, "  shipproof harness install <claude|cursor|codex|opencode|agents> [directory] [--force]")
 	fmt.Fprintln(w, "  shipproof change start <change-id> --source <path>")
 	fmt.Fprintln(w, "  shipproof change status <change-id>")
 	fmt.Fprintln(w, "  shipproof change check <change-id>")
+	fmt.Fprintln(w, "  shipproof plan create <file>")
+	fmt.Fprintln(w, "  shipproof plan review")
+	fmt.Fprintln(w, "  shipproof plan sync --linear [plan-file]")
 	fmt.Fprintln(w, "  shipproof skill check [catalog-directory]")
-	fmt.Fprintln(w, "  shipproof skill eval <check|list|show> ...")
+	fmt.Fprintln(w, "  shipproof skill eval <check|list|show|record|results> ...")
 	fmt.Fprintln(w, "  shipproof evidence pack <change-id> [--base <rev>] [--head <rev>]")
 	fmt.Fprintln(w, "  shipproof evidence review <change-id>")
 	fmt.Fprintln(w, "  shipproof telemetry collect <change-id> --adapter <claude|opencode> [--dir <path>]")

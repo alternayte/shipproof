@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "case_id": "sdd-cargo-cult-broker",
+  "skill": "shape-sdd",
+  "condition": "candidate",
+  "recorded_at": "2026-08-15T20:55:18Z",
+  "task_success": true,
+  "blocker_recall": 1,
+  "false_blocker_rate": 0,
+  "questions_asked": 0,
+  "human_intervention": false,
+  "notes": "Run by an agent with the shape-sdd skill. Rejected Kafka, recommended the outbox, asked nothing."
+}

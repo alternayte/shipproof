@@ -1,6 +1,8 @@
 package pack
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"os"
@@ -292,8 +294,57 @@ func TestAssembleNoEvidenceFiles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(pack.Verification.Checks) != 0 {
-		t.Errorf("expected 0 checks with no evidence files, got %d", len(pack.Verification.Checks))
+	if len(pack.Verification.Checks) != 1 {
+		t.Fatalf("expected 1 staleness check with no evidence files, got %d", len(pack.Verification.Checks))
+	}
+	if pack.Verification.Checks[0].ID != "intent:staleness" {
+		t.Errorf("expected intent:staleness check, got %s", pack.Verification.Checks[0].ID)
+	}
+	if pack.Intent.Stale != true {
+		t.Error("expected stale intent when the source document is missing")
+	}
+}
+
+func TestAssembleIntentStaleness(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+
+	content := []byte("# source\n")
+	source := filepath.Join(root, "docs", "changes", "SP-005-test.md")
+	if err := os.MkdirAll(filepath.Dir(source), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(source, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	hash := sha256.Sum256(content)
+	setupChangeRecord(t, root, "SP-005", hex.EncodeToString(hash[:]))
+	setupVerificationPlan(t, root, "SP-005")
+
+	pack, err := Assemble(root, "SP-005", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.Intent.Stale {
+		t.Error("expected current intent when the source matches the snapshot hash")
+	}
+
+	found := false
+	for _, check := range pack.Verification.Checks {
+		if check.ID == "intent:staleness" {
+			found = true
+			if check.Status != "pass" {
+				t.Errorf("expected staleness check pass, got %s", check.Status)
+			}
+			if check.Provenance != schema.ProvenanceDerived {
+				t.Errorf("expected derived provenance, got %s", check.Provenance)
+			}
+		}
+	}
+	if !found {
+		t.Error("intent:staleness check not found")
 	}
 }
 

@@ -1,9 +1,12 @@
 package telemetry
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/shipproof/shipproof/internal/agent"
 )
 
 func TestCollectPreservesMissingFields(t *testing.T) {
@@ -40,4 +43,26 @@ func TestCollectUnsupportedAdapter(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for unsupported adapter")
 	}
+}
+
+type fakeRawProvider struct {
+	name    string
+	rawPath string
+	collect func(projectDir string) (agent.AgentRun, error)
+}
+
+func (f *fakeRawProvider) Name() string { return f.name }
+
+func (f *fakeRawProvider) Collect(projectDir string) (agent.AgentRun, error) {
+	if f.collect != nil {
+		return f.collect(projectDir)
+	}
+	return agent.AgentRun{}, nil
+}
+
+func (f *fakeRawProvider) RawLogPath(projectDir string) (string, error) {
+	if f.rawPath == "" {
+		return "", errors.New("no raw log")
+	}
+	return f.rawPath, nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/shipproof/shipproof/internal/agent"
@@ -49,9 +50,53 @@ func (a *Adapter) Name() string {
 }
 
 func (a *Adapter) Collect(projectDir string) (agent.AgentRun, error) {
+	session, err := a.mostRecentSession(projectDir)
+	if err != nil {
+		return agent.AgentRun{}, err
+	}
+
+	run := agent.AgentRun{
+		Provider:     "claude-code",
+		AgentVersion: session.Version,
+		SessionID:    session.SessionID,
+		StartedAt:    msToISO(session.StartedAt),
+		EndedAt:      msToISO(session.UpdatedAt),
+		ExitStatus:   session.Status,
+	}
+
+	model := readModel()
+	if model != "" {
+		run.Model = model
+	}
+
+	return run, nil
+}
+
+// RawLogPath returns the transcript file for the most recent session of the
+// project. Claude Code stores transcripts as JSONL under ~/.claude/projects/.
+func (a *Adapter) RawLogPath(projectDir string) (string, error) {
+	session, err := a.mostRecentSession(projectDir)
+	if err != nil {
+		return "", err
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+
+	slug := strings.TrimPrefix(strings.ReplaceAll(projectDir, "/", "-"), "-")
+	path := filepath.Join(home, ".claude", "projects", slug, session.SessionID+".jsonl")
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("transcript not found at %q: %w", path, err)
+	}
+	return path, nil
+}
+
+func (a *Adapter) mostRecentSession(projectDir string) (claudeSession, error) {
 	entries, err := os.ReadDir(a.sessionsDir)
 	if err != nil {
-		return agent.AgentRun{}, fmt.Errorf("read sessions directory: %w", err)
+		return claudeSession{}, fmt.Errorf("read sessions directory: %w", err)
 	}
 
 	var mostRecent *claudeSession
@@ -84,26 +129,10 @@ func (a *Adapter) Collect(projectDir string) (agent.AgentRun, error) {
 	}
 
 	if mostRecent == nil {
-		return agent.AgentRun{}, fmt.Errorf("no session found for project %q", projectDir)
+		return claudeSession{}, fmt.Errorf("no session found for project %q", projectDir)
 	}
 
-	session := *mostRecent
-
-	run := agent.AgentRun{
-		Provider:     "claude-code",
-		AgentVersion: session.Version,
-		SessionID:    session.SessionID,
-		StartedAt:    msToISO(session.StartedAt),
-		EndedAt:      msToISO(session.UpdatedAt),
-		ExitStatus:   session.Status,
-	}
-
-	model := readModel()
-	if model != "" {
-		run.Model = model
-	}
-
-	return run, nil
+	return *mostRecent, nil
 }
 
 func readModel() string {

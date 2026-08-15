@@ -29,11 +29,38 @@ func Run(root, changeID, command string) (Result, error) {
 	if strings.TrimSpace(changeID) == "" {
 		return Result{}, fmt.Errorf("change id is required")
 	}
+
+	result, err := runCommand(root, RunDir(root, changeID), changeID, command)
+	if err != nil {
+		return Result{}, err
+	}
+
+	resultPath := filepath.Join(RunDir(root, changeID), "run.json")
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return Result{}, fmt.Errorf("encode result: %w", err)
+	}
+	data = append(data, '\n')
+
+	if err := os.WriteFile(resultPath, data, 0o644); err != nil {
+		return Result{}, fmt.Errorf("write result: %w", err)
+	}
+
+	return result, nil
+}
+
+// RunAdhoc executes the repository verification command without a change record.
+// Logs go to .shipproof/runs/adhoc/. No run.json is written because no change
+// exists to associate the result with.
+func RunAdhoc(root, command string) (Result, error) {
+	return runCommand(root, filepath.Join(root, ".shipproof", "runs", "adhoc"), "", command)
+}
+
+func runCommand(root, runDir, changeID, command string) (Result, error) {
 	if strings.TrimSpace(command) == "" {
 		return Result{}, ErrCommandMissing
 	}
 
-	runDir := RunDir(root, changeID)
 	if err := os.MkdirAll(runDir, 0o755); err != nil {
 		return Result{}, fmt.Errorf("create run directory: %w", err)
 	}
@@ -78,7 +105,7 @@ func Run(root, changeID, command string) (Result, error) {
 		relStderr = stderrPath
 	}
 
-	result := Result{
+	return Result{
 		SchemaVersion: "0.1",
 		ChangeID:      changeID,
 		ExitCode:      exitCode,
@@ -86,18 +113,5 @@ func Run(root, changeID, command string) (Result, error) {
 		StdoutPath:    filepath.ToSlash(relStdout),
 		StderrPath:    filepath.ToSlash(relStderr),
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
-	}
-
-	resultPath := filepath.Join(runDir, "run.json")
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return Result{}, fmt.Errorf("encode result: %w", err)
-	}
-	data = append(data, '\n')
-
-	if err := os.WriteFile(resultPath, data, 0o644); err != nil {
-		return Result{}, fmt.Errorf("write result: %w", err)
-	}
-
-	return result, nil
+	}, nil
 }

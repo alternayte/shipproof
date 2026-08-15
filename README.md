@@ -73,12 +73,28 @@ shipproof change check SP-002
 
 Each change captures an immutable intent snapshot with SHA-256 provenance. Change records live under `.shipproof/changes/<change-id>/`.
 
+`change status` and `change check` also report intent staleness. When the source document changes after the snapshot, the intent is stale and the change needs re-verification. Evidence packs carry an `intent:staleness` check.
+
+### Plans
+
+```bash
+shipproof plan create docs/design/delivery-plan.md
+shipproof plan review
+shipproof plan sync --linear [issues.json]
+```
+
+`plan create` snapshots a design document as a plan record under `.shipproof/plans/`. `plan review` validates every plan record, its snapshot hash, and its source staleness. `plan sync --linear` creates the Linear project and issues from a decomposed issue list after human approval. Without an explicit file, it uses the single `issues.json` under `.shipproof/plans/`.
+
 ### Verification plans
 
 ```bash
+shipproof verify
+shipproof verify SP-002
 shipproof verification init SP-002
 shipproof verification check SP-002
 ```
+
+`shipproof verify` runs the configured repository verification command. With a change ID it behaves like `verification run` and writes a structured run result. Without one, logs go to `.shipproof/runs/adhoc/` and the command's exit code is returned.
 
 Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target.
 
@@ -101,9 +117,13 @@ shipproof harness install cursor
 shipproof harness install codex
 shipproof skill check
 shipproof skill eval list
+shipproof skill eval record prd-ready-stop --condition without --file result.json
+shipproof skill eval results --regression
 ```
 
-ShipProof ships with 12 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
+ShipProof ships with 15 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
+
+Skill eval runs are recorded under `benchmarks/skill-evals/` with conditions `without`, `previous`, and `candidate`. `skill eval results --regression` flags candidate runs that fail a task the baseline passed, recall fewer blockers, or raise the false blocker rate.
 
 Built-in skills cover the full delivery cycle:
 
@@ -121,6 +141,22 @@ Built-in skills cover the full delivery cycle:
 | `review-change` | Review an implemented change for correctness and agent failure patterns. |
 | `prepare-human-review` | Prepare a focused human-review packet. |
 | `produce-evidence` | Produce a versioned evidence pack from recorded facts. |
+| `benchmark-run` | Run one benchmark task from a fixed commit and record the result without exposing hidden evaluation material. |
+| `triage-change` | Assess a feature, fix, or issue and recommend the smallest useful ceremony level. |
+| `prepare-change` | Prepare the next ShipProof change from approved intent. |
+
+## Evidence capture levels
+
+```yaml
+evidence:
+  capture: metadata   # metadata | redacted | full
+```
+
+- `metadata`: store timing, provider, model, status, and evidence references. Do not store prompts or transcripts.
+- `redacted`: also copy the raw session transcript under `.shipproof/runs/<change-id>/agent-raw/` with recognized secret shapes masked.
+- `full`: copy the transcript unchanged where provider terms allow it.
+
+The public reference application should use `full` where practical. Client repositories default to `metadata`.
 
 ## Design constraints
 

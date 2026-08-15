@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "case_id": "prd-hidden-solution",
+  "skill": "review-prd",
+  "condition": "without",
+  "recorded_at": "2026-08-15T20:55:18Z",
+  "task_success": true,
+  "blocker_recall": 1,
+  "false_blocker_rate": 0.67,
+  "questions_asked": 6,
+  "human_intervention": false,
+  "notes": "Run by an agent without the review-prd skill. Flagged the solution-as-problem and asked for evidence. Two extra blockers beyond the case."
+}

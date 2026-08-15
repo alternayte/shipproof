@@ -23,3 +23,10 @@ type Adapter interface {
 	Name() string
 	Collect(projectDir string) (AgentRun, error)
 }
+
+// RawLogProvider is implemented by adapters that can locate the raw session
+// transcript for the most recent run. Capture levels redacted and full store
+// this transcript under .shipproof/runs/<change-id>/agent-raw/.
+type RawLogProvider interface {
+	RawLogPath(projectDir string) (string, error)
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "case_id": "prd-ready-stop",
+  "skill": "shape-prd",
+  "condition": "without",
+  "recorded_at": "2026-08-15T20:55:18Z",
+  "task_success": false,
+  "blocker_recall": 0,
+  "false_blocker_rate": 1,
+  "questions_asked": 8,
+  "human_intervention": false,
+  "notes": "Run by an agent without the shape-prd skill. Declared blocked on implementation detail; asked 8 questions. Violates the at-most-three rule."
+}

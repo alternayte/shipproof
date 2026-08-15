@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "case_id": "sdd-cargo-cult-broker",
+  "skill": "shape-sdd",
+  "condition": "without",
+  "recorded_at": "2026-08-15T20:55:18Z",
+  "task_success": false,
+  "blocker_recall": 0.5,
+  "false_blocker_rate": 0,
+  "questions_asked": 4,
+  "human_intervention": false,
+  "notes": "Run by an agent without the shape-sdd skill. Recommended the existing outbox but asked 4 questions including non-material ones (ownership, outage)."
+}

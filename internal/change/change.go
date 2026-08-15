@@ -153,6 +153,35 @@ func (record Record) VerifyHash(root string) error {
 	return nil
 }
 
+// Staleness compares the current source document with the recorded snapshot.
+// A stale record means the source intent changed after implementation began.
+// A missing source document is stale with an empty current hash.
+type Staleness struct {
+	Stale        bool   `json:"stale"`
+	SnapshotHash string `json:"snapshot_hash"`
+	CurrentHash  string `json:"current_hash,omitempty"`
+}
+
+func (record Record) Staleness(root string) (Staleness, error) {
+	sourcePath := filepath.Join(root, filepath.FromSlash(record.SourcePath))
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return Staleness{Stale: true, SnapshotHash: record.SHA256}, nil
+		}
+		return Staleness{}, fmt.Errorf("read source file: %w", err)
+	}
+
+	hash := sha256.Sum256(content)
+	current := hex.EncodeToString(hash[:])
+
+	return Staleness{
+		Stale:        current != record.SHA256,
+		SnapshotHash: record.SHA256,
+		CurrentHash:  current,
+	}, nil
+}
+
 func HasVerificationPlan(root, changeID string) bool {
 	planPath := filepath.Join(root, ".shipproof", "changes", changeID, "verification.json")
 	_, err := os.Stat(planPath)

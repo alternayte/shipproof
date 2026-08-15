@@ -26,4 +26,4 @@ For material implementation work:
 - Run `shipproof verification check <change-id>` before implementation.
 - Keep one independently verifiable change per implementation session where practical.
 
-Read `docs/design/NEXT.md` for the current ordered dogfood backlog.
+Read `docs/design/shipproof-v0-sdd.md` for the v0 goals and phases. Read `docs/changes/` for the change backlog.

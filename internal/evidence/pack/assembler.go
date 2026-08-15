@@ -44,6 +44,28 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 
 	pack.Intent = buildIntent(record, plan)
 
+	if stale, err := record.Staleness(root); err != nil {
+		pack.Intent.Stale = true
+	} else {
+		pack.Intent.Stale = stale.Stale
+		pack.Intent.CurrentSourceHash = stale.CurrentHash
+	}
+	if pack.Intent.Stale {
+		pack.Verification.Checks = append(pack.Verification.Checks, schema.Check{
+			ID:         "intent:staleness",
+			Status:     "fail",
+			Source:     "shipproof",
+			Provenance: schema.ProvenanceDerived,
+		})
+	} else {
+		pack.Verification.Checks = append(pack.Verification.Checks, schema.Check{
+			ID:         "intent:staleness",
+			Status:     "pass",
+			Source:     "shipproof",
+			Provenance: schema.ProvenanceDerived,
+		})
+	}
+
 	runChecks, err := loadRunChecks(root, changeID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return pack, fmt.Errorf("load run result: %w", err)

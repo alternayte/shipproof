@@ -99,7 +99,10 @@ func runLinearSync(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: shipproof linear sync <plan-file>")
 		return 2
 	}
+	return syncPlanFile(args[0], stdout, stderr)
+}
 
+func syncPlanFile(planFile string, stdout, stderr io.Writer) int {
 	apiKey, err := linear.ResolveAPIKey("")
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -118,7 +121,7 @@ func runLinearSync(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	result, err := linear.SyncPlan(client, args[0], teamID, os.Stdin, stderr)
+	result, err := linear.SyncPlan(client, planFile, teamID, os.Stdin, stderr)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

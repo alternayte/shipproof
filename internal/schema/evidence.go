@@ -86,6 +86,13 @@ type ImplementationCommit struct {
 type IntentEvidence struct {
 	SnapshotHash string        `json:"snapshot_hash"`
 	Requirements []Requirement `json:"requirements"`
+	// Stale is true when the current source document differs from the
+	// snapshot taken when implementation began. Stale evidence needs
+	// re-verification against the current intent.
+	Stale bool `json:"stale"`
+	// CurrentSourceHash is the SHA-256 of the current source document.
+	// It is empty when the source document is missing.
+	CurrentSourceHash string `json:"current_source_hash,omitempty"`
 }
 
 type Requirement struct {

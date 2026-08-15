@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "case_id": "sdd-real-concurrency-blocker",
+  "skill": "review-sdd",
+  "condition": "candidate",
+  "recorded_at": "2026-08-15T20:55:18Z",
+  "task_success": true,
+  "blocker_recall": 1,
+  "false_blocker_rate": 0.5,
+  "questions_asked": 2,
+  "human_intervention": false,
+  "notes": "Run by an agent with the review-sdd skill. Reported the invariant blocker and explained the ambiguity. One extra blocker beyond the case."
+}

@@ -87,6 +87,27 @@ func (a *Adapter) Collect(projectDir string) (agent.AgentRun, error) {
 	return run, nil
 }
 
+// RawLogPath returns the message storage directory for the most recent
+// session. OpenCode stores message parts under
+// ~/.local/share/opencode/storage/session/<session-id>/messages/.
+func (a *Adapter) RawLogPath(projectDir string) (string, error) {
+	row, err := a.queryMostRecent(projectDir)
+	if err != nil {
+		return "", err
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+
+	dir := filepath.Join(home, ".local", "share", "opencode", "storage", "session", row.SessionID, "messages")
+	if _, err := os.Stat(dir); err != nil {
+		return "", fmt.Errorf("session storage not found at %q: %w", dir, err)
+	}
+	return dir, nil
+}
+
 func (a *Adapter) queryMostRecent(projectDir string) (sessionRow, error) {
 	if _, err := os.Stat(a.dbPath); err != nil {
 		return sessionRow{}, fmt.Errorf("opencode database not found at %q", a.dbPath)

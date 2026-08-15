@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "case_id": "prd-ready-stop",
+  "skill": "shape-prd",
+  "condition": "candidate",
+  "recorded_at": "2026-08-15T20:55:18Z",
+  "task_success": false,
+  "blocker_recall": 0,
+  "false_blocker_rate": 1,
+  "questions_asked": 3,
+  "human_intervention": false,
+  "notes": "Run by an agent with the shape-prd skill. Declared blocked on optional details. Three questions within the limit but blockers remain optional."
+}
