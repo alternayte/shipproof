@@ -33,6 +33,19 @@ type ReadinessEvidence struct {
 	BlockerCount int    `json:"blocker_count,omitempty"`
 }
 
+type ReviewEvidence struct {
+	Source            string `json:"source"`
+	PRNumber          int    `json:"pr_number"`
+	PRURL             string `json:"pr_url"`
+	OpenedAt          string `json:"opened_at,omitempty"`
+	FirstReviewAt     string `json:"first_review_at,omitempty"`
+	ReviewCount       int    `json:"review_count,omitempty"`
+	CommentCount      int    `json:"comment_count,omitempty"`
+	DistinctReviewers int    `json:"distinct_reviewers,omitempty"`
+	State             string `json:"state,omitempty"`
+	CollectedAt       string `json:"collected_at"`
+}
+
 type AgentRunMetadata struct {
 	Provider      string          `json:"provider,omitempty"`
 	AgentVersion  string          `json:"agent_version,omitempty"`

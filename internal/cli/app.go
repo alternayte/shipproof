@@ -69,6 +69,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof skill check [catalog-directory]")
 	fmt.Fprintln(w, "  shipproof skill eval <check|list|show> ...")
 	fmt.Fprintln(w, "  shipproof evidence pack <change-id> [--base <rev>] [--head <rev>]")
+	fmt.Fprintln(w, "  shipproof evidence review <change-id>")
 	fmt.Fprintln(w, "  shipproof telemetry collect <change-id> --adapter <claude|opencode> [--dir <path>]")
 	fmt.Fprintln(w, "  shipproof review prepare <change-id>")
 	fmt.Fprintln(w, "  shipproof linear issue <identifier>")

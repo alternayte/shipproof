@@ -283,3 +283,89 @@ func runGit(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, string(out))
 	}
 }
+
+func TestResolveGitHubRepoHTTPS(t *testing.T) {
+	t.Parallel()
+
+	dir := initTestRepo(t)
+	runGit(t, dir, "remote", "add", "origin", "https://github.com/acme/widget.git")
+
+	owner, name, err := ResolveGitHubRepo(dir)
+	if err != nil {
+		t.Fatalf("ResolveGitHubRepo: %v", err)
+	}
+	if owner != "acme" || name != "widget" {
+		t.Errorf("owner/name = %q/%q, want acme/widget", owner, name)
+	}
+}
+
+func TestResolveGitHubRepoSSH(t *testing.T) {
+	t.Parallel()
+
+	dir := initTestRepo(t)
+	runGit(t, dir, "remote", "add", "origin", "git@github.com:acme/widget.git")
+
+	owner, name, err := ResolveGitHubRepo(dir)
+	if err != nil {
+		t.Fatalf("ResolveGitHubRepo: %v", err)
+	}
+	if owner != "acme" || name != "widget" {
+		t.Errorf("owner/name = %q/%q, want acme/widget", owner, name)
+	}
+}
+
+func TestResolveGitHubRepoNoRemote(t *testing.T) {
+	t.Parallel()
+
+	dir := initTestRepo(t)
+
+	_, _, err := ResolveGitHubRepo(dir)
+	if err != ErrNoRemote {
+		t.Fatalf("expected ErrNoRemote, got %v", err)
+	}
+}
+
+func TestResolveGitHubRepoNonGitHubRemote(t *testing.T) {
+	t.Parallel()
+
+	dir := initTestRepo(t)
+	runGit(t, dir, "remote", "add", "origin", "https://gitlab.com/acme/widget.git")
+
+	_, _, err := ResolveGitHubRepo(dir)
+	if err == nil {
+		t.Fatal("expected error for non-GitHub remote")
+	}
+	if !strings.Contains(err.Error(), "not a GitHub remote") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestParseGitHubURL(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		url         string
+		owner, name string
+		wantOK      bool
+	}{
+		{"https://github.com/acme/widget.git", "acme", "widget", true},
+		{"https://github.com/acme/widget", "acme", "widget", true},
+		{"http://github.com/acme/widget.git", "acme", "widget", true},
+		{"git@github.com:acme/widget.git", "acme", "widget", true},
+		{"git@github.com:acme/widget", "acme", "widget", true},
+		{"https://gitlab.com/acme/widget.git", "", "", false},
+		{"https://github.com/onlyowner", "", "", false},
+		{"not-a-url", "", "", false},
+	}
+
+	for _, tc := range cases {
+		owner, name, ok := parseGitHubURL(tc.url)
+		if ok != tc.wantOK {
+			t.Errorf("parseGitHubURL(%q) ok = %v, want %v", tc.url, ok, tc.wantOK)
+			continue
+		}
+		if ok && (owner != tc.owner || name != tc.name) {
+			t.Errorf("parseGitHubURL(%q) = %q/%q, want %q/%q", tc.url, owner, name, tc.owner, tc.name)
+		}
+	}
+}
