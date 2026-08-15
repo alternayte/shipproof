@@ -12,6 +12,7 @@ import (
 	"github.com/shipproof/shipproof/internal/evidence"
 	"github.com/shipproof/shipproof/internal/git"
 	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/shipproof/shipproof/internal/shaping"
 	"github.com/shipproof/shipproof/internal/verification"
 )
 
@@ -84,6 +85,8 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 	if agentRun, err := loadAgentRun(root, changeID); err == nil {
 		pack.AgentRun = agentRun
 	}
+
+	pack.Readiness = loadReadiness(root, record)
 
 	pack.Provenance = schema.PackProvenance{
 		GeneratedAt:      time.Now().UTC().Format(time.RFC3339),
@@ -196,6 +199,22 @@ func loadAgentRun(root, changeID string) (*schema.AgentRunMetadata, error) {
 	}
 
 	return &run, nil
+}
+
+func loadReadiness(root string, record change.Record) *schema.ReadinessEvidence {
+	if record.ShapingRef == "" {
+		return nil
+	}
+
+	session, _, err := shaping.Load(root, record.ShapingRef)
+	if err != nil {
+		return nil
+	}
+
+	return &schema.ReadinessEvidence{
+		ShapingRef:   record.ShapingRef,
+		BlockerCount: len(session.Readiness.Blockers),
+	}
 }
 
 func implementationFromGit(meta git.Metadata) schema.ImplementationEvidence {

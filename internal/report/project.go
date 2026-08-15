@@ -96,6 +96,7 @@ type packSummaryRow struct {
 	CycleTime    string
 	CycleGap     string
 	Commits      int
+	Blockers     int
 }
 
 type projectMetrics struct {
@@ -122,6 +123,7 @@ type projectMetrics struct {
 	CycleTimeGapCount   int
 	AvgCommits          float64
 	TotalCommits        int
+	TotalBlockers       int
 }
 
 type unavailableMetric struct {
@@ -144,6 +146,11 @@ func buildPackSummaryData(packs []schema.EvidencePack) []packSummaryRow {
 
 		cycle := cycleTimeForPack(pack)
 
+		blockers := 0
+		if pack.Readiness != nil {
+			blockers = pack.Readiness.BlockerCount
+		}
+
 		rows = append(rows, packSummaryRow{
 			ChangeID:     pack.ChangeID,
 			GeneratedAt:  pack.Provenance.GeneratedAt,
@@ -154,6 +161,7 @@ func buildPackSummaryData(packs []schema.EvidencePack) []packSummaryRow {
 			CycleTime:    cycle.Value,
 			CycleGap:     cycle.GapNotice,
 			Commits:      len(pack.Implementation.Commits),
+			Blockers:     blockers,
 		})
 	}
 	return rows
@@ -209,6 +217,12 @@ func buildProjectMetrics(packs []schema.EvidencePack) projectMetrics {
 
 		commits := len(pack.Implementation.Commits)
 		m.TotalCommits += commits
+
+		blockers := 0
+		if pack.Readiness != nil {
+			blockers = pack.Readiness.BlockerCount
+		}
+		m.TotalBlockers += blockers
 
 		if duration, gap := cycleDurationForPack(pack); gap == "" {
 			cycleTotal += duration
@@ -314,6 +328,5 @@ func buildUnavailableMetrics() []unavailableMetric {
 	return []unavailableMetric{
 		{Label: "Review wait", Reason: "No review wait data collected"},
 		{Label: "Human review effort", Reason: "No human review effort data collected"},
-		{Label: "Readiness blockers", Reason: "No readiness blocker history collected"},
 	}
 }

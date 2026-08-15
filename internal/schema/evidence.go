@@ -3,7 +3,10 @@ package schema
 import (
 	"errors"
 	"fmt"
+	"regexp"
 )
+
+var shapingRefPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 type ProvenanceKind string
 
@@ -22,6 +25,12 @@ type EvidencePack struct {
 	Verification   VerificationEvidence   `json:"verification"`
 	Provenance     PackProvenance         `json:"provenance"`
 	AgentRun       *AgentRunMetadata      `json:"agent_run,omitempty"`
+	Readiness      *ReadinessEvidence     `json:"readiness,omitempty"`
+}
+
+type ReadinessEvidence struct {
+	ShapingRef   string `json:"shaping_ref,omitempty"`
+	BlockerCount int    `json:"blocker_count,omitempty"`
 }
 
 type AgentRunMetadata struct {
@@ -99,6 +108,15 @@ func (pack EvidencePack) Validate() error {
 	}
 	if pack.Provenance.ShipProofVersion == "" {
 		return errors.New("provenance.shipproof_version is required")
+	}
+
+	if pack.Readiness != nil {
+		if pack.Readiness.ShapingRef == "" {
+			return errors.New("readiness.shaping_ref is required when readiness is present")
+		}
+		if !shapingRefPattern.MatchString(pack.Readiness.ShapingRef) {
+			return errors.New("readiness.shaping_ref must use lowercase letters, digits, and hyphens")
+		}
 	}
 
 	for index, check := range pack.Verification.Checks {

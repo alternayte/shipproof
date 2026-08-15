@@ -57,6 +57,15 @@
         "generated_at": {"type": "string", "minLength": 1},
         "shipproof_version": {"type": "string", "minLength": 1}
       }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shaping_ref", "blocker_count"],
+      "properties": {
+        "shaping_ref": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+        "blocker_count": {"type": "integer", "minimum": 0}
+      }
     }
   }
 }

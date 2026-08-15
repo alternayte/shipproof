@@ -29,21 +29,29 @@ func runChange(args []string, stdout, stderr io.Writer) int {
 
 func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	if len(args) < 1 {
-		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path>")
+		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--shaping <session-id>]")
 		return 2
 	}
 
 	changeID := args[0]
-	var source string
+	var source, shapingRef string
 	for index := 1; index < len(args); index++ {
-		if args[index] == "--source" {
+		switch args[index] {
+		case "--source":
 			if index+1 >= len(args) {
 				fmt.Fprintln(stderr, "--source requires a path")
 				return 2
 			}
 			source = args[index+1]
 			index++
-		} else {
+		case "--shaping":
+			if index+1 >= len(args) {
+				fmt.Fprintln(stderr, "--shaping requires a session id")
+				return 2
+			}
+			shapingRef = args[index+1]
+			index++
+		default:
 			fmt.Fprintf(stderr, "unknown option %q\n", args[index])
 			return 2
 		}
@@ -60,7 +68,7 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	record, err := change.Start(root, changeID, source)
+	record, err := change.Start(root, changeID, source, shapingRef)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -71,6 +79,9 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Source: %s\n", record.SourcePath)
 	fmt.Fprintf(stdout, "Snapshot: %s\n", record.SnapshotPath)
 	fmt.Fprintf(stdout, "SHA-256: %s\n", record.SHA256)
+	if record.ShapingRef != "" {
+		fmt.Fprintf(stdout, "Shaping: %s\n", record.ShapingRef)
+	}
 	fmt.Fprintf(stdout, "Captured: %s\n", record.CapturedAt)
 	fmt.Fprintf(stdout, "Record: %s\n", filepath.ToSlash(rel))
 	return 0
@@ -104,6 +115,9 @@ func runChangeStatus(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Source: %s\n", record.SourcePath)
 	fmt.Fprintf(stdout, "Snapshot: %s\n", record.SnapshotPath)
 	fmt.Fprintf(stdout, "SHA-256: %s\n", record.SHA256)
+	if record.ShapingRef != "" {
+		fmt.Fprintf(stdout, "Shaping: %s\n", record.ShapingRef)
+	}
 	fmt.Fprintf(stdout, "Captured: %s\n", record.CapturedAt)
 	fmt.Fprintf(stdout, "Verification plan: %s\n", planStatus)
 	return 0

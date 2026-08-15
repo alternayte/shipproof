@@ -98,6 +98,11 @@
       <div class="stat-value">{{.Metrics.TotalCommits}}</div>
       <div class="stat-provenance">{{badge "derived"}}</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">Readiness Blockers</div>
+      <div class="stat-value">{{.Metrics.TotalBlockers}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
   </div>
 
   <div class="summary-bar" style="margin-top:1rem;">
@@ -154,7 +159,7 @@
   {{if .Packs}}
   <table>
   <thead>
-    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th><th>Cycle Time</th><th>Commits</th></tr>
+    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th><th>Cycle Time</th><th>Commits</th><th>Blockers</th></tr>
   </thead>
   <tbody>
   {{range .Packs}}
@@ -167,6 +172,7 @@
       <td>{{if .HasAgentData}}<span class="agent-yes">Yes</span>{{else}}<span class="agent-no">No</span>{{end}}</td>
       <td>{{if .CycleGap}}<span class="nodata">{{.CycleGap}}</span>{{else}}{{.CycleTime}}{{end}}</td>
       <td>{{.Commits}}</td>
+      <td>{{.Blockers}}</td>
     </tr>
   {{end}}
   </tbody>

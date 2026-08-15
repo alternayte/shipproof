@@ -563,3 +563,117 @@ func revParseHead(t *testing.T, dir string) string {
 	}
 	return strings.TrimSpace(string(out))
 }
+
+func TestAssembleReadiness(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecordWithShapingRef(t, root, "SP-012", "abc123", "test-session")
+	setupVerificationPlan(t, root, "SP-012")
+	setupShapingSession(t, root, "test-session", 2)
+
+	pack, err := Assemble(root, "SP-012", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.Readiness == nil {
+		t.Fatal("readiness must not be nil when shaping ref and session exist")
+	}
+	if pack.Readiness.ShapingRef != "test-session" {
+		t.Errorf("readiness.shaping_ref = %q, want test-session", pack.Readiness.ShapingRef)
+	}
+	if pack.Readiness.BlockerCount != 2 {
+		t.Errorf("readiness.blocker_count = %d, want 2", pack.Readiness.BlockerCount)
+	}
+}
+
+func TestAssembleReadinessWithoutRef(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-012", "abc123")
+	setupVerificationPlan(t, root, "SP-012")
+
+	pack, err := Assemble(root, "SP-012", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.Readiness != nil {
+		t.Error("readiness must be nil when the change record has no shaping ref")
+	}
+}
+
+func TestAssembleReadinessMissingSession(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecordWithShapingRef(t, root, "SP-012", "abc123", "missing-session")
+	setupVerificationPlan(t, root, "SP-012")
+
+	pack, err := Assemble(root, "SP-012", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.Readiness != nil {
+		t.Error("readiness must be nil when the shaping session file is missing")
+	}
+}
+
+func setupChangeRecordWithShapingRef(t *testing.T, root, changeID, sha256, shapingRef string) {
+	t.Helper()
+	dir := filepath.Join(root, ".shipproof", "changes", changeID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create change dir: %v", err)
+	}
+	record := map[string]string{
+		"schema_version": "0.1",
+		"change_id":      changeID,
+		"source_path":    "docs/changes/" + changeID + "-test.md",
+		"snapshot_path":  ".shipproof/changes/" + changeID + "/snapshot.md",
+		"sha256":         sha256,
+		"shaping_ref":    shapingRef,
+		"captured_at":    "2026-08-14T20:00:00Z",
+	}
+	data, _ := json.MarshalIndent(record, "", "  ")
+	data = append(data, '\n')
+	if err := os.WriteFile(filepath.Join(dir, "change.json"), data, 0o644); err != nil {
+		t.Fatalf("write change record: %v", err)
+	}
+}
+
+func setupShapingSession(t *testing.T, root, sessionID string, blockerCount int) {
+	t.Helper()
+	dir := filepath.Join(root, ".shipproof", "shaping")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create shaping dir: %v", err)
+	}
+
+	var blockers []map[string]string
+	for i := 0; i < blockerCount; i++ {
+		blockers = append(blockers, map[string]string{
+			"id":      "B-" + sessionID + "-" + string(rune('a'+i)),
+			"summary": "blocker " + string(rune('a'+i)),
+		})
+	}
+
+	session := map[string]interface{}{
+		"schema_version": "0.1",
+		"session_id":     sessionID,
+		"subject":        "test session",
+		"document_kind":  "prd",
+		"state":          "shaping",
+		"decisions":      []interface{}{},
+		"assumptions":    []interface{}{},
+		"risks":          []interface{}{},
+		"unknowns":       []interface{}{},
+		"readiness": map[string]interface{}{
+			"blockers":           blockers,
+			"decisions_required": []interface{}{},
+		},
+	}
+	data, _ := json.MarshalIndent(session, "", "  ")
+	data = append(data, '\n')
+	if err := os.WriteFile(filepath.Join(dir, sessionID+".json"), data, 0o644); err != nil {
+		t.Fatalf("write shaping session: %v", err)
+	}
+}

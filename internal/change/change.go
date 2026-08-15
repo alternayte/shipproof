@@ -18,6 +18,7 @@ type Record struct {
 	SourcePath    string `json:"source_path"`
 	SnapshotPath  string `json:"snapshot_path"`
 	SHA256        string `json:"sha256"`
+	ShapingRef    string `json:"shaping_ref,omitempty"`
 	CapturedAt    string `json:"captured_at"`
 }
 
@@ -25,7 +26,7 @@ func Path(root, changeID string) string {
 	return filepath.Join(root, ".shipproof", "changes", changeID, "change.json")
 }
 
-func Start(root, changeID, sourcePath string) (Record, error) {
+func Start(root, changeID, sourcePath, shapingRef string) (Record, error) {
 	if strings.TrimSpace(changeID) == "" {
 		return Record{}, errors.New("change id is required")
 	}
@@ -83,6 +84,7 @@ func Start(root, changeID, sourcePath string) (Record, error) {
 		SourcePath:    relSource,
 		SnapshotPath:  relSnapshot,
 		SHA256:        hashHex,
+		ShapingRef:    strings.TrimSpace(shapingRef),
 		CapturedAt:    time.Now().UTC().Format(time.RFC3339),
 	}
 

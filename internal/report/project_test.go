@@ -578,9 +578,90 @@ func TestProjectUnavailableRemaining(t *testing.T) {
 			t.Errorf("output should not contain %q", reason)
 		}
 	}
-	for _, label := range []string{"Review wait", "Human review effort", "Readiness blockers"} {
+	for _, label := range []string{"Review wait", "Human review effort"} {
 		if !strings.Contains(html, label) {
 			t.Errorf("output should still list %q as unavailable", label)
 		}
+	}
+}
+
+func makeEvidencePackWithReadiness(changeID string, blockers int) schema.EvidencePack {
+	pack := makeEvidencePack(changeID, "2026-08-14T22:00:00Z")
+	pack.Readiness = &schema.ReadinessEvidence{
+		ShapingRef:   "session-" + strings.ToLower(changeID),
+		BlockerCount: blockers,
+	}
+	return pack
+}
+
+func TestProjectReadinessBlockers(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithReadiness("SP-A", 2))
+	writeEvidencePack(t, root, makeEvidencePackWithReadiness("SP-B", 3))
+	writeEvidencePack(t, root, makeEvidencePack("SP-C", "2026-08-14T22:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "Readiness Blockers") {
+		t.Error("output should contain Readiness Blockers card")
+	}
+
+	packs, err := scanEvidencePacks(root)
+	if err != nil {
+		t.Fatalf("scan packs: %v", err)
+	}
+	metrics := buildProjectMetrics(packs)
+	if metrics.TotalBlockers != 5 {
+		t.Errorf("total blockers = %d, want 5", metrics.TotalBlockers)
+	}
+
+	rows := buildPackSummaryData(packs)
+	for _, row := range rows {
+		switch row.ChangeID {
+		case "SP-A":
+			if row.Blockers != 2 {
+				t.Errorf("SP-A blockers = %d, want 2", row.Blockers)
+			}
+		case "SP-B":
+			if row.Blockers != 3 {
+				t.Errorf("SP-B blockers = %d, want 3", row.Blockers)
+			}
+		case "SP-C":
+			if row.Blockers != 0 {
+				t.Errorf("SP-C blockers = %d, want 0 for missing readiness", row.Blockers)
+			}
+		}
+	}
+}
+
+func TestProjectReadinessRender(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithReadiness("SP-A", 2))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	idx := strings.Index(html, "Readiness Blockers")
+	if idx < 0 {
+		t.Fatal("output should contain Readiness Blockers card")
+	}
+	card := html[idx : idx+400]
+	if !strings.Contains(card, "prov-derived") {
+		t.Error("Readiness Blockers card should carry a derived provenance badge")
+	}
+	if !strings.Contains(html, "<th>Blockers</th>") {
+		t.Error("summary table should contain Blockers column")
+	}
+	if strings.Contains(html, "No readiness blocker history collected") {
+		t.Error("output should not list readiness blockers as unavailable")
 	}
 }
