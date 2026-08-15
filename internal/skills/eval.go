@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	skillassets "github.com/shipproof/shipproof/skills"
+	skillassets "github.com/alternayte/shipproof/skills"
 )
 
 type EvalCase struct {

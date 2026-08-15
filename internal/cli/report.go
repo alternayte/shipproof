@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/change"
-	"github.com/shipproof/shipproof/internal/report"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/report"
 )
 
 func runReport(args []string, stdout, stderr io.Writer) int {

@@ -9,3 +9,4 @@ docs/design/
 *.test
 coverage.*
 testdata/
+dist/

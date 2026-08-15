@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/agent"
+	"github.com/alternayte/shipproof/internal/agent"
 )
 
 func writeEvidenceConfig(t *testing.T, root, capture string) {

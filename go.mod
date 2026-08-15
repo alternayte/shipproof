@@ -1,3 +1,3 @@
-module github.com/shipproof/shipproof
+module github.com/alternayte/shipproof
 
 go 1.23

@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/review"
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/review"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func GenerateChangeReport(w io.Writer, root, changeID string) error {

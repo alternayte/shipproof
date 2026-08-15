@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/agent"
+	"github.com/alternayte/shipproof/internal/agent"
 )
 
 func TestCollectPreservesMissingFields(t *testing.T) {

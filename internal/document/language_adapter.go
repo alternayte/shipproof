@@ -1,6 +1,6 @@
 package document
 
-import "github.com/shipproof/shipproof/internal/language"
+import "github.com/alternayte/shipproof/internal/language"
 
 func languageFindings(content string, glossary language.Glossary, options language.Options) []Finding {
 	items := language.Lint(content, glossary, options)

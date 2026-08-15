@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shipproof/shipproof/internal/document"
-	"github.com/shipproof/shipproof/internal/language"
+	"github.com/alternayte/shipproof/internal/document"
+	"github.com/alternayte/shipproof/internal/language"
 )
 
 func runDoc(args []string, stdout, stderr io.Writer) int {

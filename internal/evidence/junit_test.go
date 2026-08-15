@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func TestParseJUnitSingleSuite(t *testing.T) {

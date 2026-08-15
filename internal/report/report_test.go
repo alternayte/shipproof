@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/change"
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func TestChangeReportRendersIntent(t *testing.T) {

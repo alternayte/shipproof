@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func provenanceBadge(kind schema.ProvenanceKind) template.HTML {

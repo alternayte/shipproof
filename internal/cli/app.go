@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"io"
+
+	"github.com/alternayte/shipproof/internal/version"
 )
 
 func Run(args []string, stdout, stderr io.Writer) int {
@@ -41,7 +43,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "report":
 		return runReport(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
-		fmt.Fprintln(stdout, "shipproof 0.2.0-dev")
+		fmt.Fprintf(stdout, "shipproof %s\n", version.Version)
 		return 0
 	case "help", "--help", "-h":
 		printUsage(stdout)

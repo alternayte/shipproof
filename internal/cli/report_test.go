@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func TestReportChangeWritesHTML(t *testing.T) {

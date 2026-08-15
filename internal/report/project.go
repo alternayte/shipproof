@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func GenerateProjectReport(w io.Writer, root, projectName string) error {

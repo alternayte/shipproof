@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shipproof/shipproof/internal/shaping"
+	"github.com/alternayte/shipproof/internal/shaping"
 )
 
 func runShape(args []string, stdout, stderr io.Writer) int {

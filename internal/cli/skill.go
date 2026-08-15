@@ -5,7 +5,7 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/skills"
+	"github.com/alternayte/shipproof/internal/skills"
 )
 
 func runSkill(args []string, stdout, stderr io.Writer) int {

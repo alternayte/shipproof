@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/shipproof/shipproof/internal/telemetry"
+	"github.com/alternayte/shipproof/internal/telemetry"
 )
 
 func runTelemetry(args []string, stdout, stderr io.Writer) int {

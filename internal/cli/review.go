@@ -5,8 +5,8 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/change"
-	"github.com/shipproof/shipproof/internal/review"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/review"
 )
 
 func runReview(args []string, stdout, stderr io.Writer) int {

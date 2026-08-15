@@ -1,8 +1,8 @@
 package report
 
 import (
-	"github.com/shipproof/shipproof/internal/review"
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/review"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 type changeReportData struct {

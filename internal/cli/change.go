@@ -5,7 +5,7 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/change"
 )
 
 func runChange(args []string, stdout, stderr io.Writer) int {

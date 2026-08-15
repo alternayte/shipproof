@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/plan"
+	"github.com/alternayte/shipproof/internal/plan"
 )
 
 func runPlan(args []string, stdout, stderr io.Writer) int {

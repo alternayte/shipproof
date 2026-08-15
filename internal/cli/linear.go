@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/shipproof/shipproof/internal/linear"
+	"github.com/alternayte/shipproof/internal/linear"
 )
 
 func runLinear(args []string, stdout, stderr io.Writer) int {

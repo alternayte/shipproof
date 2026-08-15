@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/shipproof/shipproof/internal/review"
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/review"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func writePRSummary(w io.Writer, pack schema.EvidencePack, packet review.ReviewPacket) error {

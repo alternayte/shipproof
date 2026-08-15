@@ -3,7 +3,7 @@ package document
 import (
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/language"
+	"github.com/alternayte/shipproof/internal/language"
 )
 
 func TestPRDReadyEnoughDoesNotRequirePerfectTemplate(t *testing.T) {

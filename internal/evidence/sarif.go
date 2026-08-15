@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 type sarifLog struct {

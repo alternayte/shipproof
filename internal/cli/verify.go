@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/shipproof/shipproof/internal/verify"
+	"github.com/alternayte/shipproof/internal/verify"
 )
 
 // runVerify implements `shipproof verify`.

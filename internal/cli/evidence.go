@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/shipproof/shipproof/internal/change"
-	"github.com/shipproof/shipproof/internal/evidence/pack"
-	"github.com/shipproof/shipproof/internal/git"
-	"github.com/shipproof/shipproof/internal/github"
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/evidence/pack"
+	"github.com/alternayte/shipproof/internal/git"
+	"github.com/alternayte/shipproof/internal/github"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 var githubAPIURLOverride = ""

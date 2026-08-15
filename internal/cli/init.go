@@ -5,7 +5,7 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/repository"
+	"github.com/alternayte/shipproof/internal/repository"
 )
 
 func runInit(args []string, stdout, stderr io.Writer) int {

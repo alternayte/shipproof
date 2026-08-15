@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/shipproof/shipproof/internal/language"
+	"github.com/alternayte/shipproof/internal/language"
 )
 
 type AnalyzeOptions struct {

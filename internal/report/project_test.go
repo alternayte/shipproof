@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func TestProjectScanPacks(t *testing.T) {

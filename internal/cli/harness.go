@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/harness"
+	"github.com/alternayte/shipproof/internal/harness"
 )
 
 func runHarness(args []string, stdout, stderr io.Writer) int {

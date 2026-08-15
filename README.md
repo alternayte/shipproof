@@ -7,7 +7,7 @@ ShipProof is a CLI tool that helps teams produce verifiable evidence of what was
 ## Quick start
 
 ```bash
-go install github.com/shipproof/shipproof/cmd/shipproof@latest
+go install github.com/alternayte/shipproof/cmd/shipproof@latest
 shipproof init .
 ```
 

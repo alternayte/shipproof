@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func TestAssembleLoadsIntent(t *testing.T) {

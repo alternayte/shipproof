@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/shipproof/shipproof/internal/agent"
-	"github.com/shipproof/shipproof/internal/repository"
-	"github.com/shipproof/shipproof/internal/telemetry/claude"
-	"github.com/shipproof/shipproof/internal/telemetry/opencode"
+	"github.com/alternayte/shipproof/internal/agent"
+	"github.com/alternayte/shipproof/internal/repository"
+	"github.com/alternayte/shipproof/internal/telemetry/claude"
+	"github.com/alternayte/shipproof/internal/telemetry/opencode"
 )
 
 func Collect(root, changeID, adapterName, projectDir string) error {

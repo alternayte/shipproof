@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/shipproof/shipproof/internal/change"
-	"github.com/shipproof/shipproof/internal/evidence"
-	"github.com/shipproof/shipproof/internal/git"
-	"github.com/shipproof/shipproof/internal/schema"
-	"github.com/shipproof/shipproof/internal/shaping"
-	"github.com/shipproof/shipproof/internal/verification"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/evidence"
+	"github.com/alternayte/shipproof/internal/git"
+	"github.com/alternayte/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/shaping"
+	"github.com/alternayte/shipproof/internal/verification"
 )
 
 type Options struct {

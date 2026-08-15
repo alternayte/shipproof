@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/shipproof/shipproof/internal/skills"
+	"github.com/alternayte/shipproof/internal/skills"
 )
 
 func runSkillEval(args []string, stdout, stderr io.Writer) int {

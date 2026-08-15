@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/shipproof/shipproof/internal/change"
-	"github.com/shipproof/shipproof/internal/verification"
-	"github.com/shipproof/shipproof/internal/verify"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/verification"
+	"github.com/alternayte/shipproof/internal/verify"
 )
 
 func runVerification(args []string, stdout, stderr io.Writer) int {

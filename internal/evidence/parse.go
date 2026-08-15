@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/shipproof/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 var ErrUnknownFormat = fmt.Errorf("unknown evidence format")
