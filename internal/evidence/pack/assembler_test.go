@@ -677,3 +677,112 @@ func setupShapingSession(t *testing.T, root, sessionID string, blockerCount int)
 		t.Fatalf("write shaping session: %v", err)
 	}
 }
+
+func TestAssembleReview(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-014", "abc123")
+	setupVerificationPlan(t, root, "SP-014")
+	setupReviewFile(t, root, "SP-014")
+
+	pack, err := Assemble(root, "SP-014", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.Review == nil {
+		t.Fatal("review must not be nil when review.json exists")
+	}
+	if pack.Review.Source != "github" {
+		t.Errorf("review.source = %q, want github", pack.Review.Source)
+	}
+	if pack.Review.PRNumber != 42 {
+		t.Errorf("review.pr_number = %d, want 42", pack.Review.PRNumber)
+	}
+
+	found := false
+	for _, check := range pack.Verification.Checks {
+		if check.ID == "github:review" {
+			found = true
+			if check.Status != "pass" {
+				t.Errorf("github:review status = %q, want pass", check.Status)
+			}
+			if check.Source != "github" {
+				t.Errorf("github:review source = %q, want github", check.Source)
+			}
+			if check.Provenance != schema.ProvenanceObserved {
+				t.Errorf("github:review provenance = %q, want observed", check.Provenance)
+			}
+		}
+	}
+	if !found {
+		t.Error("github:review check not found")
+	}
+}
+
+func TestAssembleWithoutReview(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-014", "abc123")
+	setupVerificationPlan(t, root, "SP-014")
+
+	pack, err := Assemble(root, "SP-014", Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if pack.Review != nil {
+		t.Error("review must be nil when review.json does not exist")
+	}
+	for _, check := range pack.Verification.Checks {
+		if check.ID == "github:review" {
+			t.Error("github:review check must not exist without review.json")
+		}
+	}
+}
+
+func TestAssembleMalformedReview(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-014", "abc123")
+	setupVerificationPlan(t, root, "SP-014")
+
+	dir := filepath.Join(root, ".shipproof", "changes", "SP-014")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create change dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "review.json"), []byte("{not json"), 0o644); err != nil {
+		t.Fatalf("write malformed review.json: %v", err)
+	}
+
+	_, err := Assemble(root, "SP-014", Options{})
+	if err == nil {
+		t.Fatal("expected error for malformed review.json")
+	}
+}
+
+func setupReviewFile(t *testing.T, root, changeID string) {
+	t.Helper()
+	dir := filepath.Join(root, ".shipproof", "changes", changeID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create change dir: %v", err)
+	}
+	review := map[string]interface{}{
+		"source":             "github",
+		"pr_number":          42,
+		"pr_url":             "https://github.com/acme/widget/pull/42",
+		"opened_at":          "2026-08-14T10:00:00Z",
+		"first_review_at":    "2026-08-14T12:00:00Z",
+		"review_count":       1,
+		"comment_count":      3,
+		"distinct_reviewers": 1,
+		"reviewer_logins":    []string{"alice"},
+		"state":              "MERGED",
+		"collected_at":       "2026-08-14T13:00:00Z",
+	}
+	data, _ := json.MarshalIndent(review, "", "  ")
+	data = append(data, '\n')
+	if err := os.WriteFile(filepath.Join(dir, "review.json"), data, 0o644); err != nil {
+		t.Fatalf("write review.json: %v", err)
+	}
+}

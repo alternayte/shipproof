@@ -36,10 +36,6 @@
   .pill-unknown { background: #f1f5f9; color: #475569; }
   .agent-yes { color: #166534; }
   .agent-no { color: #94a3b8; }
-  .unavailable-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
-  .unavailable-card { background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem 1rem; }
-  .unavailable-label { font-weight: 600; font-size: 0.9rem; }
-  .unavailable-reason { font-size: 0.8rem; color: #a16207; margin-top: 0.25rem; }
 </style>
 </head>
 <body>
@@ -103,6 +99,21 @@
       <div class="stat-value">{{.Metrics.TotalBlockers}}</div>
       <div class="stat-provenance">{{badge "derived"}}</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Review Wait</div>
+      <div class="stat-value">{{if .Metrics.AvgReviewWait}}{{.Metrics.AvgReviewWait}}{{else}}—{{end}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Review Comments</div>
+      <div class="stat-value">{{.Metrics.TotalReviewComments}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Distinct Reviewers</div>
+      <div class="stat-value">{{.Metrics.TotalReviewers}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
   </div>
 
   <div class="summary-bar" style="margin-top:1rem;">
@@ -159,7 +170,7 @@
   {{if .Packs}}
   <table>
   <thead>
-    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th><th>Cycle Time</th><th>Commits</th><th>Blockers</th></tr>
+    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th><th>Cycle Time</th><th>Commits</th><th>Blockers</th><th>Review Wait</th><th>Comments</th><th>Reviewers</th></tr>
   </thead>
   <tbody>
   {{range .Packs}}
@@ -173,6 +184,9 @@
       <td>{{if .CycleGap}}<span class="nodata">{{.CycleGap}}</span>{{else}}{{.CycleTime}}{{end}}</td>
       <td>{{.Commits}}</td>
       <td>{{.Blockers}}</td>
+      <td>{{if .ReviewGap}}<span class="nodata">{{.ReviewGap}}</span>{{else}}{{.ReviewWait}}{{end}}</td>
+      <td>{{.ReviewComments}}</td>
+      <td>{{.Reviewers}}</td>
     </tr>
   {{end}}
   </tbody>
@@ -180,19 +194,6 @@
   {{else}}
   <p class="nodata">No change evidence packs found.</p>
   {{end}}
-</section>
-
-<section>
-  <h2>Unavailable Metrics</h2>
-  <p class="nodata" style="margin-bottom:1rem;">These metrics require additional data collection not yet implemented.</p>
-  <div class="unavailable-grid">
-  {{range .Unavailable}}
-    <div class="unavailable-card">
-      <div class="unavailable-label">{{.Label}}</div>
-      <div class="unavailable-reason">{{.Reason}}</div>
-    </div>
-  {{end}}
-  </div>
 </section>
 
 </div>

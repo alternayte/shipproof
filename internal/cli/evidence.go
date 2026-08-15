@@ -205,15 +205,20 @@ func buildReviewEvidence(pr *github.PullRequest) schema.ReviewEvidence {
 	}
 
 	reviewers := make(map[string]struct{})
+	var logins []string
 	for _, r := range pr.Reviews.Nodes {
 		if r.SubmittedAt != "" && (review.FirstReviewAt == "" || r.SubmittedAt < review.FirstReviewAt) {
 			review.FirstReviewAt = r.SubmittedAt
 		}
 		if r.Author.Login != "" {
-			reviewers[r.Author.Login] = struct{}{}
+			if _, seen := reviewers[r.Author.Login]; !seen {
+				reviewers[r.Author.Login] = struct{}{}
+				logins = append(logins, r.Author.Login)
+			}
 		}
 	}
 	review.DistinctReviewers = len(reviewers)
+	review.ReviewerLogins = logins
 
 	return review
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 )
 
 var shapingRefPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
@@ -26,6 +27,7 @@ type EvidencePack struct {
 	Provenance     PackProvenance         `json:"provenance"`
 	AgentRun       *AgentRunMetadata      `json:"agent_run,omitempty"`
 	Readiness      *ReadinessEvidence     `json:"readiness,omitempty"`
+	Review         *ReviewEvidence        `json:"review,omitempty"`
 }
 
 type ReadinessEvidence struct {
@@ -34,16 +36,17 @@ type ReadinessEvidence struct {
 }
 
 type ReviewEvidence struct {
-	Source            string `json:"source"`
-	PRNumber          int    `json:"pr_number"`
-	PRURL             string `json:"pr_url"`
-	OpenedAt          string `json:"opened_at,omitempty"`
-	FirstReviewAt     string `json:"first_review_at,omitempty"`
-	ReviewCount       int    `json:"review_count,omitempty"`
-	CommentCount      int    `json:"comment_count,omitempty"`
-	DistinctReviewers int    `json:"distinct_reviewers,omitempty"`
-	State             string `json:"state,omitempty"`
-	CollectedAt       string `json:"collected_at"`
+	Source            string   `json:"source"`
+	PRNumber          int      `json:"pr_number"`
+	PRURL             string   `json:"pr_url"`
+	OpenedAt          string   `json:"opened_at,omitempty"`
+	FirstReviewAt     string   `json:"first_review_at,omitempty"`
+	ReviewCount       int      `json:"review_count,omitempty"`
+	CommentCount      int      `json:"comment_count,omitempty"`
+	DistinctReviewers int      `json:"distinct_reviewers,omitempty"`
+	ReviewerLogins    []string `json:"reviewer_logins,omitempty"`
+	State             string   `json:"state,omitempty"`
+	CollectedAt       string   `json:"collected_at"`
 }
 
 type AgentRunMetadata struct {
@@ -129,6 +132,30 @@ func (pack EvidencePack) Validate() error {
 		}
 		if !shapingRefPattern.MatchString(pack.Readiness.ShapingRef) {
 			return errors.New("readiness.shaping_ref must use lowercase letters, digits, and hyphens")
+		}
+	}
+
+	if pack.Review != nil {
+		if pack.Review.Source == "" {
+			return errors.New("review.source is required when review is present")
+		}
+		if pack.Review.PRURL == "" {
+			return errors.New("review.pr_url is required when review is present")
+		}
+		if pack.Review.CollectedAt == "" {
+			return errors.New("review.collected_at is required when review is present")
+		}
+		for _, ts := range []struct{ name, value string }{
+			{"opened_at", pack.Review.OpenedAt},
+			{"first_review_at", pack.Review.FirstReviewAt},
+			{"collected_at", pack.Review.CollectedAt},
+		} {
+			if ts.value == "" {
+				continue
+			}
+			if _, err := time.Parse(time.RFC3339, ts.value); err != nil {
+				return fmt.Errorf("review.%s is not RFC 3339", ts.name)
+			}
 		}
 	}
 

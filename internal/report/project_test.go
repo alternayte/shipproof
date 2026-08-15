@@ -159,14 +159,11 @@ func TestProjectNoDataMarkers(t *testing.T) {
 	}
 
 	html := sb.String()
-	if !strings.Contains(html, "Unavailable Metrics") {
-		t.Error("output should contain Unavailable Metrics section")
+	if strings.Contains(html, "Unavailable Metrics") {
+		t.Error("output should not contain an Unavailable Metrics section")
 	}
-	if !strings.Contains(html, "Review wait") {
-		t.Error("output should list Review wait as unavailable")
-	}
-	if !strings.Contains(html, "No review wait data collected") {
-		t.Error("output should show reason for unavailable review wait")
+	if !strings.Contains(html, "No review data collected") {
+		t.Error("output should show a review gap notice for a pack without review data")
 	}
 }
 
@@ -573,14 +570,12 @@ func TestProjectUnavailableRemaining(t *testing.T) {
 	}
 
 	html := sb.String()
-	for _, reason := range []string{"No cycle time data collected", "No rework data collected"} {
+	if strings.Contains(html, "Unavailable Metrics") {
+		t.Error("output should not contain an Unavailable Metrics section")
+	}
+	for _, reason := range []string{"No cycle time data collected", "No rework data collected", "No review wait data collected"} {
 		if strings.Contains(html, reason) {
 			t.Errorf("output should not contain %q", reason)
-		}
-	}
-	for _, label := range []string{"Review wait", "Human review effort"} {
-		if !strings.Contains(html, label) {
-			t.Errorf("output should still list %q as unavailable", label)
 		}
 	}
 }
@@ -663,5 +658,179 @@ func TestProjectReadinessRender(t *testing.T) {
 	}
 	if strings.Contains(html, "No readiness blocker history collected") {
 		t.Error("output should not list readiness blockers as unavailable")
+	}
+}
+
+func makeEvidencePackWithReview(changeID, firstReviewAt string, comments, reviewers int, logins []string) schema.EvidencePack {
+	pack := makeEvidencePackWithCommits(
+		changeID, "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z")
+	pack.Review = &schema.ReviewEvidence{
+		Source:            "github",
+		PRNumber:          1,
+		PRURL:             "https://github.com/acme/widget/pull/1",
+		OpenedAt:          "2026-08-14T20:30:00Z",
+		FirstReviewAt:     firstReviewAt,
+		ReviewCount:       reviewers,
+		CommentCount:      comments,
+		DistinctReviewers: reviewers,
+		ReviewerLogins:    logins,
+		State:             "MERGED",
+		CollectedAt:       "2026-08-14T22:00:00Z",
+	}
+	return pack
+}
+
+func TestProjectReviewWait(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	pack := makeEvidencePackWithReview("SP-A", "2026-08-14T23:00:00Z", 1, 1, []string{"alice"})
+	pack.AgentRun = &schema.AgentRunMetadata{EndedAt: "2026-08-14T21:00:00Z"}
+	writeEvidencePack(t, root, pack)
+
+	writeEvidencePack(t, root, makeEvidencePack("SP-NOREVIEW", "2026-08-14T22:00:00Z"))
+
+	packNoFirst := makeEvidencePackWithReview("SP-NOFIRST", "", 0, 0, nil)
+	writeEvidencePack(t, root, packNoFirst)
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "2.0h") {
+		t.Error("output should contain the review wait for SP-A (21:00 to 23:00)")
+	}
+	if !strings.Contains(html, "No review data collected") {
+		t.Error("output should contain gap notice for pack without review data")
+	}
+	if !strings.Contains(html, "No review submitted yet") {
+		t.Error("output should contain gap notice when first_review_at is empty")
+	}
+}
+
+func TestProjectReviewWaitCommitFallback(t *testing.T) {
+	pack := makeEvidencePackWithCommits(
+		"SP-FALLBACK", "2026-08-14T22:00:00Z", "2026-08-14T18:00:00Z", "2026-08-14T19:00:00Z")
+	pack.Review = &schema.ReviewEvidence{
+		Source:        "github",
+		PRNumber:      2,
+		PRURL:         "https://github.com/acme/widget/pull/2",
+		FirstReviewAt: "2026-08-14T21:00:00Z",
+		CollectedAt:   "2026-08-14T22:00:00Z",
+	}
+
+	entry := reviewWaitForPack(pack)
+	if entry.GapNotice != "" {
+		t.Fatalf("unexpected gap notice: %s", entry.GapNotice)
+	}
+	if entry.Value != "2.0h" {
+		t.Fatalf("value = %q, want 2.0h (latest commit 19:00 to review 21:00)", entry.Value)
+	}
+}
+
+func TestProjectReviewWaitPredatesImplementation(t *testing.T) {
+	pack := makeEvidencePackWithReview("SP-PRE", "2026-08-14T19:00:00Z", 1, 1, []string{"alice"})
+
+	entry := reviewWaitForPack(pack)
+	if entry.GapNotice != "Review predates implementation end" {
+		t.Fatalf("gap notice = %q, want %q", entry.GapNotice, "Review predates implementation end")
+	}
+}
+
+func TestProjectReviewWaitAverage(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	packA := makeEvidencePackWithReview("SP-A", "2026-08-14T23:00:00Z", 1, 1, []string{"alice"})
+	packA.AgentRun = &schema.AgentRunMetadata{EndedAt: "2026-08-14T21:00:00Z"}
+	writeEvidencePack(t, root, packA)
+
+	packB := makeEvidencePackWithReview("SP-B", "2026-08-15T03:00:00Z", 1, 1, []string{"bob"})
+	packB.AgentRun = &schema.AgentRunMetadata{EndedAt: "2026-08-14T21:00:00Z"}
+	writeEvidencePack(t, root, packB)
+
+	writeEvidencePack(t, root, makeEvidencePack("SP-NOREVIEW", "2026-08-14T22:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "Avg Review Wait") {
+		t.Error("output should contain Avg Review Wait card")
+	}
+	if !strings.Contains(html, "4.0h") {
+		t.Error("output should contain the average of 2h and 6h review waits")
+	}
+}
+
+func TestProjectReviewEffort(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithReview("SP-A", "2026-08-14T23:00:00Z", 3, 2, []string{"alice", "bob"}))
+	writeEvidencePack(t, root, makeEvidencePackWithReview("SP-B", "2026-08-15T03:00:00Z", 5, 1, []string{"bob"}))
+	writeEvidencePack(t, root, makeEvidencePack("SP-NOREVIEW", "2026-08-14T22:00:00Z"))
+
+	packs, err := scanEvidencePacks(root)
+	if err != nil {
+		t.Fatalf("scan packs: %v", err)
+	}
+	metrics := buildProjectMetrics(packs)
+	if metrics.TotalReviewComments != 8 {
+		t.Errorf("total review comments = %d, want 8", metrics.TotalReviewComments)
+	}
+	if metrics.TotalReviewers != 2 {
+		t.Errorf("distinct reviewer union = %d, want 2 (alice, bob)", metrics.TotalReviewers)
+	}
+
+	rows := buildPackSummaryData(packs)
+	for _, row := range rows {
+		switch row.ChangeID {
+		case "SP-A":
+			if row.ReviewComments != 3 || row.Reviewers != 2 {
+				t.Errorf("SP-A review effort = %d comments, %d reviewers; want 3, 2", row.ReviewComments, row.Reviewers)
+			}
+		case "SP-B":
+			if row.ReviewComments != 5 || row.Reviewers != 1 {
+				t.Errorf("SP-B review effort = %d comments, %d reviewers; want 5, 1", row.ReviewComments, row.Reviewers)
+			}
+		case "SP-NOREVIEW":
+			if row.ReviewComments != 0 || row.Reviewers != 0 {
+				t.Errorf("SP-NOREVIEW review effort should be zero, got %d, %d", row.ReviewComments, row.Reviewers)
+			}
+		}
+	}
+}
+
+func TestProjectReviewRender(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithReview("SP-A", "2026-08-14T23:00:00Z", 3, 1, []string{"alice"}))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if strings.Contains(html, "Unavailable Metrics") {
+		t.Error("output must not contain an Unavailable Metrics section")
+	}
+	for _, label := range []string{"Avg Review Wait", "Review Comments", "Distinct Reviewers"} {
+		idx := strings.Index(html, label)
+		if idx < 0 {
+			t.Errorf("output should contain %q card", label)
+			continue
+		}
+		card := html[idx : idx+400]
+		if !strings.Contains(card, "prov-derived") {
+			t.Errorf("%q card should carry a derived provenance badge", label)
+		}
+	}
+	for _, column := range []string{"<th>Review Wait</th>", "<th>Comments</th>", "<th>Reviewers</th>"} {
+		if !strings.Contains(html, column) {
+			t.Errorf("summary table should contain %s", column)
+		}
 	}
 }

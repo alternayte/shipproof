@@ -66,6 +66,24 @@
         "shaping_ref": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
         "blocker_count": {"type": "integer", "minimum": 0}
       }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "pr_number", "pr_url", "collected_at"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "pr_url": {"type": "string", "minLength": 1},
+        "opened_at": {"type": "string"},
+        "first_review_at": {"type": "string"},
+        "review_count": {"type": "integer", "minimum": 0},
+        "comment_count": {"type": "integer", "minimum": 0},
+        "distinct_reviewers": {"type": "integer", "minimum": 0},
+        "reviewer_logins": {"type": "array", "items": {"type": "string"}},
+        "state": {"type": "string"},
+        "collected_at": {"type": "string", "minLength": 1}
+      }
     }
   }
 }

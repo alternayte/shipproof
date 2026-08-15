@@ -28,7 +28,6 @@ func GenerateProjectReport(w io.Writer, root, projectName string) error {
 		GeneratedAt: generatedAt,
 		Packs:       buildPackSummaryData(packs),
 		Metrics:     buildProjectMetrics(packs),
-		Unavailable: buildUnavailableMetrics(),
 		Provenance:  reportProvenanceData{ShipProofVersion: schema.CurrentVersion},
 	}
 
@@ -82,21 +81,24 @@ type projectReportData struct {
 	GeneratedAt string
 	Packs       []packSummaryRow
 	Metrics     projectMetrics
-	Unavailable []unavailableMetric
 	Provenance  reportProvenanceData
 }
 
 type packSummaryRow struct {
-	ChangeID     string
-	GeneratedAt  string
-	CheckCount   int
-	PassCount    int
-	FailCount    int
-	HasAgentData bool
-	CycleTime    string
-	CycleGap     string
-	Commits      int
-	Blockers     int
+	ChangeID       string
+	GeneratedAt    string
+	CheckCount     int
+	PassCount      int
+	FailCount      int
+	HasAgentData   bool
+	CycleTime      string
+	CycleGap       string
+	Commits        int
+	Blockers       int
+	ReviewWait     string
+	ReviewGap      string
+	ReviewComments int
+	Reviewers      int
 }
 
 type projectMetrics struct {
@@ -124,11 +126,10 @@ type projectMetrics struct {
 	AvgCommits          float64
 	TotalCommits        int
 	TotalBlockers       int
-}
-
-type unavailableMetric struct {
-	Label  string
-	Reason string
+	AvgReviewWait       string
+	ReviewWaitGapCount  int
+	TotalReviewComments int
+	TotalReviewers      int
 }
 
 func buildPackSummaryData(packs []schema.EvidencePack) []packSummaryRow {
@@ -151,17 +152,29 @@ func buildPackSummaryData(packs []schema.EvidencePack) []packSummaryRow {
 			blockers = pack.Readiness.BlockerCount
 		}
 
+		reviewWait := reviewWaitForPack(pack)
+		reviewComments := 0
+		reviewers := 0
+		if pack.Review != nil {
+			reviewComments = pack.Review.CommentCount
+			reviewers = pack.Review.DistinctReviewers
+		}
+
 		rows = append(rows, packSummaryRow{
-			ChangeID:     pack.ChangeID,
-			GeneratedAt:  pack.Provenance.GeneratedAt,
-			CheckCount:   len(pack.Verification.Checks),
-			PassCount:    pass,
-			FailCount:    fail,
-			HasAgentData: pack.AgentRun != nil,
-			CycleTime:    cycle.Value,
-			CycleGap:     cycle.GapNotice,
-			Commits:      len(pack.Implementation.Commits),
-			Blockers:     blockers,
+			ChangeID:       pack.ChangeID,
+			GeneratedAt:    pack.Provenance.GeneratedAt,
+			CheckCount:     len(pack.Verification.Checks),
+			PassCount:      pass,
+			FailCount:      fail,
+			HasAgentData:   pack.AgentRun != nil,
+			CycleTime:      cycle.Value,
+			CycleGap:       cycle.GapNotice,
+			Commits:        len(pack.Implementation.Commits),
+			Blockers:       blockers,
+			ReviewWait:     reviewWait.Value,
+			ReviewGap:      reviewWait.GapNotice,
+			ReviewComments: reviewComments,
+			Reviewers:      reviewers,
 		})
 	}
 	return rows
@@ -171,8 +184,11 @@ func buildProjectMetrics(packs []schema.EvidencePack) projectMetrics {
 	m := projectMetrics{TotalChanges: len(packs)}
 
 	modelsSet := make(map[string]struct{})
+	reviewersSet := make(map[string]struct{})
 	var cycleTotal time.Duration
 	var cycleCount int
+	var reviewWaitTotal time.Duration
+	var reviewWaitCount int
 
 	for _, pack := range packs {
 		if pack.AgentRun != nil {
@@ -224,16 +240,35 @@ func buildProjectMetrics(packs []schema.EvidencePack) projectMetrics {
 		}
 		m.TotalBlockers += blockers
 
+		if pack.Review != nil {
+			m.TotalReviewComments += pack.Review.CommentCount
+			for _, login := range pack.Review.ReviewerLogins {
+				reviewersSet[login] = struct{}{}
+			}
+		}
+
 		if duration, gap := cycleDurationForPack(pack); gap == "" {
 			cycleTotal += duration
 			cycleCount++
 		} else {
 			m.CycleTimeGapCount++
 		}
+
+		if duration, gap := reviewWaitDurationForPack(pack); gap == "" {
+			reviewWaitTotal += duration
+			reviewWaitCount++
+		} else {
+			m.ReviewWaitGapCount++
+		}
 	}
+
+	m.TotalReviewers = len(reviewersSet)
 
 	if cycleCount > 0 {
 		m.AvgCycleTime = formatCycleDuration(cycleTotal / time.Duration(cycleCount))
+	}
+	if reviewWaitCount > 0 {
+		m.AvgReviewWait = formatCycleDuration(reviewWaitTotal / time.Duration(reviewWaitCount))
 	}
 	if m.TotalChanges > 0 {
 		m.AvgCommits = float64(m.TotalCommits) / float64(m.TotalChanges)
@@ -324,9 +359,67 @@ func formatCycleDuration(d time.Duration) string {
 	return fmt.Sprintf("%.1fd", hours/24)
 }
 
-func buildUnavailableMetrics() []unavailableMetric {
-	return []unavailableMetric{
-		{Label: "Review wait", Reason: "No review wait data collected"},
-		{Label: "Human review effort", Reason: "No human review effort data collected"},
+func reviewWaitForPack(pack schema.EvidencePack) changeMetricEntry {
+	duration, gap := reviewWaitDurationForPack(pack)
+	if gap != "" {
+		return changeMetricEntry{
+			ChangeID:  pack.ChangeID,
+			GapNotice: gap,
+		}
 	}
+	return changeMetricEntry{
+		ChangeID: pack.ChangeID,
+		Value:    formatCycleDuration(duration),
+	}
+}
+
+func reviewWaitDurationForPack(pack schema.EvidencePack) (time.Duration, string) {
+	if pack.Review == nil {
+		return 0, "No review data collected"
+	}
+	if pack.Review.FirstReviewAt == "" {
+		return 0, "No review submitted yet"
+	}
+
+	end, err := time.Parse(time.RFC3339, pack.Review.FirstReviewAt)
+	if err != nil {
+		return 0, "Cannot parse first review timestamp"
+	}
+
+	var start time.Time
+	if pack.AgentRun != nil && pack.AgentRun.EndedAt != "" {
+		start, err = time.Parse(time.RFC3339, pack.AgentRun.EndedAt)
+		if err != nil {
+			return 0, "Cannot parse agent run end timestamp"
+		}
+	} else {
+		latest, found := latestCommitTimestamp(pack)
+		if !found {
+			return 0, "No implementation timing data"
+		}
+		start = latest
+	}
+
+	if end.Before(start) {
+		return 0, "Review predates implementation end"
+	}
+
+	return end.Sub(start), ""
+}
+
+func latestCommitTimestamp(pack schema.EvidencePack) (time.Time, bool) {
+	var latest time.Time
+	for _, commit := range pack.Implementation.Commits {
+		t, err := time.Parse(time.RFC3339, commit.Timestamp)
+		if err != nil {
+			continue
+		}
+		if t.After(latest) {
+			latest = t
+		}
+	}
+	if latest.IsZero() {
+		return time.Time{}, false
+	}
+	return latest, true
 }
