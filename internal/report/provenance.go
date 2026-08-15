@@ -2,12 +2,13 @@ package report
 
 import (
 	"fmt"
+	"html/template"
 	"strings"
 
 	"github.com/shipproof/shipproof/internal/schema"
 )
 
-func provenanceBadge(kind schema.ProvenanceKind) string {
+func provenanceBadge(kind schema.ProvenanceKind) template.HTML {
 	switch kind {
 	case schema.ProvenanceObserved:
 		return `<span class="prov-badge prov-observed">observed</span>`
@@ -18,7 +19,7 @@ func provenanceBadge(kind schema.ProvenanceKind) string {
 	case schema.ProvenanceHuman:
 		return `<span class="prov-badge prov-human">human</span>`
 	default:
-		return `<span class="prov-badge">` + htmlEscape(string(kind)) + `</span>`
+		return template.HTML(`<span class="prov-badge">` + htmlEscape(string(kind)) + `</span>`)
 	}
 }
 
@@ -41,7 +42,7 @@ func statusClass(status string) string {
 	}
 }
 
-func statusIcon(status string) string {
+func statusIcon(status string) template.HTML {
 	switch status {
 	case "pass":
 		return "&#10004;"
@@ -52,7 +53,7 @@ func statusIcon(status string) string {
 	case "unknown":
 		return "?"
 	default:
-		return htmlEscape(status)
+		return template.HTML(htmlEscape(status))
 	}
 }
 
