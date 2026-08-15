@@ -34,6 +34,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runLinear(args[1:], stdout, stderr)
 	case "telemetry":
 		return runTelemetry(args[1:], stdout, stderr)
+	case "report":
+		return runReport(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, "shipproof 0.2.0-dev")
 		return 0
@@ -72,5 +74,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof linear issue <identifier>")
 	fmt.Fprintln(w, "  shipproof linear project <name>")
 	fmt.Fprintln(w, "  shipproof linear sync <plan-file>")
+	fmt.Fprintln(w, "  shipproof report change <change-id> [--output path]")
+	fmt.Fprintln(w, "  shipproof report pr-summary <change-id> [--output path]")
+	fmt.Fprintln(w, "  shipproof report project <name> [--output path]")
 	fmt.Fprintln(w, "  shipproof version")
 }

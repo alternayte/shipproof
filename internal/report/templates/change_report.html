@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Change Report — {{.ChangeID}}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; color: #1a1a2e; background: #f8f9fa; line-height: 1.5; }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+  header { background: #1a1a2e; color: #fff; padding: 1.5rem 1.5rem; border-radius: 8px 8px 0 0; }
+  header h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+  header .meta { font-size: 0.8rem; opacity: 0.75; }
+  section { background: #fff; border: 1px solid #e2e8f0; border-top: none; padding: 1.5rem; }
+  section:last-of-type { border-radius: 0 0 8px 8px; }
+  section h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { text-align: left; padding: 0.5rem 0.75rem; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; font-weight: 600; }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f5f9; }
+  tr:last-child td { border-bottom: none; }
+  .prov-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .prov-observed { background: #dcfce7; color: #166534; }
+  .prov-derived { background: #dbeafe; color: #1e40af; }
+  .prov-inferred { background: #fef9c3; color: #854d0e; }
+  .prov-human { background: #f3e8ff; color: #6b21a8; }
+  .status-pass { color: #166534; }
+  .status-fail { color: #991b1b; font-weight: 600; }
+  .status-skip { color: #92400e; }
+  .status-unknown { color: #64748b; font-style: italic; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+  .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; }
+  .stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+  .stat-value { font-size: 1.1rem; font-weight: 600; }
+  .stat-provenance { margin-top: 0.25rem; }
+  .commit-list { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+  .commit-item { padding: 0.35rem 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 0.75rem; }
+  .commit-hash { color: #64748b; min-width: 5rem; }
+  .commit-subject { flex: 1; }
+  .commit-author { color: #94a3b8; font-size: 0.8rem; min-width: 6rem; text-align: right; }
+  .nodata { color: #94a3b8; font-style: italic; }
+  .summary-bar { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .summary-pill { padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-fail { background: #fee2e2; color: #991b1b; }
+  .pill-skip { background: #fef3c7; color: #92400e; }
+  .pill-unknown { background: #f1f5f9; color: #475569; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Change Report — {{.ChangeID}}</h1>
+  <div class="meta">Generated {{.GeneratedAt}} &middot; ShipProof {{.Provenance.ShipProofVersion}}</div>
+</header>
+
+<section>
+  <h2>Intent</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Snapshot Hash</div>
+      <div class="stat-value commit-hash">{{.Intent.SnapshotHash}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Requirements</div>
+      <div class="stat-value">{{.Intent.RequirementCount}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Implementation</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Commits</div>
+      <div class="stat-value">{{.Implement.CommitCount}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Files Changed</div>
+      <div class="stat-value">{{.Implement.ChangedFileCount}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Additions</div>
+      <div class="stat-value" style="color:#166534">+{{.Implement.Additions}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Deletions</div>
+      <div class="stat-value" style="color:#991b1b">-{{.Implement.Deletions}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+  </div>
+
+  {{if .Implement.Commits}}
+  <h3 style="margin-top:1.5rem;font-size:0.95rem;">Commits</h3>
+  <div class="commit-list">
+  {{range .Implement.Commits}}
+    <div class="commit-item">
+      <span class="commit-hash">{{printf "%.7s" .Hash}}</span>
+      <span class="commit-subject">{{.Subject}}</span>
+      <span class="commit-author">{{.Author}}</span>
+    </div>
+  {{end}}
+  </div>
+  {{end}}
+
+  {{if .Implement.ChangedFiles}}
+  <h3 style="margin-top:1.5rem;font-size:0.95rem;">Changed Files</h3>
+  <table>
+  <thead><tr><th>File</th></tr></thead>
+  <tbody>
+  {{range .Implement.ChangedFiles}}
+    <tr><td><code>{{.}}</code></td></tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{end}}
+</section>
+
+<section>
+  <h2>Verification</h2>
+  {{if .Verify.TotalChecks}}
+  <div class="summary-bar">
+    <span class="summary-pill pill-pass">{{.Verify.ProvenCheckCount}} passed</span>
+    <span class="summary-pill pill-fail">{{.Verify.FailCheckCount}} failed</span>
+    <span class="summary-pill pill-skip">{{.Verify.SkipCheckCount}} skipped</span>
+    <span class="summary-pill pill-unknown">{{.Verify.UnknownCheckCount}} unknown</span>
+  </div>
+  <table>
+  <thead>
+    <tr><th>Check</th><th>Status</th><th>Source</th><th>Provenance</th></tr>
+  </thead>
+  <tbody>
+  {{range .Verify.Checks}}
+    <tr>
+      <td><code>{{.ID}}</code></td>
+      <td class="{{statusClass .Status}}">{{statusIcon .Status}} {{statusLabel .Status}}</td>
+      <td>{{.Source}}</td>
+      <td>{{badge .Provenance}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{else}}
+  <p class="nodata">No verification checks recorded.</p>
+  {{end}}
+</section>
+
+{{if not .AgentRun.Hides}}
+<section>
+  <h2>Agent Run</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Provider</div>
+      <div class="stat-value">{{.AgentRun.Provider}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Model</div>
+      <div class="stat-value">{{.AgentRun.Model}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Session</div>
+      <div class="stat-value commit-hash">{{.AgentRun.SessionID}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cost</div>
+      <div class="stat-value">{{formatDollars .AgentRun.Cost}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Input Tokens</div>
+      <div class="stat-value">{{formatTokens .AgentRun.InputTokens}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Output Tokens</div>
+      <div class="stat-value">{{formatTokens .AgentRun.OutputTokens}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tool Calls</div>
+      <div class="stat-value">{{.AgentRun.ToolCallCount}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Exit Status</div>
+      <div class="stat-value">{{.AgentRun.ExitStatus}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+  </div>
+  {{if .AgentRun.StartedAt}}
+  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">{{formatDuration .AgentRun.StartedAt .AgentRun.EndedAt}}</p>
+  {{end}}
+</section>
+{{end}}
+
+</div>
+</body>
+</html>

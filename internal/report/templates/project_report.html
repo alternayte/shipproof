@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project Report — {{.ProjectName}}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; color: #1a1a2e; background: #f8f9fa; line-height: 1.5; }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+  header { background: #1a1a2e; color: #fff; padding: 1.5rem 1.5rem; border-radius: 8px 8px 0 0; }
+  header h1 { font-size: 1.5rem; font-weight: 600; }
+  header .meta { font-size: 0.8rem; opacity: 0.75; margin-top: 0.25rem; }
+  section { background: #fff; border: 1px solid #e2e8f0; border-top: none; padding: 1.5rem; }
+  section:last-of-type { border-radius: 0 0 8px 8px; }
+  section h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { text-align: left; padding: 0.5rem 0.75rem; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; font-weight: 600; }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f5f9; }
+  tr:last-child td { border-bottom: none; }
+  .prov-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .prov-observed { background: #dcfce7; color: #166534; }
+  .prov-derived { background: #dbeafe; color: #1e40af; }
+  .prov-inferred { background: #fef9c3; color: #854d0e; }
+  .prov-human { background: #f3e8ff; color: #6b21a8; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+  .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; }
+  .stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+  .stat-value { font-size: 1.1rem; font-weight: 600; }
+  .stat-provenance { margin-top: 0.25rem; }
+  .nodata { color: #94a3b8; font-style: italic; }
+  .summary-bar { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .summary-pill { padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-fail { background: #fee2e2; color: #991b1b; }
+  .pill-skip { background: #fef3c7; color: #92400e; }
+  .pill-unknown { background: #f1f5f9; color: #475569; }
+  .agent-yes { color: #166534; }
+  .agent-no { color: #94a3b8; }
+  .unavailable-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+  .unavailable-card { background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem 1rem; }
+  .unavailable-label { font-weight: 600; font-size: 0.9rem; }
+  .unavailable-reason { font-size: 0.8rem; color: #a16207; margin-top: 0.25rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Project Report — {{.ProjectName}}</h1>
+  <div class="meta">Last pack generated {{.GeneratedAt}} &middot; ShipProof {{.Provenance.ShipProofVersion}}</div>
+</header>
+
+<section>
+  <h2>Overview</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Changes</div>
+      <div class="stat-value">{{.Metrics.TotalChanges}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Verification Pass Rate</div>
+      <div class="stat-value">{{formatPercent .Metrics.PassRate}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">First-Pass Success</div>
+      <div class="stat-value">{{.Metrics.FirstPassCount}} / {{.Metrics.TotalChanges}} ({{formatPercent .Metrics.FirstPassRate}})</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Requirement Coverage</div>
+      <div class="stat-value">{{formatPercent .Metrics.CoverageRate}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Checks</div>
+      <div class="stat-value">{{.Metrics.TotalChecks}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Requirements</div>
+      <div class="stat-value">{{.Metrics.TotalRequirements}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+  </div>
+
+  <div class="summary-bar" style="margin-top:1rem;">
+    <span class="summary-pill pill-pass">{{.Metrics.TotalPass}} passed</span>
+    <span class="summary-pill pill-fail">{{.Metrics.TotalFail}} failed</span>
+    <span class="summary-pill pill-skip">{{.Metrics.TotalSkip}} skipped</span>
+    <span class="summary-pill pill-unknown">{{.Metrics.TotalUnknown}} unknown</span>
+  </div>
+</section>
+
+<section>
+  <h2>Agent Usage</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Changes With Agent Data</div>
+      <div class="stat-value">{{.Metrics.ChangesWithAgent}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Changes Without Agent Data</div>
+      <div class="stat-value">{{.Metrics.ChangesWithoutAgent}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Input Tokens</div>
+      <div class="stat-value">{{formatInt64 .Metrics.TotalInputTokens}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Output Tokens</div>
+      <div class="stat-value">{{formatInt64 .Metrics.TotalOutputTokens}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Tool Calls</div>
+      <div class="stat-value">{{.Metrics.TotalToolCalls}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Cost</div>
+      <div class="stat-value">{{formatDollars .Metrics.TotalCost}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Models Used</div>
+      <div class="stat-value" style="font-size:0.85rem;">{{formatModelList .Metrics.Models}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Change Summary</h2>
+  {{if .Packs}}
+  <table>
+  <thead>
+    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th></tr>
+  </thead>
+  <tbody>
+  {{range .Packs}}
+    <tr>
+      <td><strong>{{.ChangeID}}</strong></td>
+      <td>{{.GeneratedAt}}</td>
+      <td>{{.CheckCount}}</td>
+      <td>{{.PassCount}}</td>
+      <td>{{.FailCount}}</td>
+      <td>{{if .HasAgentData}}<span class="agent-yes">Yes</span>{{else}}<span class="agent-no">No</span>{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{else}}
+  <p class="nodata">No change evidence packs found.</p>
+  {{end}}
+</section>
+
+<section>
+  <h2>Unavailable Metrics</h2>
+  <p class="nodata" style="margin-bottom:1rem;">These metrics require additional data collection not yet implemented.</p>
+  <div class="unavailable-grid">
+  {{range .Unavailable}}
+    <div class="unavailable-card">
+      <div class="unavailable-label">{{.Label}}</div>
+      <div class="unavailable-reason">{{.Reason}}</div>
+    </div>
+  {{end}}
+  </div>
+</section>
+
+</div>
+</body>
+</html>
