@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="com.example.UnitTests" tests="2" failures="1" errors="0" skipped="0" time="0.200">
+    <testcase name="testUnitA" classname="com.example.UnitTests" time="0.100">
+    </testcase>
+    <testcase name="testUnitB" classname="com.example.UnitTests" time="0.100">
+      <failure message="assertion failed" type="AssertionError">expected true</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="com.example.IntegrationTests" tests="1" failures="0" errors="1" skipped="0" time="0.300">
+    <testcase name="testIntegration" classname="com.example.IntegrationTests" time="0.300">
+      <error message="timeout" type="TimeoutException">timed out after 5s</error>
+    </testcase>
+  </testsuite>
+</testsuites>

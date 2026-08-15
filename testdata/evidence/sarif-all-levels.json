@@ -1,0 +1,92 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "govet",
+          "informationUri": "https://pkg.go.dev/golang.org/x/tools/go/analysis"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "errorsas",
+          "level": "error",
+          "message": {
+            "text": "errors.As argument must be a pointer to a type implementing error"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/handler.go"
+                },
+                "region": {
+                  "startLine": 30
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "printf",
+          "level": "warning",
+          "message": {
+            "text": "possible formatting directive in Println call"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/format.go"
+                },
+                "region": {
+                  "startLine": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "shadow",
+          "level": "note",
+          "message": {
+            "text": "declaration of err shadows declaration at line 10"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/shadow.go"
+                },
+                "region": {
+                  "startLine": 25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "nilfunc",
+          "level": "none",
+          "message": {
+            "text": "useful information only"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "pkg/nilcheck.go"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

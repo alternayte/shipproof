@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "custom-linter",
+          "informationUri": "https://example.com"
+        }
+      },
+      "results": [
+        {
+          "level": "error",
+          "message": {
+            "text": "Something is wrong."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app.go"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C001",
+          "level": "error",
+          "message": {
+            "text": "Known rule violation."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app.go"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

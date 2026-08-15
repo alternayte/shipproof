@@ -1,4 +1,4 @@
-shipproof
+/shipproof
 bin/
 docs/design/
 .shipproof
@@ -8,5 +8,4 @@ docs/design/
 *.out
 *.test
 coverage.*
-testdata/
 dist/

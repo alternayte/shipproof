@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "gosec",
+          "informationUri": "https://github.com/securego/gosec"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "G104",
+          "level": "error",
+          "message": {
+            "text": "Errors unhandled."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "internal/handler.go"
+                },
+                "region": {
+                  "startLine": 42
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "G401",
+          "level": "error",
+          "message": {
+            "text": "Use of weak cryptographic primitive"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "internal/crypto.go"
+                },
+                "region": {
+                  "startLine": 15
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-1",
+  "intent": {
+    "snapshot_hash": "sha256:abc123",
+    "requirements": [
+      {"id": "SDD-R01", "verification_refs": ["unit-test:init-layout"]}
+    ]
+  },
+  "verification": {
+    "checks": [
+      {"id": "unit-tests", "status": "pass", "source": "go-test", "provenance": "observed"}
+    ]
+  },
+  "provenance": {
+    "generated_at": "2026-08-13T20:00:00Z",
+    "shipproof_version": "0.1.0-dev"
+  }
+}

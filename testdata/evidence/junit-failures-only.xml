@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.FailingSuite" tests="2" failures="2" errors="0" skipped="0" time="0.050">
+  <testcase name="testAlwaysFails" classname="com.example.FailingSuite" time="0.025">
+    <failure message="never works" type="AssertionError">always fails</failure>
+  </testcase>
+  <testcase name="testAlsoFails" classname="com.example.FailingSuite" time="0.025">
+    <failure message="wrong value" type="AssertionError">wrong value</failure>
+  </testcase>
+</testsuite>

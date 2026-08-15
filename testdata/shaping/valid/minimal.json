@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1",
+  "subject": "Webhook retries",
+  "document_kind": "prd",
+  "state": "shaping",
+  "current_model": {
+    "problem": "Transient endpoint failures lose delivery attempts.",
+    "desired_outcome": "Deliveries recover from transient failures."
+  },
+  "decisions": [],
+  "assumptions": [],
+  "risks": [],
+  "unknowns": []
+}
