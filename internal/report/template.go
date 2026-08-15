@@ -20,6 +20,7 @@ var templates = template.Must(template.New("").Funcs(template.FuncMap{
 	"formatPercent":   formatPercent,
 	"formatInt64":     formatInt64,
 	"formatModelList": formatModelList,
+	"formatDecimal":   formatDecimal,
 	"provLabel":       func() string { return "observed" },
 }).ParseFS(templateFS, "templates/*"))
 

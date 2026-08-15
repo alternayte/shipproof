@@ -83,6 +83,21 @@
       <div class="stat-value">{{.Metrics.TotalRequirements}}</div>
       <div class="stat-provenance">{{badge "derived"}}</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Cycle Time</div>
+      <div class="stat-value">{{if .Metrics.AvgCycleTime}}{{.Metrics.AvgCycleTime}}{{else}}—{{end}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Commits Per Change</div>
+      <div class="stat-value">{{formatDecimal .Metrics.AvgCommits}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Commits</div>
+      <div class="stat-value">{{.Metrics.TotalCommits}}</div>
+      <div class="stat-provenance">{{badge "derived"}}</div>
+    </div>
   </div>
 
   <div class="summary-bar" style="margin-top:1rem;">
@@ -139,7 +154,7 @@
   {{if .Packs}}
   <table>
   <thead>
-    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th></tr>
+    <tr><th>Change</th><th>Generated</th><th>Checks</th><th>Passed</th><th>Failed</th><th>Agent Data</th><th>Cycle Time</th><th>Commits</th></tr>
   </thead>
   <tbody>
   {{range .Packs}}
@@ -150,6 +165,8 @@
       <td>{{.PassCount}}</td>
       <td>{{.FailCount}}</td>
       <td>{{if .HasAgentData}}<span class="agent-yes">Yes</span>{{else}}<span class="agent-no">No</span>{{end}}</td>
+      <td>{{if .CycleGap}}<span class="nodata">{{.CycleGap}}</span>{{else}}{{.CycleTime}}{{end}}</td>
+      <td>{{.Commits}}</td>
     </tr>
   {{end}}
   </tbody>

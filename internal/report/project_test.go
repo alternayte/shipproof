@@ -162,14 +162,11 @@ func TestProjectNoDataMarkers(t *testing.T) {
 	if !strings.Contains(html, "Unavailable Metrics") {
 		t.Error("output should contain Unavailable Metrics section")
 	}
-	if !strings.Contains(html, "Cycle time") {
-		t.Error("output should list Cycle time as unavailable")
-	}
 	if !strings.Contains(html, "Review wait") {
 		t.Error("output should list Review wait as unavailable")
 	}
-	if !strings.Contains(html, "No cycle time data collected") {
-		t.Error("output should show reason for unavailable cycle time")
+	if !strings.Contains(html, "No review wait data collected") {
+		t.Error("output should show reason for unavailable review wait")
 	}
 }
 
@@ -339,5 +336,251 @@ func writeEvidencePack(t *testing.T, root string, pack schema.EvidencePack) {
 	data = append(data, '\n')
 	if err := os.WriteFile(filepath.Join(changeDir, "evidence-pack.json"), data, 0o644); err != nil {
 		t.Fatalf("write evidence pack: %v", err)
+	}
+}
+
+func TestCycleTimeEmptyCommits(t *testing.T) {
+	pack := makeEvidencePack("SP-NOCOMMIT", "2026-08-14T22:00:00Z")
+
+	entry := cycleTimeForPack(pack)
+	if entry.ChangeID != "SP-NOCOMMIT" {
+		t.Fatalf("change_id = %q, want SP-NOCOMMIT", entry.ChangeID)
+	}
+	if entry.GapNotice == "" {
+		t.Fatal("expected gap notice for empty commits")
+	}
+	if entry.Value != "" {
+		t.Fatalf("value should be empty, got %q", entry.Value)
+	}
+}
+
+func TestCycleTimeWithCommits(t *testing.T) {
+	pack := makeEvidencePack("SP-CYCLE", "2026-08-14T22:00:00Z")
+	pack.Implementation.Commits = []schema.ImplementationCommit{
+		{Hash: "abc123", Author: "dev", Timestamp: "2026-08-14T20:00:00Z", Subject: "first"},
+		{Hash: "def456", Author: "dev", Timestamp: "2026-08-14T21:00:00Z", Subject: "second"},
+	}
+
+	entry := cycleTimeForPack(pack)
+	if entry.ChangeID != "SP-CYCLE" {
+		t.Fatalf("change_id = %q, want SP-CYCLE", entry.ChangeID)
+	}
+	if entry.GapNotice != "" {
+		t.Fatalf("unexpected gap notice: %s", entry.GapNotice)
+	}
+	if entry.Value != "2.0h" {
+		t.Fatalf("value = %q, want %q", entry.Value, "2.0h")
+	}
+}
+
+func TestCycleTimeLongDuration(t *testing.T) {
+	pack := makeEvidencePack("SP-LONG", "2026-08-17T20:00:00Z")
+	pack.Implementation.Commits = []schema.ImplementationCommit{
+		{Hash: "abc123", Author: "dev", Timestamp: "2026-08-14T20:00:00Z", Subject: "start"},
+	}
+
+	entry := cycleTimeForPack(pack)
+	if entry.GapNotice != "" {
+		t.Fatalf("unexpected gap notice: %s", entry.GapNotice)
+	}
+	if entry.Value != "3.0d" {
+		t.Fatalf("value = %q, want %q", entry.Value, "3.0d")
+	}
+}
+
+func TestCycleTimeShortDuration(t *testing.T) {
+	pack := makeEvidencePack("SP-SHORT", "2026-08-14T20:30:00Z")
+	pack.Implementation.Commits = []schema.ImplementationCommit{
+		{Hash: "abc123", Author: "dev", Timestamp: "2026-08-14T20:00:00Z", Subject: "quick"},
+	}
+
+	entry := cycleTimeForPack(pack)
+	if entry.GapNotice != "" {
+		t.Fatalf("unexpected gap notice: %s", entry.GapNotice)
+	}
+	if entry.Value != "30m" {
+		t.Fatalf("value = %q, want %q", entry.Value, "30m")
+	}
+}
+
+func makeEvidencePackWithCommits(changeID, generatedAt string, timestamps ...string) schema.EvidencePack {
+	pack := makeEvidencePack(changeID, generatedAt)
+	for i, ts := range timestamps {
+		pack.Implementation.Commits = append(pack.Implementation.Commits, schema.ImplementationCommit{
+			Hash:      "hash-" + changeID + "-" + string(rune('a'+i)),
+			Author:    "dev",
+			Timestamp: ts,
+			Subject:   "commit",
+		})
+	}
+	return pack
+}
+
+func TestProjectCycleTime(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-A", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z", "2026-08-14T21:00:00Z"))
+	writeEvidencePack(t, root, makeEvidencePack("SP-NOCOMMIT", "2026-08-14T22:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "2.0h") {
+		t.Error("output should contain the per-change cycle time")
+	}
+	if !strings.Contains(html, "No commit data available") {
+		t.Error("output should contain a cycle time gap notice for a pack without commits")
+	}
+}
+
+func TestProjectCycleTimeAverage(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-A", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z"))
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-B", "2026-08-14T22:00:00Z", "2026-08-14T18:00:00Z"))
+	writeEvidencePack(t, root, makeEvidencePack("SP-NOCOMMIT", "2026-08-14T22:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "Avg Cycle Time") {
+		t.Error("output should contain Avg Cycle Time card")
+	}
+	if !strings.Contains(html, "3.0h") {
+		t.Error("output should contain the average of 2h and 4h cycles")
+	}
+}
+
+func TestProjectRework(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-A", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z", "2026-08-14T20:30:00Z", "2026-08-14T21:00:00Z"))
+	writeEvidencePack(t, root, makeEvidencePack("SP-B", "2026-08-14T22:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "Total Commits") {
+		t.Error("output should contain Total Commits metric")
+	}
+
+	packs, err := scanEvidencePacks(root)
+	if err != nil {
+		t.Fatalf("scan packs: %v", err)
+	}
+	rows := buildPackSummaryData(packs)
+	if len(rows) != 2 {
+		t.Fatalf("rows = %d, want 2", len(rows))
+	}
+	for _, row := range rows {
+		if row.ChangeID == "SP-A" && row.Commits != 3 {
+			t.Errorf("SP-A commits = %d, want 3", row.Commits)
+		}
+		if row.ChangeID == "SP-B" && row.Commits != 0 {
+			t.Errorf("SP-B commits = %d, want 0", row.Commits)
+		}
+	}
+}
+
+func TestProjectReworkAverage(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-A", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z", "2026-08-14T21:00:00Z"))
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-B", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z", "2026-08-14T20:30:00Z", "2026-08-14T21:00:00Z", "2026-08-14T21:30:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "Avg Commits Per Change") {
+		t.Error("output should contain Avg Commits Per Change card")
+	}
+	if !strings.Contains(html, "3.0") {
+		t.Error("output should contain the average commit count")
+	}
+}
+
+func TestProjectCycleReworkRender(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-A", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	for _, label := range []string{"Avg Cycle Time", "Avg Commits Per Change"} {
+		idx := strings.Index(html, label)
+		if idx < 0 {
+			t.Errorf("output should contain %q card", label)
+			continue
+		}
+		card := html[idx : idx+400]
+		if !strings.Contains(card, "prov-derived") {
+			t.Errorf("%q card should carry a derived provenance badge", label)
+		}
+	}
+}
+
+func TestProjectSummaryColumns(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePackWithCommits(
+		"SP-A", "2026-08-14T22:00:00Z", "2026-08-14T20:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	if !strings.Contains(html, "Cycle Time") {
+		t.Error("summary table should contain Cycle Time column")
+	}
+	if !strings.Contains(html, "Commits") {
+		t.Error("summary table should contain Commits column")
+	}
+}
+
+func TestProjectUnavailableRemaining(t *testing.T) {
+	root, _ := setupProjectTest(t)
+
+	writeEvidencePack(t, root, makeEvidencePack("SP-A", "2026-08-14T22:00:00Z"))
+
+	var sb strings.Builder
+	if err := GenerateProjectReport(&sb, root, "test-project"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	html := sb.String()
+	for _, reason := range []string{"No cycle time data collected", "No rework data collected"} {
+		if strings.Contains(html, reason) {
+			t.Errorf("output should not contain %q", reason)
+		}
+	}
+	for _, label := range []string{"Review wait", "Human review effort", "Readiness blockers"} {
+		if !strings.Contains(html, label) {
+			t.Errorf("output should still list %q as unavailable", label)
+		}
 	}
 }

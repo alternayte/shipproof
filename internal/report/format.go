@@ -31,3 +31,10 @@ func formatModelList(models []string) string {
 	}
 	return strings.Join(models, ", ")
 }
+
+func formatDecimal(v float64) string {
+	if v == 0 {
+		return "—"
+	}
+	return fmt.Sprintf("%.1f", v)
+}

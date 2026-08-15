@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/shipproof/shipproof/internal/schema"
 )
@@ -92,6 +93,9 @@ type packSummaryRow struct {
 	PassCount    int
 	FailCount    int
 	HasAgentData bool
+	CycleTime    string
+	CycleGap     string
+	Commits      int
 }
 
 type projectMetrics struct {
@@ -114,6 +118,10 @@ type projectMetrics struct {
 	TotalToolCalls      int64
 	TotalCost           float64
 	Models              []string
+	AvgCycleTime        string
+	CycleTimeGapCount   int
+	AvgCommits          float64
+	TotalCommits        int
 }
 
 type unavailableMetric struct {
@@ -134,6 +142,8 @@ func buildPackSummaryData(packs []schema.EvidencePack) []packSummaryRow {
 			}
 		}
 
+		cycle := cycleTimeForPack(pack)
+
 		rows = append(rows, packSummaryRow{
 			ChangeID:     pack.ChangeID,
 			GeneratedAt:  pack.Provenance.GeneratedAt,
@@ -141,6 +151,9 @@ func buildPackSummaryData(packs []schema.EvidencePack) []packSummaryRow {
 			PassCount:    pass,
 			FailCount:    fail,
 			HasAgentData: pack.AgentRun != nil,
+			CycleTime:    cycle.Value,
+			CycleGap:     cycle.GapNotice,
+			Commits:      len(pack.Implementation.Commits),
 		})
 	}
 	return rows
@@ -150,6 +163,8 @@ func buildProjectMetrics(packs []schema.EvidencePack) projectMetrics {
 	m := projectMetrics{TotalChanges: len(packs)}
 
 	modelsSet := make(map[string]struct{})
+	var cycleTotal time.Duration
+	var cycleCount int
 
 	for _, pack := range packs {
 		if pack.AgentRun != nil {
@@ -191,6 +206,23 @@ func buildProjectMetrics(packs []schema.EvidencePack) projectMetrics {
 				m.CoveredRequirements++
 			}
 		}
+
+		commits := len(pack.Implementation.Commits)
+		m.TotalCommits += commits
+
+		if duration, gap := cycleDurationForPack(pack); gap == "" {
+			cycleTotal += duration
+			cycleCount++
+		} else {
+			m.CycleTimeGapCount++
+		}
+	}
+
+	if cycleCount > 0 {
+		m.AvgCycleTime = formatCycleDuration(cycleTotal / time.Duration(cycleCount))
+	}
+	if m.TotalChanges > 0 {
+		m.AvgCommits = float64(m.TotalCommits) / float64(m.TotalChanges)
 	}
 
 	if m.TotalChecks > 0 {
@@ -220,11 +252,67 @@ func firstPassCheck(pack schema.EvidencePack) bool {
 	return false
 }
 
+type changeMetricEntry struct {
+	ChangeID  string
+	Value     string
+	GapNotice string
+}
+
+func cycleTimeForPack(pack schema.EvidencePack) changeMetricEntry {
+	duration, gap := cycleDurationForPack(pack)
+	if gap != "" {
+		return changeMetricEntry{
+			ChangeID:  pack.ChangeID,
+			GapNotice: gap,
+		}
+	}
+	return changeMetricEntry{
+		ChangeID: pack.ChangeID,
+		Value:    formatCycleDuration(duration),
+	}
+}
+
+func cycleDurationForPack(pack schema.EvidencePack) (time.Duration, string) {
+	if len(pack.Implementation.Commits) == 0 {
+		return 0, "No commit data available"
+	}
+
+	oldest, err := time.Parse(time.RFC3339, pack.Implementation.Commits[0].Timestamp)
+	if err != nil {
+		return 0, "Cannot parse commit timestamp"
+	}
+	for _, c := range pack.Implementation.Commits[1:] {
+		t, err := time.Parse(time.RFC3339, c.Timestamp)
+		if err != nil {
+			continue
+		}
+		if t.Before(oldest) {
+			oldest = t
+		}
+	}
+
+	end, err := time.Parse(time.RFC3339, pack.Provenance.GeneratedAt)
+	if err != nil {
+		return 0, "Cannot parse evidence pack timestamp"
+	}
+
+	return end.Sub(oldest), ""
+}
+
+func formatCycleDuration(d time.Duration) string {
+	hours := d.Hours()
+	if hours < 1 {
+		return fmt.Sprintf("%.0fm", d.Minutes())
+	}
+	if hours < 48 {
+		return fmt.Sprintf("%.1fh", hours)
+	}
+	return fmt.Sprintf("%.1fd", hours/24)
+}
+
 func buildUnavailableMetrics() []unavailableMetric {
 	return []unavailableMetric{
-		{Label: "Cycle time", Reason: "No cycle time data collected"},
 		{Label: "Review wait", Reason: "No review wait data collected"},
-		{Label: "Rework rate", Reason: "No rework data collected"},
 		{Label: "Human review effort", Reason: "No human review effort data collected"},
 		{Label: "Readiness blockers", Reason: "No readiness blocker history collected"},
 	}
