@@ -30,10 +30,36 @@ Maintain `.shipproof/shaping/<stable-id>.json` as the compact decision ledger. U
 7. Apply the readiness gate in [references/READINESS.md](references/READINESS.md).
 8. Stop when no blocker remains. Set the session to `READY` or `READY_WITH_ASSUMPTIONS`, validate it, then produce or update the PRD.
 
+## Stop rule
+
+Apply this test before you write another question or another blocker.
+
+1. Check the readiness gate in [references/READINESS.md](references/READINESS.md).
+2. For each remaining gap, ask one question: does the answer change the outcome, the scope, the acceptance, the architecture, the risk, or the decomposition?
+3. If the answer is no, the gap is a `SUGGESTION` or a `NIT`. Record it. Do not block on it.
+4. If no `BLOCKER` and no unresolved `DECISION` remains, stop and declare `READY` or `READY_WITH_ASSUMPTIONS`.
+5. Declare `READY_WITH_ASSUMPTIONS` when you recorded an assumption. Declare `READY` when you did not.
+
+Stop even when the document can still improve. A model can always propose one more question. A remaining suggestion is not a reason to continue.
+
+### Optional detail never blocks
+
+These are optional details. Record them as suggestions or assumptions. Never make one a blocker:
+
+- an edge case that does not change the main outcome;
+- a metric threshold that the team can set later;
+- a rollout date, a rollout order, or a communication plan;
+- an error message, a label, or wording;
+- a field name, a schema detail, or an implementation choice;
+- a generic non-functional requirement with no contextual source;
+- a permission, a limit, or a default that a stated constraint already implies.
+
 ## Rules
 
 - Do not manufacture requirements to fill a template.
 - Do not ask a question merely because more detail could be useful.
+- Do not declare `BLOCKED` for a detail that the stop rule classifies as optional.
+- Do not ask a fourth question in one turn.
 - Do not reopen an accepted decision without new evidence.
 - Keep solution detail out of the PRD unless it is a real constraint.
 - Recommend the smallest useful ceremony.

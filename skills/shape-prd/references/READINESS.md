@@ -19,3 +19,25 @@ A document is complete enough when it supports the next decision responsibly.
 - `NIT`: wording or presentation only. It cannot block readiness.
 
 Do not create a new blocker merely because another detail could be specified.
+
+## Blocker test
+
+A gap is a `BLOCKER` only when at least one statement holds:
+
+- the problem cannot be distinguished from the proposed solution;
+- the target behavior has materially different valid interpretations;
+- a key requirement has no evaluation method and no human acceptance method;
+- two important requirements contradict each other;
+- a critical dependency is assumed but not identified;
+- an invented user need appears as a fact;
+- the proposed scope clearly exceeds a fixed appetite.
+
+If no statement holds, the gap is not a blocker.
+
+## Stop condition
+
+Stop the interview when no `BLOCKER` and no unresolved `DECISION` remains.
+Declare `READY` or `READY_WITH_ASSUMPTIONS`. Report the remaining suggestions
+without changing the state.
+
+Do not create a new blocker merely because another detail could be specified.

@@ -1,0 +1,12 @@
+{
+  "schema_version": "0.1",
+  "case_id": "prd-ready-stop",
+  "skill": "shape-prd",
+  "condition": "candidate",
+  "recorded_at": "2026-08-24T12:20:00Z",
+  "task_success": true,
+  "false_blocker_rate": 0,
+  "questions_asked": 0,
+  "human_intervention": false,
+  "notes": "Run by an agent with the shape-prd skill after SP-027 added the stop rule and the blocker test. Input document: testdata/documents/prd/ready.md. The run applied the blocker test to every remaining gap, found no blocker and no unresolved decision, and declared READY_WITH_ASSUMPTIONS because the document records the duplicate-delivery assumption. It asked no question. It recorded two optional details as suggestions: the full retried status-code set and the maximum retry window. It raised no blocker, so the false blocker rate is 0. Blocker recall stays absent because the case holds no true blocker and the metric is undefined over an empty set."
+}
