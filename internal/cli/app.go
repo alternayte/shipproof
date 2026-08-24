@@ -42,6 +42,12 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTelemetry(args[1:], stdout, stderr)
 	case "report":
 		return runReport(args[1:], stdout, stderr)
+	case "config":
+		return runConfig(args[1:], stdout, stderr)
+	case "runner":
+		return runRunner(args[1:], stdout, stderr)
+	case "run":
+		return runRun(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintf(stdout, "shipproof %s\n", version.Version)
 		return 0
@@ -88,5 +94,10 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof report change <change-id> [--output path]")
 	fmt.Fprintln(w, "  shipproof report pr-summary <change-id> [--output path]")
 	fmt.Fprintln(w, "  shipproof report project <name> [--output path]")
+	fmt.Fprintln(w, "  shipproof runner list")
+	fmt.Fprintln(w, "  shipproof runner doctor")
+	fmt.Fprintln(w, "  shipproof config get <key>")
+	fmt.Fprintln(w, "  shipproof config set <key> <value> [--global|--local]")
+	fmt.Fprintln(w, "  shipproof run <change-id> [--runner <name>]")
 	fmt.Fprintln(w, "  shipproof version")
 }

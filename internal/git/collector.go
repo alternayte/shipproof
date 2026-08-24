@@ -239,3 +239,32 @@ func parseShortStat(stat string) (additions, deletions int) {
 
 	return additions, deletions
 }
+
+// HeadRevision returns the current commit of the workspace. ShipProof
+// inspects the real Git state. It does not accept a runner claim.
+func HeadRevision(dir string) (string, error) {
+	if err := checkRepo(dir); err != nil {
+		return "", err
+	}
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("read HEAD revision: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// Dirty reports whether the workspace holds uncommitted changes.
+func Dirty(dir string) (bool, error) {
+	if err := checkRepo(dir); err != nil {
+		return false, err
+	}
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("read worktree status: %w", err)
+	}
+	return strings.TrimSpace(string(output)) != "", nil
+}

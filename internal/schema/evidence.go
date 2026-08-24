@@ -28,6 +28,20 @@ type EvidencePack struct {
 	AgentRun       *AgentRunMetadata      `json:"agent_run,omitempty"`
 	Readiness      *ReadinessEvidence     `json:"readiness,omitempty"`
 	Review         *ReviewEvidence        `json:"review,omitempty"`
+	AgentReview    *AgentReviewEvidence   `json:"agent_review,omitempty"`
+}
+
+// AgentReviewEvidence holds adversarial reviewer findings. Every finding is
+// agent-inferred. A reviewer claim is never an observed fact.
+type AgentReviewEvidence struct {
+	Runner   string         `json:"runner,omitempty"`
+	Findings []AgentFinding `json:"findings"`
+}
+
+type AgentFinding struct {
+	Source     string         `json:"source"`
+	Summary    string         `json:"summary"`
+	Provenance ProvenanceKind `json:"provenance"`
 }
 
 type ReadinessEvidence struct {
@@ -142,6 +156,19 @@ func (pack EvidencePack) Validate() error {
 		}
 	}
 
+	if pack.AgentReview != nil {
+		if len(pack.AgentReview.Findings) == 0 {
+			return errors.New("agent_review.findings must not be empty")
+		}
+		for index, finding := range pack.AgentReview.Findings {
+			if finding.Summary == "" {
+				return fmt.Errorf("agent_review.findings[%d].summary is required", index)
+			}
+			if finding.Provenance != ProvenanceInferred {
+				return fmt.Errorf("agent_review.findings[%d].provenance must be %q", index, ProvenanceInferred)
+			}
+		}
+	}
 	if pack.Review != nil {
 		if pack.Review.Source == "" {
 			return errors.New("review.source is required when review is present")

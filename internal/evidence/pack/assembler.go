@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alternayte/shipproof/internal/agent"
 	"github.com/alternayte/shipproof/internal/change"
 	"github.com/alternayte/shipproof/internal/evidence"
 	"github.com/alternayte/shipproof/internal/git"
@@ -106,6 +107,24 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 
 	if agentRun, err := loadAgentRun(root, changeID); err == nil {
 		pack.AgentRun = agentRun
+	}
+
+	if execution, err := agent.LoadExecution(root, changeID); err == nil && len(execution.Findings) > 0 {
+		review := &schema.AgentReviewEvidence{Runner: execution.Execution.Runner}
+		for _, finding := range execution.Findings {
+			review.Findings = append(review.Findings, schema.AgentFinding{
+				Source:     finding.Source,
+				Summary:    finding.Summary,
+				Provenance: schema.ProvenanceInferred,
+			})
+		}
+		pack.AgentReview = review
+		pack.Verification.Checks = append(pack.Verification.Checks, schema.Check{
+			ID:         "agent:review",
+			Status:     "pass",
+			Source:     review.Runner,
+			Provenance: schema.ProvenanceInferred,
+		})
 	}
 
 	pack.Readiness = loadReadiness(root, record)
