@@ -145,6 +145,57 @@ Built-in skills cover the full delivery cycle:
 | `triage-change` | Assess a feature, fix, or issue and recommend the smallest useful ceremony level. |
 | `prepare-change` | Prepare the next ShipProof change from approved intent. |
 
+### Agent execution
+
+ShipProof can run a bounded change through your existing coding agent. It stays
+independent of any one harness or provider.
+
+```bash
+shipproof runner list
+shipproof runner doctor
+shipproof config set agent.runner codex --global
+shipproof config set agent.runner opencode --local
+shipproof config get agent.runner
+shipproof run SP-002
+shipproof run SP-002 --runner claude
+```
+
+Runner resolution follows this precedence, highest first: the `--runner` flag,
+the `SHIPPROOF_RUNNER` variable, `.shipproof/config.yaml`,
+`~/.config/shipproof/config.yaml`, then auto-selection when exactly one usable
+runner exists. ShipProof never chooses a vendor silently.
+
+```yaml
+agent:
+  runner: codex
+  review_runner: claude
+  repair:
+    max_attempts: 2
+  runners:
+    codex:
+      model: ""
+    claude: {}
+    opencode:
+      base_url: "http://127.0.0.1:4096"
+```
+
+v0 ships three adapters: Codex and Claude Code over a subprocess, and OpenCode
+over its server transport.
+
+ShipProof does not own model-provider authentication. Authenticate with the
+coding agent itself. ShipProof never stores an API key, never copies a
+credential file, and refuses a configuration key that looks like a secret.
+
+`shipproof run` returns one of three outcomes:
+
+- `PASS`: deterministic verification passed and the adversarial review ran.
+- `NEEDS_REVIEW`: verification failed after the bounded repair attempts.
+- `BLOCKED`: the runner is unusable, or it cannot enforce the role policy.
+
+A runner claim is never evidence. ShipProof records the base and result Git
+revisions, then runs its own verification. Adversarial reviewer findings enter
+the evidence pack as agent-inferred. They are never labeled as observed.
+
 ## Evidence capture levels
 
 ```yaml
