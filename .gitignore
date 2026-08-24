@@ -1,6 +1,7 @@
 /shipproof
 bin/
 docs/design/
+decisions.md
 .shipproof
 .claude
 .agents

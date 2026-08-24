@@ -14,16 +14,24 @@ Follow these invariants:
 - Run `just verify` before declaring implementation complete.
 - Treat suggestions and nits as non-blocking.
 
-For shaping work:
+## Self-hosted workflow: paused
 
-- Persist durable shaping state under `.shipproof/shaping/`.
-- Run `shipproof shape check` after editing shaping state.
-- Stop the interview when the finite readiness gate is satisfied.
+ShipProof does not currently run its own workflow on itself. Do not create a
+shaping session, an intent snapshot, a verification plan, or an evidence pack
+for work in this repository.
 
-For material implementation work:
+Write a change document under `docs/changes/` in the SP-011 format instead.
+Keep one independently verifiable change per implementation session.
 
-- Read `.shipproof/changes/<change-id>/verification.json` when present.
-- Run `shipproof verification check <change-id>` before implementation.
-- Keep one independently verifiable change per implementation session where practical.
+The existing `.shipproof/` state is a historical record of SP-001 to SP-020.
+Read it. Do not extend it.
 
-Read `docs/design/shipproof-v0-sdd.md` for the v0 goals and phases. Read `docs/changes/` for the change backlog.
+Self-hosted work resumes after v0 closes. See Section 26 of the SDD.
+
+`docs/design/shipproof-v0-sdd.md` is the canonical v0 contract. Section 24 holds the complete definition of done. Section 25 holds the closure rules.
+
+- A criterion is met when its proof command succeeds. Nothing else changes its state.
+- A suggestion or a nit must never reopen a met criterion.
+- A useful idea that no criterion covers becomes a new document under `docs/changes/`. It is not v0 work.
+
+Read `docs/changes/` for the change backlog.

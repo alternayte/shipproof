@@ -1,5 +1,9 @@
 # Complete project report metrics — Software Design Document
 
+> **Not canonical.** This work is complete. The document stays as a record of
+> changes SP-011 to SP-014. `docs/design/shipproof-v0-sdd.md` is the contract
+> for v0. This document creates no requirement.
+
 **Status:** ready_with_assumptions
 **Date:** 2026-08-15
 **Shaping session:** `.shipproof/shaping/complete-metrics-sdd.json`
