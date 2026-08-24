@@ -5,6 +5,7 @@ decisions.md
 .shipproof
 .claude
 .agents
+.opencode
 .DS_Store
 *.out
 *.test
