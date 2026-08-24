@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 
 	"github.com/alternayte/shipproof/internal/change"
 )
@@ -29,12 +30,13 @@ func runChange(args []string, stdout, stderr io.Writer) int {
 
 func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	if len(args) < 1 {
-		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--shaping <session-id>]")
+		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--shaping <session-id>] [--ceremony 0|1|2|3]")
 		return 2
 	}
 
 	changeID := args[0]
 	var source, shapingRef string
+	ceremony := change.DefaultCeremony
 	for index := 1; index < len(args); index++ {
 		switch args[index] {
 		case "--source":
@@ -50,6 +52,18 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 				return 2
 			}
 			shapingRef = args[index+1]
+			index++
+		case "--ceremony":
+			if index+1 >= len(args) {
+				fmt.Fprintln(stderr, "--ceremony requires a level from 0 to 3")
+				return 2
+			}
+			parsed, err := strconv.Atoi(args[index+1])
+			if err != nil {
+				fmt.Fprintf(stderr, "--ceremony requires a level from 0 to 3; got %q\n", args[index+1])
+				return 2
+			}
+			ceremony = parsed
 			index++
 		default:
 			fmt.Fprintf(stderr, "unknown option %q\n", args[index])
@@ -68,7 +82,7 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	record, err := change.Start(root, changeID, source, shapingRef)
+	record, err := change.Start(root, changeID, source, shapingRef, ceremony)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -82,6 +96,7 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	if record.ShapingRef != "" {
 		fmt.Fprintf(stdout, "Shaping: %s\n", record.ShapingRef)
 	}
+	fmt.Fprintf(stdout, "Ceremony: %d\n", record.CeremonyLevel())
 	fmt.Fprintf(stdout, "Captured: %s\n", record.CapturedAt)
 	fmt.Fprintf(stdout, "Record: %s\n", filepath.ToSlash(rel))
 	return 0

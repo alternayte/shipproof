@@ -19,14 +19,35 @@ type Record struct {
 	SnapshotPath  string `json:"snapshot_path"`
 	SHA256        string `json:"sha256"`
 	ShapingRef    string `json:"shaping_ref,omitempty"`
+	Ceremony      *int   `json:"ceremony,omitempty"`
 	CapturedAt    string `json:"captured_at"`
+}
+
+// DefaultCeremony applies when a caller states no level, and when a record
+// written before the field existed is loaded.
+const DefaultCeremony = 1
+
+// MaxCeremony is the highest level the triage-change skill can recommend.
+const MaxCeremony = 3
+
+// CeremonyLevel returns the recorded level. A record written before the field
+// existed reads as DefaultCeremony. The field is a pointer because level 0 is
+// a real value that must survive a round trip.
+func (record Record) CeremonyLevel() int {
+	if record.Ceremony == nil {
+		return DefaultCeremony
+	}
+	return *record.Ceremony
 }
 
 func Path(root, changeID string) string {
 	return filepath.Join(root, ".shipproof", "changes", changeID, "change.json")
 }
 
-func Start(root, changeID, sourcePath, shapingRef string) (Record, error) {
+func Start(root, changeID, sourcePath, shapingRef string, ceremony int) (Record, error) {
+	if ceremony < 0 || ceremony > MaxCeremony {
+		return Record{}, fmt.Errorf("ceremony must be 0 to %d; got %d", MaxCeremony, ceremony)
+	}
 	if strings.TrimSpace(changeID) == "" {
 		return Record{}, errors.New("change id is required")
 	}
@@ -85,6 +106,7 @@ func Start(root, changeID, sourcePath, shapingRef string) (Record, error) {
 		SnapshotPath:  relSnapshot,
 		SHA256:        hashHex,
 		ShapingRef:    strings.TrimSpace(shapingRef),
+		Ceremony:      &ceremony,
 		CapturedAt:    time.Now().UTC().Format(time.RFC3339),
 	}
 
@@ -133,6 +155,9 @@ func (record Record) Validate() error {
 	}
 	if record.CapturedAt == "" {
 		return errors.New("captured_at is required")
+	}
+	if record.Ceremony != nil && (*record.Ceremony < 0 || *record.Ceremony > MaxCeremony) {
+		return fmt.Errorf("ceremony must be 0 to %d; got %d", MaxCeremony, *record.Ceremony)
 	}
 	return nil
 }

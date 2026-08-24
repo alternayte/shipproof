@@ -16,7 +16,7 @@ func TestStalenessCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-100", source, "")
+	record, err := Start(root, "SP-100", source, "", DefaultCeremony)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -42,7 +42,7 @@ func TestStalenessAfterSourceChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-100", source, "")
+	record, err := Start(root, "SP-100", source, "", DefaultCeremony)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -75,7 +75,7 @@ func TestStalenessAfterSourceRemoval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-100", source, "")
+	record, err := Start(root, "SP-100", source, "", DefaultCeremony)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}

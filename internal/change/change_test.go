@@ -3,6 +3,7 @@ package change
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -15,7 +16,7 @@ func TestStartAndLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-001", src, "")
+	record, err := Start(root, "SP-001", src, "", DefaultCeremony)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -50,10 +51,10 @@ func TestDuplicateStartFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "SP-002", src, ""); err != nil {
+	if _, err := Start(root, "SP-002", src, "", DefaultCeremony); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Start(root, "SP-002", src, ""); err == nil {
+	if _, err := Start(root, "SP-002", src, "", DefaultCeremony); err == nil {
 		t.Fatal("expected duplicate start error")
 	}
 }
@@ -67,7 +68,7 @@ func TestVerifyHashDetectsTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "SP-003", src, ""); err != nil {
+	if _, err := Start(root, "SP-003", src, "", DefaultCeremony); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,7 +100,7 @@ func TestStartRejectsEmptyChangeID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "", src, ""); err == nil {
+	if _, err := Start(root, "", src, "", DefaultCeremony); err == nil {
 		t.Fatal("expected error for empty change id")
 	}
 }
@@ -108,7 +109,7 @@ func TestStartRejectsMissingSource(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	if _, err := Start(root, "SP-005", filepath.Join(root, "missing.md"), ""); err == nil {
+	if _, err := Start(root, "SP-005", filepath.Join(root, "missing.md"), "", DefaultCeremony); err == nil {
 		t.Fatal("expected error for missing source")
 	}
 }
@@ -122,7 +123,7 @@ func TestStartWithShapingRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-020", src, "complete-metrics")
+	record, err := Start(root, "SP-020", src, "complete-metrics", DefaultCeremony)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -148,7 +149,7 @@ func TestLoadRecordWithoutShapingRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "SP-021", src, ""); err != nil {
+	if _, err := Start(root, "SP-021", src, "", DefaultCeremony); err != nil {
 		t.Fatal(err)
 	}
 
@@ -158,5 +159,75 @@ func TestLoadRecordWithoutShapingRef(t *testing.T) {
 	}
 	if loaded.ShapingRef != "" {
 		t.Fatalf("shaping_ref should be empty, got %q", loaded.ShapingRef)
+	}
+}
+
+func TestStartRecordsCeremonyZero(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	source := filepath.Join(root, "SP-100.md")
+	if err := os.WriteFile(source, []byte("# SP-100\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	record, err := Start(root, "SP-100", source, "", 0)
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if record.CeremonyLevel() != 0 {
+		t.Fatalf("CeremonyLevel() = %d, want 0", record.CeremonyLevel())
+	}
+
+	data, err := os.ReadFile(Path(root, "SP-100"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"ceremony": 0`) {
+		t.Fatalf("record does not hold ceremony 0:\n%s", data)
+	}
+}
+
+func TestLoadRecordWithoutCeremonyReadsAsOne(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dir := filepath.Join(root, ".shipproof", "changes", "SP-001")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := `{
+  "schema_version": "0.1",
+  "change_id": "SP-001",
+  "source_path": "docs/changes/SP-001.md",
+  "snapshot_path": ".shipproof/changes/SP-001/snapshot.md",
+  "sha256": "511d9f04cea0429920ad7733e973fbe7741190694b4fb8bcc2b8ebbcdc478a56",
+  "captured_at": "2026-08-14T21:58:11Z"
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "change.json"), []byte(legacy), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	record, err := Load(root, "SP-001")
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if record.CeremonyLevel() != 1 {
+		t.Fatalf("CeremonyLevel() = %d, want 1", record.CeremonyLevel())
+	}
+}
+
+func TestStartRejectsCeremonyOutOfRange(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	source := filepath.Join(root, "SP-101.md")
+	if err := os.WriteFile(source, []byte("# SP-101\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Start(root, "SP-101", source, "", 4); err == nil {
+		t.Fatal("expected an error for ceremony 4")
 	}
 }
