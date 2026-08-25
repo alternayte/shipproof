@@ -40,10 +40,16 @@ func CoverageDir(root, changeID string) string {
 //
 // A human proof runs no command. ShipProof records that a person owns it and
 // claims nothing further.
-func Run(root string, plan verification.Plan, headRev string, treeClean *bool, coverage *Coverage) (Set, error) {
+//
+// Run reports no error. A coverage fault degrades the measurement and leaves
+// every recorded proof result unchanged.
+func Run(root string, plan verification.Plan, headRev string, treeClean *bool, coverage *Coverage) Set {
 	if coverage != nil {
 		if err := os.MkdirAll(coverage.Dir, 0o755); err != nil {
-			return Set{}, fmt.Errorf("create coverage directory: %w", err)
+			// A coverage directory ShipProof cannot create removes the
+			// measurement, not the run. Section 11.6 rule 1: the signal
+			// never blocks a run. The caller reports the failure.
+			coverage = nil
 		}
 	}
 	results := []Result{}
@@ -62,7 +68,7 @@ func Run(root string, plan verification.Plan, headRev string, treeClean *bool, c
 		TreeClean:     treeClean,
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		Results:       results,
-	}, nil
+	}
 }
 
 // runProof executes one proof and records what it observed. A command that the

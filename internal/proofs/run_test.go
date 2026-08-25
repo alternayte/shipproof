@@ -35,10 +35,7 @@ func planWithOnePassAndOneFail() verification.Plan {
 func TestRunRecordsOneResultPerProof(t *testing.T) {
 	t.Parallel()
 
-	set, err := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
-	if err != nil {
-		t.Fatalf("Run() error = %v", err)
-	}
+	set := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
 	if len(set.Results) != 3 {
 		t.Fatalf("Results = %d, want 3", len(set.Results))
 	}
@@ -50,10 +47,7 @@ func TestRunRecordsOneResultPerProof(t *testing.T) {
 func TestRunRecordsThePassingProof(t *testing.T) {
 	t.Parallel()
 
-	set, err := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
 	first := set.Results[0]
 	if first.RequirementID != "SP-021-R1" || first.ProofIndex != 0 {
 		t.Fatalf("result 1 = %+v", first)
@@ -69,10 +63,7 @@ func TestRunRecordsThePassingProof(t *testing.T) {
 func TestRunRecordsTheFailingProofWithItsExitCode(t *testing.T) {
 	t.Parallel()
 
-	set, err := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
 	second := set.Results[1]
 	if second.Status != Fail {
 		t.Fatalf("result 2 status = %q, want %q", second.Status, Fail)
@@ -88,10 +79,7 @@ func TestRunRecordsTheFailingProofWithItsExitCode(t *testing.T) {
 func TestRunRunsNoCommandForAHumanProof(t *testing.T) {
 	t.Parallel()
 
-	set, err := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set := Run(t.TempDir(), planWithOnePassAndOneFail(), "", nil, nil)
 	third := set.Results[2]
 	if third.Status != Human {
 		t.Fatalf("result 3 status = %q, want %q", third.Status, Human)
@@ -108,10 +96,7 @@ func TestRunCarriesTheRecordedRevisionAndTreeState(t *testing.T) {
 	t.Parallel()
 
 	clean := true
-	set, err := Run(t.TempDir(), planWithOnePassAndOneFail(), "1cceb33", &clean, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set := Run(t.TempDir(), planWithOnePassAndOneFail(), "1cceb33", &clean, nil)
 	if set.HeadRev != "1cceb33" {
 		t.Fatalf("HeadRev = %q", set.HeadRev)
 	}
@@ -129,10 +114,7 @@ func TestRunCarriesTheRecordedRevisionAndTreeState(t *testing.T) {
 func TestRunOnAnEmptyPlanRecordsNoResult(t *testing.T) {
 	t.Parallel()
 
-	set, err := Run(t.TempDir(), verification.Plan{SchemaVersion: "0.1", ChangeID: "SP-021"}, "", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set := Run(t.TempDir(), verification.Plan{SchemaVersion: "0.1", ChangeID: "SP-021"}, "", nil, nil)
 	if len(set.Results) != 0 {
 		t.Fatalf("Results = %d, want 0", len(set.Results))
 	}
@@ -154,10 +136,7 @@ func TestRunUsesTheRepositoryRootAsTheWorkingDirectory(t *testing.T) {
 		}},
 	}
 
-	set, err := Run(root, plan, "", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set := Run(root, plan, "", nil, nil)
 	if set.Results[0].Status != Fail {
 		t.Fatalf("status = %q, want %q before the marker exists", set.Results[0].Status, Fail)
 	}
@@ -165,10 +144,7 @@ func TestRunUsesTheRepositoryRootAsTheWorkingDirectory(t *testing.T) {
 	if err := writeMarker(root); err != nil {
 		t.Fatal(err)
 	}
-	set, err = Run(root, plan, "", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	set = Run(root, plan, "", nil, nil)
 	if set.Results[0].Status != Pass {
 		t.Fatalf("status = %q, want %q after the marker exists", set.Results[0].Status, Pass)
 	}
@@ -192,13 +168,10 @@ func TestRunWritesOneProfilePerProof(t *testing.T) {
 	}
 
 	dir := filepath.Join(root, ".shipproof", "runs", "SP-100", "coverage")
-	set, err := Run(root, plan, "abc123", nil, &Coverage{
+	set := Run(root, plan, "abc123", nil, &Coverage{
 		Command: "printf 'mode: set\\nm/internal/a/a.go:1.1,2.2 1 1\\n' > {{profile}} && test -n '{{target}}'",
 		Dir:     dir,
 	})
-	if err != nil {
-		t.Fatalf("Run: %v", err)
-	}
 	if len(set.Results) != 2 {
 		t.Fatalf("results = %d, want 2", len(set.Results))
 	}
@@ -227,13 +200,10 @@ func TestRunKeepsTheResultWhenCoverageFails(t *testing.T) {
 		},
 	}
 
-	set, err := Run(root, plan, "abc123", nil, &Coverage{
+	set := Run(root, plan, "abc123", nil, &Coverage{
 		Command: "exit 3",
 		Dir:     filepath.Join(root, "coverage"),
 	})
-	if err != nil {
-		t.Fatalf("Run: %v", err)
-	}
 	if set.Results[0].Status != Pass || set.Results[0].ExitCode != 0 {
 		t.Errorf("a failed coverage command changed the result: %#v", set.Results[0])
 	}
@@ -248,11 +218,31 @@ func TestRunWithoutCoverageWritesNoProfile(t *testing.T) {
 			{ID: "SP-102-R1", Proof: []verification.Proof{{Type: "test", Target: "internal/a", Command: "true"}}},
 		},
 	}
-	set, err := Run(root, plan, "abc123", nil, nil)
-	if err != nil {
-		t.Fatalf("Run: %v", err)
-	}
+	set := Run(root, plan, "abc123", nil, nil)
 	if len(set.Results) != 1 || set.Results[0].Status != Pass {
 		t.Errorf("results = %#v", set.Results)
+	}
+}
+
+// TestRunKeepsTheResultWhenTheCoverageDirectoryCannotBeCreated proves that a
+// coverage directory ShipProof cannot create removes the measurement and not
+// the run. SDD Section 11.6 rule 1: the signal never blocks a run.
+func TestRunKeepsTheResultWhenTheCoverageDirectoryCannotBeCreated(t *testing.T) {
+	root := t.TempDir()
+	blocked := filepath.Join(root, "blocked")
+	if err := os.WriteFile(blocked, []byte("not a directory\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan := verification.Plan{
+		SchemaVersion: "0.1",
+		ChangeID:      "SP-103",
+		Requirements: []verification.Item{
+			{ID: "SP-103-R1", Proof: []verification.Proof{{Type: "test", Target: "internal/a", Command: "true"}}},
+		},
+	}
+
+	set := Run(root, plan, "abc123", nil, &Coverage{Command: "true", Dir: blocked})
+	if len(set.Results) != 1 || set.Results[0].Status != Pass {
+		t.Errorf("a failed coverage directory changed the results: %#v", set.Results)
 	}
 }

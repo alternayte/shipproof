@@ -323,3 +323,45 @@ func TestVerificationRunSurvivesAFailedCoverageCleanup(t *testing.T) {
 		t.Errorf("the coverage summary does not warn about a stale profile: %s", stdout.String())
 	}
 }
+
+// TestVerificationRunSurvivesAFailedCoverageDirectoryCreation proves that a
+// coverage directory ShipProof cannot create does not block the run, does not
+// change the exit code, and does not stop the proof results from reaching
+// disk. SDD Section 11.6 rule 1: the signal never blocks a run.
+//
+// The test locks the parent of the coverage directory, so os.MkdirAll cannot
+// create it. It creates proofs.json first, because a write to an existing
+// file needs no write permission on the locked parent.
+func TestVerificationRunSurvivesAFailedCoverageDirectoryCreation(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-202")
+	writeConfigWithCoverage(t, root)
+
+	runDir := filepath.Dir(proofs.CoverageDir(root, "SP-202"))
+	if err := os.MkdirAll(runDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	proofsPath := filepath.Join(runDir, "proofs.json")
+	if err := os.WriteFile(proofsPath, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(runDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(runDir, 0o755) })
+
+	var stdout, stderr bytes.Buffer
+	code := runVerification([]string{"run", "SP-202", "--proofs-only"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("a failed coverage directory creation changed the exit code: %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "coverage") {
+		t.Errorf("stderr does not report the coverage failure: %s", stderr.String())
+	}
+	data, err := os.ReadFile(proofsPath)
+	if err != nil {
+		t.Fatalf("proofs.json was not readable: %v", err)
+	}
+	if !strings.Contains(string(data), "\"results\"") {
+		t.Errorf("proofs.json holds no proof results: %s", string(data))
+	}
+}

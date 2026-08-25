@@ -198,14 +198,18 @@ func runVerificationRun(args []string, stdout, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "coverage: could not clear the coverage directory, a stale profile can survive: %v\n", err)
 				staleCoverageDir = true
 			}
+			if err := os.MkdirAll(coverageOptions.Dir, 0o755); err != nil {
+				// Section 11.6 rule 1: the signal never blocks a run. A
+				// coverage directory ShipProof cannot create drops the
+				// measurement. Every proof still runs.
+				fmt.Fprintf(stderr, "coverage: could not create the coverage directory, no coverage is measured: %v\n", err)
+				coverageOptions = nil
+				staleCoverageDir = false
+			}
 		}
 	}
 
-	set, err := proofs.Run(root, plan, headRev, treeClean, coverageOptions)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
-	}
+	set := proofs.Run(root, plan, headRev, treeClean, coverageOptions)
 	if _, err := proofs.Save(root, set); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
