@@ -24,10 +24,11 @@
         "rationale": {"type": "string"},
         "accepted_at": {"type": "string", "format": "date-time"}
       },
-      "anyOf": [
+      "oneOf": [
         {"required": ["command"], "properties": {"command": {"minLength": 1}}},
         {"required": ["human", "rationale"], "properties": {"human": {"const": true}, "rationale": {"minLength": 1}}}
-      ]
+      ],
+      "not": {"required": ["command", "accepted_at"]}
     },
     "item": {
       "type": "object",

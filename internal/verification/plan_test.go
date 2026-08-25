@@ -159,3 +159,25 @@ func TestEveryRecordedPlanStillLoads(t *testing.T) {
 		}
 	}
 }
+
+func TestProofRejectsBothCommandAndHuman(t *testing.T) {
+	t.Parallel()
+
+	plan := Plan{
+		SchemaVersion: "0.1",
+		ChangeID:      "SP-021",
+		Requirements: []Item{{
+			ID: "SP-021-R1",
+			Proof: []Proof{{
+				Type:      "test",
+				Target:    "x",
+				Command:   "go test ./...",
+				Human:     true,
+				Rationale: "A person reads it.",
+			}},
+		}},
+	}
+	if err := plan.Validate(); err == nil {
+		t.Fatal("Validate() = nil, want an error; a proof is one form or the other")
+	}
+}
