@@ -280,3 +280,46 @@ func TestVerificationRunWritesAMergedProfile(t *testing.T) {
 		t.Errorf("merged profile missing: %v", err)
 	}
 }
+
+// TestVerificationRunSurvivesAFailedCoverageCleanup proves that a coverage
+// directory ShipProof cannot clear does not block the run and does not
+// change the exit code. SDD Section 11.6: the signal never blocks a run.
+//
+// The test locks a subdirectory nested inside the coverage directory, not
+// the coverage directory's own parent. The parent stays writable, so
+// proofs.json and run.json still write next to it. os.RemoveAll cannot
+// unlink an entry inside the locked subdirectory, so it fails and leaves a
+// stale profile behind.
+func TestVerificationRunSurvivesAFailedCoverageCleanup(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-201")
+	writeConfigWithCoverage(t, root)
+
+	coverageDir := proofs.CoverageDir(root, "SP-201")
+	locked := filepath.Join(coverageDir, "locked")
+	if err := os.MkdirAll(locked, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stale := filepath.Join(locked, "stale.out")
+	if err := os.WriteFile(stale, []byte("mode: set\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(locked, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+	var stdout, stderr bytes.Buffer
+	code := runVerification([]string{"run", "SP-201", "--proofs-only"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("a failed coverage cleanup changed the exit code: %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "coverage") {
+		t.Errorf("stderr does not report the cleanup failure: %s", stderr.String())
+	}
+	if _, err := os.Stat(stale); err != nil {
+		t.Errorf("the stale profile was removed despite the failed cleanup: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "stale profile") {
+		t.Errorf("the coverage summary does not warn about a stale profile: %s", stdout.String())
+	}
+}

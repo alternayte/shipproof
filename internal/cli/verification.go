@@ -187,15 +187,16 @@ func runVerificationRun(args []string, stdout, stderr io.Writer) int {
 	}
 
 	var coverageOptions *proofs.Coverage
+	staleCoverageDir := false
 	if cfg, err := repository.LoadConfig(root); err == nil {
 		if template := strings.TrimSpace(cfg.Verification.Coverage.Command); template != "" {
 			coverageOptions = &proofs.Coverage{
 				Command: template,
 				Dir:     proofs.CoverageDir(root, changeID),
 			}
-			if err := os.RemoveAll(coverageOptions.Dir); err != nil {
-				fmt.Fprintln(stderr, err)
-				return 1
+			if err := clearCoverageDir(coverageOptions.Dir); err != nil {
+				fmt.Fprintf(stderr, "coverage: could not clear the coverage directory, a stale profile can survive: %v\n", err)
+				staleCoverageDir = true
 			}
 		}
 	}
@@ -228,10 +229,22 @@ func runVerificationRun(args []string, stdout, stderr io.Writer) int {
 	if coverageOptions != nil {
 		merged, count := mergeProfiles(root, changeID, coverageOptions.Dir)
 		if merged != "" {
-			fmt.Fprintf(stdout, "coverage: %s (%d profiles)\n", merged, count)
+			note := ""
+			if staleCoverageDir {
+				note = " (a stale profile from an earlier revision may be present)"
+			}
+			fmt.Fprintf(stdout, "coverage: %s (%d profiles)%s\n", merged, count, note)
 		}
 	}
 	return 0
+}
+
+// clearCoverageDir removes a stale coverage directory from an earlier
+// revision. The caller must not treat a failure here as a run failure. The
+// signal never blocks a run, so measurement still runs against whatever
+// profiles remain, and a surviving stale profile is the lesser harm.
+func clearCoverageDir(dir string) error {
+	return os.RemoveAll(dir)
 }
 
 // mergeProfiles joins every per-proof profile into one. It returns the
