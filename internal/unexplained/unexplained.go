@@ -39,7 +39,8 @@ type FileFinding struct {
 type Report struct {
 	ChangeID string `json:"change_id"`
 	// CoverageAvailable is false when no coverage command is configured. The
-	// line-level section is then absent.
+	// line-level section is then absent, and every changed line counts as a
+	// line ShipProof could not judge.
 	CoverageAvailable   bool          `json:"coverage_available"`
 	LineFindings        []LineFinding `json:"line_findings"`
 	FileFindings        []FileFinding `json:"file_findings"`
@@ -79,6 +80,12 @@ func Build(input Input) Report {
 			findings, uninstrumented := judgeLines(file, input.Profile)
 			report.LineFindings = append(report.LineFindings, findings...)
 			report.UninstrumentedLines += uninstrumented
+		} else {
+			// Section 11.6 rule 4: the report states the count of lines it
+			// could not judge. Without a profile it judged no line, so every
+			// changed line of a file it reads counts. An ignored path counts
+			// toward no total, so this loop never reaches one.
+			report.UninstrumentedLines += changedLineCount(file)
 		}
 
 		if targetNames(file.Path, input.Targets) {
@@ -91,6 +98,16 @@ func Build(input Input) Report {
 	}
 
 	return report
+}
+
+// changedLineCount sums the post-image lines of one file. A pure deletion
+// carries no line, so it adds nothing.
+func changedLineCount(file git.FileHunks) int {
+	total := 0
+	for _, hunk := range file.Hunks {
+		total += hunk.LineCount
+	}
+	return total
 }
 
 // judgeLines walks every changed line of one file and groups the lines that no

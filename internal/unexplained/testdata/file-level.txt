@@ -6,4 +6,4 @@ Unexplained change — SP-028
     internal/cli/app.go
     docs/workflow.md     [ignored: docs/**]
 
-  Not instrumented: 0 changed lines. No claim made.
+  Not instrumented: 7 changed lines. No claim made.

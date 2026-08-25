@@ -92,8 +92,11 @@ func TestBuildDegradesToFileLevel(t *testing.T) {
 	if len(report.LineFindings) != 0 {
 		t.Errorf("line findings = %#v, want none", report.LineFindings)
 	}
-	if report.UninstrumentedLines != 0 {
-		t.Errorf("uninstrumented = %d, want 0", report.UninstrumentedLines)
+	// Section 11.6 rule 4: without a profile ShipProof judged no line, so
+	// every changed line it read counts as a line it could not judge. The
+	// two ignored lines in docs/workflow.md count toward no total.
+	if report.UninstrumentedLines != 7 {
+		t.Errorf("uninstrumented = %d, want 7", report.UninstrumentedLines)
 	}
 	if len(report.FileFindings) != 2 {
 		t.Fatalf("file findings = %#v", report.FileFindings)
