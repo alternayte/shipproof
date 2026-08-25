@@ -1,0 +1,9 @@
+Unexplained change — SP-028
+
+  No coverage command is configured. ShipProof cannot see inside a file.
+
+  No proof names these files (derived):
+    internal/cli/app.go
+    docs/workflow.md     [ignored: docs/**]
+
+  Not instrumented: 0 changed lines. No claim made.

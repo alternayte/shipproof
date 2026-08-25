@@ -1,0 +1,11 @@
+Unexplained change — SP-028
+
+  No proof ran these (observed):
+    internal/git/collector.go  withRetry         lines 190-192
+    internal/git/errors.go     RetryError.Error  lines 44-45
+
+  No proof names these files (derived):
+    internal/cli/app.go
+    docs/workflow.md     [ignored: docs/**]
+
+  Not instrumented: 2 changed lines. No claim made.
