@@ -47,6 +47,17 @@ trivial change. Level 0 needs no verification plan. Level 1 and above need one.
 shipproof change status <change-id>
 ```
 
+## Adopt the requirement set
+
+Run `shipproof doc adopt <change-id> --source <path>`.
+
+A document in the `docs/changes/` format adopts with no human step. The
+provenance is `observed`.
+
+Any other document produces a proposal. Present the proposal to the human.
+Do not pass `--confirm` on the human's behalf. Wait for the human to approve
+the list, then rerun the command with `--confirm`.
+
 ## Refresh a stale snapshot
 
 `shipproof next` reports `INTENT_STALE` when the source document changed after

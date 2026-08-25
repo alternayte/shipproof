@@ -62,11 +62,15 @@ With no change identifier, `next` resolves the single change that is not
 shipproof doc status docs/prd/retries.md
 shipproof doc review docs/prd/retries.md
 shipproof doc review design.md --kind sdd --json
+shipproof doc adopt SP-002 --source docs/changes/SP-002-retries.md
+shipproof doc adopt SP-002 --source design.md --confirm
 ```
 
 Deterministic checks catch structural gaps (missing problem statement, absent scope), unresolved placeholders, and contextless quality attributes. Semantic review is performed by the portable Agent Skills inside the coding harness.
 
 The CLI does not invoke an LLM. A clean deterministic result does not guarantee semantic completeness.
+
+`doc adopt` extracts the requirement set from a source document into `.shipproof/changes/<change-id>/requirements.json`. A document in the `docs/changes/` format adopts with `observed` provenance and no human step. Any other document prints a proposal and needs `--confirm`, and then it writes with `human` provenance.
 
 ### Shaping sessions
 
@@ -113,6 +117,8 @@ shipproof verification check SP-002
 `shipproof verify` runs the configured repository verification command. With a change ID it behaves like `verification run` and writes a structured run result. Without one, logs go to `.shipproof/runs/adhoc/` and the command's exit code is returned.
 
 Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target.
+
+`verification check` also compares the requirement set against the plan when a requirement sidecar exists. A requirement with no plan entry blocks. A plan entry with no requirement blocks.
 
 ### Reports
 
