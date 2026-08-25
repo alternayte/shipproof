@@ -38,3 +38,29 @@ For each material requirement or invariant:
 Do not invent acceptance criteria.
 Do not weaken a requirement because it is hard to test.
 Do not require an elaborate verification plan for a trivial low-risk change.
+
+## Two proof forms
+
+A proof carries one of two forms.
+
+- An automated proof carries a `command`. ShipProof runs it and records the
+  exit code.
+- A human proof carries `human: true` and a `rationale`. The rationale states
+  why no machine can perform the check. ShipProof runs nothing for it.
+
+A proof that carries neither form is incomplete. `shipproof verification check`
+rejects it.
+
+When a person performs a human proof, record the acceptance. Add
+`"accepted_at"` with an RFC 3339 timestamp to that proof. Without it the
+coverage matrix reads `awaiting-human`.
+
+```json
+{
+  "type": "human",
+  "target": "docs/workflow.md",
+  "human": true,
+  "rationale": "A person reads the document and confirms the sequence.",
+  "accepted_at": "2026-08-25T10:00:00Z"
+}
+```

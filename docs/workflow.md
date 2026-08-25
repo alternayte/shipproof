@@ -91,8 +91,17 @@ The agent reads the intent snapshot and verification plan, then makes the smalle
 
 ```bash
 shipproof verification run <change-id>
+shipproof verification run <change-id> --gate-only
+shipproof verification run <change-id> --proofs-only
 shipproof change check <change-id>
+shipproof coverage <change-id>
 ```
+
+`--gate-only` skips the attribution pass. `--proofs-only` skips the gate. Both
+flags together is an error.
+
+`shipproof coverage <change-id>` reports what each requirement proved at the
+current revision.
 
 ## Step 4 — Produce evidence
 
@@ -150,7 +159,7 @@ Linear sync requires `LINEAR_API_KEY` and `LINEAR_TEAM_ID` environment variables
 |---|---|---|
 | Prepare | `prepare-change` | `change start`, `change status` |
 | Plan verification | `plan-verification` | `verification init`, `verification check` |
-| Implement | `implement-change` | `change status`, `verification check`, `verification run`, `change check` |
+| Implement | `implement-change` | `change status`, `verification check`, `verification run`, `change check`, `coverage` |
 | Evidence | `produce-evidence` | `evidence pack` |
 | Human review | `prepare-human-review` | `review prepare` |
 | Reports | none | `report change`, `report pr-summary`, `report project` |
