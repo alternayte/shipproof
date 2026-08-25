@@ -140,7 +140,7 @@ func classify(requirementID string, item verification.Item, planned bool, record
 			Detail: fmt.Sprintf("%d of %d human proofs carry no recorded acceptance", humanProofs-accepted, humanProofs)}
 	case automated > 0:
 		return Row{RequirementID: requirementID, State: Unproven, Provenance: Unknown,
-			Detail: fmt.Sprintf("%d of %d automated proofs did not run at this revision", automated-passed-failed, automated)}
+			Detail: fmt.Sprintf("%d of %d automated proofs have no result at this revision", automated-passed-failed, automated)}
 	default:
 		return Row{RequirementID: requirementID, State: Unproven, Provenance: Unknown,
 			Detail: "the plan entry names no usable proof"}

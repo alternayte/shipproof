@@ -10,7 +10,7 @@ decisions.md
 .DS_Store
 *.out
 *.test
-coverage.*
+/coverage.*
 dist/
 .superpowers/
 docs/build/
