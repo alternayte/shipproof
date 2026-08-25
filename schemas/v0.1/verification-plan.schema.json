@@ -25,8 +25,8 @@
         "accepted_at": {"type": "string", "format": "date-time"}
       },
       "oneOf": [
-        {"required": ["command"], "properties": {"command": {"minLength": 1}}},
-        {"required": ["human", "rationale"], "properties": {"human": {"const": true}, "rationale": {"minLength": 1}}}
+        {"required": ["command"], "properties": {"command": {"pattern": "\\S"}}},
+        {"required": ["human", "rationale"], "properties": {"human": {"const": true}, "rationale": {"pattern": "\\S"}}}
       ],
       "not": {"required": ["command", "accepted_at"]}
     },

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -58,10 +59,34 @@ func newCoverageWorkspace(t *testing.T, changeID string) string {
 		t.Fatal(err)
 	}
 
+	commitCoverageWorkspace(t, root)
+
 	RunOverrides["."] = root
 	t.Cleanup(func() { delete(RunOverrides, ".") })
 
 	return root
+}
+
+// commitCoverageWorkspace makes root a Git repository with one commit. A proof
+// result carries a revision only inside a repository. The coverage matrix reads
+// an empty revision as not current, so a workspace without a commit proves
+// nothing.
+func commitCoverageWorkspace(t *testing.T, root string) {
+	t.Helper()
+
+	for _, args := range [][]string{
+		{"init", "--initial-branch=main"},
+		{"config", "user.email", "test@example.com"},
+		{"config", "user.name", "Test"},
+		{"add", "-A"},
+		{"commit", "-m", "workspace"},
+	} {
+		command := exec.Command("git", args...)
+		command.Dir = root
+		if out, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, string(out))
+		}
+	}
 }
 
 func TestCoverageReportsProvenAndAwaitingHuman(t *testing.T) {
@@ -163,5 +188,36 @@ func TestCoverageWithNoArgumentIsAUsageError(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := runCoverage(nil, &stdout, &stderr); code != 2 {
 		t.Fatalf("exit = %d, want 2", code)
+	}
+}
+
+// TestCoverageWithNoRecordedRevisionReportsUnproven covers a ShipProof root
+// outside a Git repository. The proof result carries a pass with no revision.
+// The matrix must not turn an unrevisioned artifact into a proven row.
+func TestCoverageWithNoRecordedRevisionReportsUnproven(t *testing.T) {
+	root := newCoverageWorkspace(t, "SP-806")
+
+	results := `{"schema_version":"0.1","change_id":"SP-806","timestamp":"2026-08-25T10:00:00Z","results":[` +
+		`{"requirement_id":"SP-806-R1","proof_index":0,"command":"true","exit_code":0,"duration_ms":1,"status":"pass"}]}`
+	if err := os.MkdirAll(filepath.Join(root, ".shipproof", "runs", "SP-806"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".shipproof", "runs", "SP-806", "proofs.json"), []byte(results+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := runCoverage([]string{"SP-806", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("coverage exit = %d, stderr = %s", code, stderr.String())
+	}
+	var matrix coverage.Matrix
+	if err := json.Unmarshal(stdout.Bytes(), &matrix); err != nil {
+		t.Fatal(err)
+	}
+	if matrix.RunCurrent {
+		t.Fatal("RunCurrent = true with no recorded revision")
+	}
+	if matrix.Rows[0].State != coverage.Unproven {
+		t.Fatalf("row 1 state = %q, want %q", matrix.Rows[0].State, coverage.Unproven)
 	}
 }

@@ -8,8 +8,8 @@ import (
 
 // StateDirectory is the ShipProof state directory. Tree checks exclude it,
 // because ShipProof writes its own artifacts there as a normal part of the
-// flow. A check that counted those writes would mark every run stale the
-// moment the evidence pack landed.
+// flow. A check that counts those writes marks every run stale the moment the
+// evidence pack lands.
 const StateDirectory = ".shipproof"
 
 // TreeState reports the Git revision and the cleanliness of root. A directory

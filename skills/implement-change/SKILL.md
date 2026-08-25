@@ -58,9 +58,13 @@ shipproof change check <change-id>
 Then map results to intent:
 
 1. Read the verification plan from `.shipproof/changes/<change-id>/verification.json`.
-2. Read the run result from `.shipproof/runs/<change-id>/run.json`.
-3. Map observed results to requirements and invariants.
-4. Record pass, fail, skip, or unknown exactly as observed.
+2. Read `.shipproof/runs/<change-id>/proofs.json`, which holds one result per
+   proof. Read `.shipproof/runs/<change-id>/run.json`, which holds the gate
+   result.
+3. Read `shipproof coverage <change-id>`. It derives the state of each
+   requirement from those two artifacts.
+4. Copy the state the coverage matrix reports. Write no status the matrix does
+   not report.
 5. Preserve raw evidence references.
 
 Run `shipproof next <change-id>` again. The phase advances only when the run

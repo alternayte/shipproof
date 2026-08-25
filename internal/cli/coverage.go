@@ -68,7 +68,13 @@ func runCoverage(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		results = &loaded
-		current, _ = verify.IsCurrent(root, verify.Result{HeadRev: loaded.HeadRev, TreeClean: loaded.TreeClean})
+		// A run with no recorded revision is not judgeable. The phase function
+		// reads it as current, so that an unjudgeable run raises no false alarm.
+		// The coverage matrix takes the opposite bias. A row must not make a
+		// claim it cannot support, so an empty revision reads as not current.
+		if strings.TrimSpace(loaded.HeadRev) != "" {
+			current, _ = verify.IsCurrent(root, verify.Result{HeadRev: loaded.HeadRev, TreeClean: loaded.TreeClean})
+		}
 	}
 
 	matrix := coverage.Build(set, plan, results, current)

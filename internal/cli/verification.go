@@ -136,9 +136,12 @@ func runVerificationRun(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	// Capture the tree state once, before either pass runs. A command can
-	// write files, so a state captured afterwards would describe a tree that
-	// the run itself changed.
+	// Capture the tree state once, before either pass runs. A command can write
+	// files, so a state captured afterwards describes a tree that the run itself
+	// changed.
+	//
+	// run.json and proofs.json take separate captures. The two agree only while
+	// nothing between the two calls writes to the tree.
 	headRev, treeClean := verify.TreeState(root)
 
 	if !proofsOnly {

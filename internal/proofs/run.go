@@ -37,7 +37,12 @@ func Run(root string, plan verification.Plan, headRev string, treeClean *bool) (
 }
 
 // runProof executes one proof and records what it observed. A command that the
-// shell cannot start counts as a failure with the exit code the shell reports.
+// shell cannot start counts as a failure with the exit code 127, because the
+// shell never started and reported no code.
+//
+// This is a deliberate asymmetry with the gate. A proof that cannot start is
+// attributed to its requirement as a failure. A gate that cannot start returns
+// an error, because no requirement owns the gate.
 func runProof(root, requirementID string, index int, proof verification.Proof) Result {
 	if !proof.IsAutomated() {
 		return Result{RequirementID: requirementID, ProofIndex: index, Status: Human}
