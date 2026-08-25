@@ -51,6 +51,19 @@ func TestNextJSONOutput(t *testing.T) {
 	}
 }
 
+func TestNextRejectsUnrecognizedOption(t *testing.T) {
+	newCLITestRoot(t)
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"next", "--Json"}, &stdout, &stderr)
+	if code != 2 {
+		t.Fatalf("exit code = %d, want 2; stdout = %s stderr = %s", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "unknown option") {
+		t.Fatalf("stderr does not name the problem:\n%s", stderr.String())
+	}
+}
+
 func TestNextWithSeveralOpenChangesListsThem(t *testing.T) {
 	root := newCLITestRoot(t)
 

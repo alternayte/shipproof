@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/alternayte/shipproof/internal/phase"
 )
@@ -21,8 +22,12 @@ func runNext(args []string, stdout, stderr io.Writer) int {
 			asJSON = true
 			continue
 		}
-		if changeID != "" {
+		if strings.HasPrefix(argument, "--") {
 			fmt.Fprintf(stderr, "unknown option %q\n", argument)
+			return 2
+		}
+		if changeID != "" {
+			fmt.Fprintf(stderr, "unexpected argument %q\n", argument)
 			return 2
 		}
 		changeID = argument
