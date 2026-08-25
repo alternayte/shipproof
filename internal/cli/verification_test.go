@@ -94,23 +94,32 @@ func TestVerificationCheckBlocksAnUntiedPlanEntry(t *testing.T) {
 	}
 }
 
-// runVerificationIn runs the verification command with the process working
-// directory set to root. The check resolves the repository root from ".", so
-// the test must move there.
+// runVerificationIn runs the verification command with the repository root
+// resolved to root. The check resolves the root from ".", so the test installs
+// the RunOverrides seam that the rest of the package uses.
 func runVerificationIn(t *testing.T, root string, args []string, stdout, stderr *bytes.Buffer) int {
 	t.Helper()
 
-	previous, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := os.Chdir(previous); err != nil {
-			t.Fatal(err)
-		}
-	})
+	RunOverrides["."] = root
+	t.Cleanup(func() { delete(RunOverrides, ".") })
 	return runVerification(args, stdout, stderr)
+}
+
+// TestVerificationCheckTiesAPlanFileByPath proves that an existing plan file
+// locates its own repository. No override is installed, so
+// a resolution from "." finds the ShipProof repository that holds this test
+// and never finds the temporary sidecar.
+func TestVerificationCheckTiesAPlanFileByPath(t *testing.T) {
+	root := tieRepo(t, tiePlanJSON, tieSidecarExtra)
+	plan := filepath.Join(root, ".shipproof", "changes", "SP-028", "verification.json")
+
+	var stdout, stderr bytes.Buffer
+	code := runVerification([]string{"check", plan}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("exit = 0, want non-zero\nstdout: %s", stdout.String())
+	}
+	combined := stdout.String() + stderr.String()
+	if !strings.Contains(combined, "SP-028-R2") {
+		t.Fatalf("output does not report the tie blocker:\n%s", combined)
+	}
 }

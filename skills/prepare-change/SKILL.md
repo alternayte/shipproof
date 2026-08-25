@@ -56,7 +56,7 @@ provenance is `observed`.
 
 Any other document produces a proposal. Present the proposal to the human.
 Do not pass `--confirm` on the human's behalf. Wait for the human to approve
-the list, then rerun the command with `--confirm`.
+the list. Then rerun the command with `--confirm`.
 
 ## Refresh a stale snapshot
 

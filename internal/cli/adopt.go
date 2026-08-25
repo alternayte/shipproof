@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/alternayte/shipproof/internal/requirements"
@@ -17,7 +18,7 @@ import (
 var adoptNow = func() time.Time { return time.Now() }
 
 func runDocAdopt(args []string, stdout, stderr io.Writer) int {
-	const usage = "usage: shipproof doc adopt <change-id> --source <path> [--confirm] [--json]"
+	const usage = "usage: shipproof doc adopt <change-id> --source <path> [--confirm] [--force] [--json]"
 
 	if len(args) < 1 {
 		fmt.Fprintln(stderr, usage)
@@ -27,6 +28,7 @@ func runDocAdopt(args []string, stdout, stderr io.Writer) int {
 
 	source := ""
 	confirm := false
+	force := false
 	jsonOutput := false
 	for index := 1; index < len(args); index++ {
 		switch args[index] {
@@ -36,9 +38,15 @@ func runDocAdopt(args []string, stdout, stderr io.Writer) int {
 				return 2
 			}
 			source = args[index+1]
+			if strings.HasPrefix(source, "--") {
+				fmt.Fprintf(stderr, "--source requires a path, not the option %q\n%s\n", source, usage)
+				return 2
+			}
 			index++
 		case "--confirm":
 			confirm = true
+		case "--force":
+			force = true
 		case "--json":
 			jsonOutput = true
 		default:
@@ -57,9 +65,17 @@ func runDocAdopt(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	root, err := findRepositoryRoot(source)
+	root, err := findRepositoryRoot(".")
 	if err != nil {
 		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	// A second adopt renumbers every requirement below a new heading. That
+	// action drops the confirmation stamps and unties the verification plan.
+	// The command refuses until the operator asks for the overwrite.
+	if !force && requirements.Exists(root, changeID) {
+		fmt.Fprintf(stderr, "a requirement set already exists for %s. Rerun with --force to overwrite it.\n", changeID)
 		return 1
 	}
 

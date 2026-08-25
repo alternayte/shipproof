@@ -75,9 +75,16 @@ func runVerification(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintln(stderr, "usage: shipproof verification check <change-id-or-file>")
 			return 2
 		}
+		// The argument names the artifact that locates the repository. An
+		// existing file resolves the root from its own path. A change
+		// identifier resolves the root from the working directory.
 		path := args[1]
-		root, rootErr := findRepositoryRoot(".")
-		if _, err := os.Stat(path); err != nil {
+		var root string
+		var rootErr error
+		if _, err := os.Stat(path); err == nil {
+			root, rootErr = findRepositoryRoot(path)
+		} else {
+			root, rootErr = findRepositoryRoot(".")
 			if rootErr != nil {
 				fmt.Fprintln(stderr, rootErr)
 				return 1

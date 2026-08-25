@@ -14,7 +14,7 @@ import (
 // heading. The caller decides whether to fall back to the foreign adopter.
 var ErrNoNativeRequirement = errors.New("the document holds no requirement heading")
 
-// nativeHeading matches a requirement heading in the docs/changes/ format.
+// nativeHeadingPattern matches a requirement heading in the docs/changes/ format.
 // The separator is an em dash or a hyphen, because real documents use both.
 // The change identifier is inserted at parse time, so a heading that belongs
 // to another change never matches.
@@ -48,7 +48,7 @@ func ParseNative(changeID, sourcePath string, body []byte) (Set, error) {
 		line := scanner.Text()
 
 		// A fenced block holds example text. A heading inside one is not a
-		// requirement, and a document that documents its own format would
+		// requirement, and a document that explains its own format would
 		// otherwise adopt its own example.
 		if strings.HasPrefix(strings.TrimSpace(line), "```") {
 			inFence = !inFence

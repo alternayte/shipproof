@@ -175,14 +175,6 @@ func TestConfirmStampsEveryHumanRequirement(t *testing.T) {
 	}
 }
 
-func TestErrUnconfirmedIsExported(t *testing.T) {
-	t.Parallel()
-
-	if !errors.Is(ErrUnconfirmed, ErrUnconfirmed) {
-		t.Fatal("ErrUnconfirmed is not usable with errors.Is")
-	}
-}
-
 func TestSaveRefusesAnUnconfirmedForeignSet(t *testing.T) {
 	t.Parallel()
 

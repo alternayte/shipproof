@@ -70,7 +70,7 @@ Deterministic checks catch structural gaps (missing problem statement, absent sc
 
 The CLI does not invoke an LLM. A clean deterministic result does not guarantee semantic completeness.
 
-`doc adopt` extracts the requirement set from a source document into `.shipproof/changes/<change-id>/requirements.json`. A document in the `docs/changes/` format adopts with `observed` provenance and no human step. Any other document prints a proposal and needs `--confirm`. With `--confirm`, it writes with `human` provenance.
+`doc adopt` extracts the requirement set from a source document into `.shipproof/changes/<change-id>/requirements.json`. A document in the `docs/changes/` format adopts with `observed` provenance and no human step. Any other document prints a proposal and needs `--confirm`. With `--confirm`, it writes with `human` provenance. `doc adopt` refuses to overwrite an existing requirement set. Pass `--force` to replace it.
 
 ### Shaping sessions
 
@@ -118,7 +118,7 @@ shipproof verification check SP-002
 
 Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target.
 
-`verification check` also compares the requirement set against the plan when a requirement sidecar exists. A requirement with no plan entry blocks. A plan entry with no requirement blocks.
+`verification check` also compares the requirement set against the plan when a requirement sidecar exists. A requirement with no plan entry blocks. A plan entry with no requirement blocks. Invariants take no part in the tie check.
 
 ### Reports
 

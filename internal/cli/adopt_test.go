@@ -50,6 +50,8 @@ func adoptRepo(t *testing.T, name, body string) (string, string) {
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	RunOverrides["."] = root
+	t.Cleanup(func() { delete(RunOverrides, ".") })
 	return root, path
 }
 
@@ -179,9 +181,72 @@ func TestDocAdoptRejectsAnUnknownOption(t *testing.T) {
 	_, source := adoptRepo(t, "SP-011.md", nativeDoc)
 
 	var stdout, stderr bytes.Buffer
-	code := runDoc([]string{"adopt", "SP-011", "--source", source, "--force"}, &stdout, &stderr)
+	code := runDoc([]string{"adopt", "SP-011", "--source", source, "--unknown"}, &stdout, &stderr)
 	if code != 2 {
 		t.Fatalf("exit = %d, want 2", code)
+	}
+}
+
+func TestDocAdoptRejectsAnOptionAsTheSourceValue(t *testing.T) {
+	adoptRepo(t, "SP-011.md", nativeDoc)
+
+	var stdout, stderr bytes.Buffer
+	code := runDoc([]string{"adopt", "SP-011", "--source", "--confirm"}, &stdout, &stderr)
+	if code != 2 {
+		t.Fatalf("exit = %d, want 2\nstderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "usage:") {
+		t.Fatalf("stderr does not report a usage error:\n%s", stderr.String())
+	}
+}
+
+func TestDocAdoptRefusesToOverwriteWithoutForce(t *testing.T) {
+	root, source := adoptRepo(t, "SP-011.md", nativeDoc)
+	sidecar := filepath.Join(root, ".shipproof", "changes", "SP-011", "requirements.json")
+
+	var stdout, stderr bytes.Buffer
+	if code := runDoc([]string{"adopt", "SP-011", "--source", source}, &stdout, &stderr); code != 0 {
+		t.Fatalf("first adopt exit = %d, want 0\nstderr: %s", code, stderr.String())
+	}
+	before, err := os.ReadFile(sidecar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code := runDoc([]string{"adopt", "SP-011", "--source", source}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("second adopt exit = 0, want non-zero\nstdout: %s", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "--force") {
+		t.Fatalf("stderr does not name --force:\n%s", stderr.String())
+	}
+	after, err := os.ReadFile(sidecar)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("the refused adopt changed the existing sidecar")
+	}
+}
+
+func TestDocAdoptOverwritesWithForce(t *testing.T) {
+	root, source := adoptRepo(t, "SP-011.md", nativeDoc)
+	sidecar := filepath.Join(root, ".shipproof", "changes", "SP-011", "requirements.json")
+
+	var stdout, stderr bytes.Buffer
+	if code := runDoc([]string{"adopt", "SP-011", "--source", source}, &stdout, &stderr); code != 0 {
+		t.Fatalf("first adopt exit = %d, want 0\nstderr: %s", code, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runDoc([]string{"adopt", "SP-011", "--source", source, "--force"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("forced adopt exit = %d, want 0\nstderr: %s", code, stderr.String())
+	}
+	if _, err := os.ReadFile(sidecar); err != nil {
+		t.Fatalf("sidecar missing after the forced adopt: %v", err)
 	}
 }
 

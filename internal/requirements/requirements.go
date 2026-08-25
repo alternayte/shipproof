@@ -19,7 +19,7 @@ import (
 // SchemaVersion is the version that every ShipProof artifact carries.
 const SchemaVersion = "0.1"
 
-// Provenance names how ShipProof learned a requirement. No adopter may write
+// Provenance names how ShipProof learned a requirement. No adopter writes
 // inferred. A requirement that a model guessed is not a requirement.
 type Provenance string
 
