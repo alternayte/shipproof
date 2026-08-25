@@ -310,6 +310,30 @@ func TestResolveReadyForHuman(t *testing.T) {
 	}
 }
 
+// TestUnexplainedChangeDoesNotBlockReadyForHuman proves S16. The signal is
+// review material. The phase function must not read it, so a change with
+// unexplained findings still reaches READY_FOR_HUMAN.
+func TestUnexplainedChangeDoesNotBlockReadyForHuman(t *testing.T) {
+	t.Parallel()
+
+	root, _ := newChange(t, "SP-318", 1)
+	writePlan(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","requirements":[{"id":"SP-318-R1","proof":[{"type":"unit","target":"x_test.go","command":"go test ."}]}],"invariants":[]}`)
+	writeRun(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","exit_code":0,"duration_ms":10,"stdout_path":"a","stderr_path":"b","timestamp":"2026-08-25T10:00:00Z"}`)
+	writeArtifact(t, root, "SP-318", "evidence-pack.json", `{"unexplained_change":{"coverage_available":true,"line_findings":[{"file":"internal/a/a.go","symbol":"F","start_line":1,"end_line":9}],"file_findings":[{"path":"internal/b/b.go"}],"uninstrumented_lines":61}}`)
+	writeArtifact(t, root, "SP-318", "review-packet.json", "{}")
+
+	result, err := Resolve(root, "SP-318")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if result.Phase != ReadyForHuman {
+		t.Fatalf("Phase = %q, want %q; the unexplained-change signal must never block a change", result.Phase, ReadyForHuman)
+	}
+	if result.Blocker != "" {
+		t.Errorf("Blocker = %q, want empty", result.Blocker)
+	}
+}
+
 // TestResolveStoresNoCursor proves the two properties that the design rests on.
 // Repeated calls agree, and the removal of an artifact moves the phase backward.
 func TestResolveStoresNoCursor(t *testing.T) {
