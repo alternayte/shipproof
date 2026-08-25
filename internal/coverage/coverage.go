@@ -1,6 +1,6 @@
 // Package coverage derives the requirement coverage matrix. The matrix is
 // derived on demand and no agent writes it. A stored matrix is an assertion.
-// A derived matrix is a reading of the artifacts on disk.
+// A derived matrix states what the artifacts on disk say.
 //
 // No state and no provenance in this package reads inferred. A row that
 // nothing proved reads unproven with unknown provenance, and it says so.

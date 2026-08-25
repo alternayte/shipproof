@@ -17,6 +17,12 @@ Act on the phase it reports. When it names a different skill, use that skill
 first. The repository is the source of truth. Do not rely on chat history to
 decide the next step.
 
+## Read the unexplained-change section first
+
+Read the unexplained-change section of the review packet or the change report
+before you review anything else. It names changed code that no approved proof
+ran. The signal fails no change. It is review material only.
+
 Review the change against its approved intent, not against an imagined broader product.
 
 Check:

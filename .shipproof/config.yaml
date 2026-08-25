@@ -1,0 +1,18 @@
+version: 1
+schema_version: "0.1"
+verification:
+  command: just verify
+  coverage:
+    command: go test -coverpkg=./... -coverprofile={{profile}} ./{{target}}/
+    format: go
+  unexplained_ignore:
+    - "docs/**"
+    - "skills/**"
+    - "schemas/**"
+    - ".shipproof/**"
+evidence:
+  capture: metadata
+language:
+  profile: ste-assisted
+  procedural_sentence_max_words: 20
+  descriptive_sentence_max_words: 25

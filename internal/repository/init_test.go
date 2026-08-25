@@ -55,3 +55,19 @@ func TestInitializeDoesNotOverwriteExistingConfig(t *testing.T) {
 		t.Fatal("existing config was overwritten")
 	}
 }
+
+func TestInitializeWritesALoadableConfig(t *testing.T) {
+	root := t.TempDir()
+
+	if _, err := Initialize(root); err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+
+	config, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if config.Verification.Command != "just verify" {
+		t.Fatalf("verification.command = %q, want %q", config.Verification.Command, "just verify")
+	}
+}

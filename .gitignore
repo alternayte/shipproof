@@ -9,6 +9,8 @@ decisions.md
 .opencode
 .DS_Store
 *.out
+# Do not silently drop a required test fixture under testdata.
+!**/testdata/**/*.out
 *.test
 /coverage.*
 dist/

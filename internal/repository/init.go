@@ -18,6 +18,11 @@ var initialFiles = map[string]string{
 schema_version: "0.1"
 verification:
   command: just verify
+  # coverage:
+  #   command: go test -coverpkg=./... -coverprofile={{profile}} ./{{target}}/
+  #   format: go
+  # unexplained_ignore:
+  #   - "docs/**"
 evidence:
   capture: metadata
 language:

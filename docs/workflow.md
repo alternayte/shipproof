@@ -103,6 +103,38 @@ not use both flags together.
 `shipproof coverage <change-id>` reports what each requirement proved at the
 current revision.
 
+## Unexplained change
+
+ShipProof reports which changed code no approved proof ran. It never reports
+which code answers to no requirement. Nothing can measure that.
+
+The report has two resolutions. The line-level section needs a coverage command
+in `.shipproof/config.yaml`. It names each changed line inside an instrumented
+block with a zero count. Its provenance is `observed`. The file-level section is
+always available. It names each changed file that no proof target names and no
+coverage profile covers. Its provenance is `derived`.
+
+The report always states how many changed lines it could not judge. A line
+outside every instrumented block carries no claim.
+
+The signal never fails a change. It is review material. Read it in
+`review-packet.json` and in the change report.
+
+Configure it like this:
+
+```yaml
+verification:
+  coverage:
+    command: go test -coverpkg=./... -coverprofile={{profile}} ./{{target}}/
+    format: go
+  unexplained_ignore:
+    - "docs/**"
+```
+
+`{{profile}}` takes the output profile path. `{{target}}` takes the proof
+target. An ignored path appears in the report with its reason. It counts toward
+no total.
+
 ## Step 4 — Produce evidence
 
 **Skill:** `produce-evidence`

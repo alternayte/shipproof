@@ -9,8 +9,11 @@ import (
 
 // yamlTree is a minimal ordered document for the small YAML subset that
 // .shipproof/config.yaml uses: nested mappings and scalar string values.
-// It preserves key order, comments, and blank lines. It does not support
-// sequences, anchors, or multi-line scalars. v0 needs none of those.
+// It preserves key order, comments, and blank lines. It stores a sequence
+// under a key as an opaque, ordered list of raw lines, and it reproduces
+// that list unchanged on render. It does not read or write a sequence
+// item. It does not support anchors or multi-line scalars. v0 needs none
+// of those.
 type yamlTree struct {
 	nodes    []*yamlNode
 	trailing []string
@@ -23,6 +26,9 @@ type yamlNode struct {
 	value    string
 	mapping  bool
 	children []*yamlNode
+	// sequenceItems holds a raw "- item" list under this key. get and set do
+	// not read or write a sequence. render reproduces it unchanged.
+	sequenceItems []string
 }
 
 const emptyMapping = "{}"
@@ -67,6 +73,15 @@ func parseTree(reader io.Reader) (*yamlTree, error) {
 			continue
 		}
 		indent := len(line) - len(strings.TrimLeft(line, " \t"))
+		if item, isItem := strings.CutPrefix(trimmed, "- "); isItem {
+			if len(stack) == 0 {
+				return nil, fmt.Errorf("unexpected sequence item %q", trimmed)
+			}
+			parent := stack[len(stack)-1].node
+			parent.sequenceItems = append(parent.sequenceItems, item)
+			lead = nil
+			continue
+		}
 		key, value, ok := splitKV(trimmed)
 		if !ok {
 			return nil, fmt.Errorf("cannot parse config line %q", trimmed)
@@ -180,6 +195,15 @@ func renderNodes(builder *strings.Builder, nodes []*yamlNode, depth int) {
 		case len(node.children) > 0:
 			builder.WriteString("\n")
 			renderNodes(builder, node.children, depth+1)
+		case len(node.sequenceItems) > 0:
+			builder.WriteString("\n")
+			itemIndent := strings.Repeat("  ", depth+1)
+			for _, item := range node.sequenceItems {
+				builder.WriteString(itemIndent)
+				builder.WriteString("- ")
+				builder.WriteString(item)
+				builder.WriteString("\n")
+			}
 		case node.mapping && node.value == emptyMapping:
 			builder.WriteString(" {}\n")
 		case node.value == "":
