@@ -19,16 +19,39 @@ const (
 )
 
 type EvidencePack struct {
-	SchemaVersion  string                 `json:"schema_version"`
-	ChangeID       string                 `json:"change_id"`
-	Intent         IntentEvidence         `json:"intent"`
-	Implementation ImplementationEvidence `json:"implementation"`
-	Verification   VerificationEvidence   `json:"verification"`
-	Provenance     PackProvenance         `json:"provenance"`
-	AgentRun       *AgentRunMetadata      `json:"agent_run,omitempty"`
-	Readiness      *ReadinessEvidence     `json:"readiness,omitempty"`
-	Review         *ReviewEvidence        `json:"review,omitempty"`
-	AgentReview    *AgentReviewEvidence   `json:"agent_review,omitempty"`
+	SchemaVersion     string                 `json:"schema_version"`
+	ChangeID          string                 `json:"change_id"`
+	Intent            IntentEvidence         `json:"intent"`
+	Implementation    ImplementationEvidence `json:"implementation"`
+	Verification      VerificationEvidence   `json:"verification"`
+	Provenance        PackProvenance         `json:"provenance"`
+	AgentRun          *AgentRunMetadata      `json:"agent_run,omitempty"`
+	Readiness         *ReadinessEvidence     `json:"readiness,omitempty"`
+	Review            *ReviewEvidence        `json:"review,omitempty"`
+	AgentReview       *AgentReviewEvidence   `json:"agent_review,omitempty"`
+	UnexplainedChange *UnexplainedEvidence   `json:"unexplained_change,omitempty"`
+}
+
+// UnexplainedEvidence records which changed code no approved proof ran. The
+// line-level findings are observed. The file-level findings are derived. The
+// section never fails a change.
+type UnexplainedEvidence struct {
+	CoverageAvailable   bool              `json:"coverage_available"`
+	LineFindings        []UnexplainedLine `json:"line_findings"`
+	FileFindings        []UnexplainedFile `json:"file_findings"`
+	UninstrumentedLines int               `json:"uninstrumented_lines"`
+}
+
+type UnexplainedLine struct {
+	File      string `json:"file"`
+	Symbol    string `json:"symbol,omitempty"`
+	StartLine int    `json:"start_line"`
+	EndLine   int    `json:"end_line"`
+}
+
+type UnexplainedFile struct {
+	Path          string `json:"path"`
+	IgnorePattern string `json:"ignore_pattern,omitempty"`
 }
 
 // AgentReviewEvidence holds adversarial reviewer findings. Every finding is

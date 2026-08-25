@@ -13,6 +13,7 @@ import (
 	"github.com/alternayte/shipproof/internal/proofs"
 	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/verification"
+	"github.com/alternayte/shipproof/internal/verify"
 )
 
 // State names what the artifacts say about one requirement.
@@ -161,4 +162,30 @@ func classify(requirementID string, item verification.Item, planned bool, record
 
 func key(requirementID string, index int) string {
 	return fmt.Sprintf("%s#%d", requirementID, index)
+}
+
+// Read loads the requirement set and the proof results for one change, then
+// derives the matrix. The caller supplies the verification plan it already
+// holds. A proof result with no recorded revision reads as not current,
+// because a row must not make a claim it cannot support.
+func Read(root, changeID string, plan verification.Plan) (Matrix, error) {
+	set, err := requirements.Load(root, changeID)
+	if err != nil {
+		return Matrix{}, fmt.Errorf("load requirement set: %w", err)
+	}
+
+	var results *proofs.Set
+	current := false
+	if proofs.Exists(root, changeID) {
+		loaded, err := proofs.Load(root, changeID)
+		if err != nil {
+			return Matrix{}, fmt.Errorf("load proof results: %w", err)
+		}
+		results = &loaded
+		if strings.TrimSpace(loaded.HeadRev) != "" {
+			current, _ = verify.IsCurrent(root, verify.Result{HeadRev: loaded.HeadRev, TreeClean: loaded.TreeClean})
+		}
+	}
+
+	return Build(set, plan, results, current), nil
 }

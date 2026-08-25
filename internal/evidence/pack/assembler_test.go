@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/schema"
 )
 
@@ -392,6 +393,117 @@ func TestWritePackRejectsInvalid(t *testing.T) {
 
 	if err := WritePack(root, pack); err == nil {
 		t.Fatal("expected error for invalid pack")
+	}
+}
+
+func TestAssembleAddsOneCheckPerRequirement(t *testing.T) {
+	root := t.TempDir()
+	setupChangeWithRequirements(t, root, "SP-300", []string{"SP-300-R1", "SP-300-R2", "SP-300-R3"})
+
+	pack, err := Assemble(root, "SP-300", Options{})
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if err := pack.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+
+	seen := map[string]bool{}
+	for _, check := range pack.Verification.Checks {
+		if id, ok := strings.CutPrefix(check.ID, "coverage:"); ok {
+			seen[id] = true
+			if check.Provenance == schema.ProvenanceInferred {
+				t.Errorf("check %q reads inferred", check.ID)
+			}
+		}
+	}
+	for _, id := range []string{"SP-300-R1", "SP-300-R2", "SP-300-R3"} {
+		if !seen[id] {
+			t.Errorf("no coverage check for %s", id)
+		}
+	}
+	if len(seen) != 3 {
+		t.Errorf("coverage checks = %d, want 3", len(seen))
+	}
+}
+
+func TestAssembleWithoutASidecarAddsNoCoverageCheck(t *testing.T) {
+	root := t.TempDir()
+	setupChangeWithoutRequirements(t, root, "SP-301")
+
+	pack, err := Assemble(root, "SP-301", Options{})
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	for _, check := range pack.Verification.Checks {
+		if strings.HasPrefix(check.ID, "coverage:") {
+			t.Errorf("unexpected coverage check %q", check.ID)
+		}
+	}
+}
+
+// setupChangeWithRequirements builds a change record, a verification plan,
+// and a requirement sidecar, all naming the same requirement identifiers.
+func setupChangeWithRequirements(t *testing.T, root, changeID string, ids []string) {
+	t.Helper()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, changeID, "abc123")
+	setupVerificationPlanWithRequirements(t, root, changeID, ids)
+
+	set := requirements.Set{
+		SchemaVersion: requirements.SchemaVersion,
+		ChangeID:      changeID,
+		Adopter:       requirements.AdopterNative,
+	}
+	for _, id := range ids {
+		set.Requirements = append(set.Requirements, requirements.Requirement{
+			ID:         id,
+			Statement:  "Requirement " + id + ".",
+			Provenance: requirements.Observed,
+		})
+	}
+	if _, err := requirements.Save(root, set); err != nil {
+		t.Fatalf("save requirement set: %v", err)
+	}
+}
+
+// setupChangeWithoutRequirements builds a change record and a verification
+// plan, but writes no requirement sidecar.
+func setupChangeWithoutRequirements(t *testing.T, root, changeID string) {
+	t.Helper()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, changeID, "abc123")
+	setupVerificationPlan(t, root, changeID)
+}
+
+// setupVerificationPlanWithRequirements writes a verification plan whose
+// requirements carry the given identifiers, each with one automated proof.
+func setupVerificationPlanWithRequirements(t *testing.T, root, changeID string, ids []string) {
+	t.Helper()
+	dir := filepath.Join(root, ".shipproof", "changes", changeID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create change dir: %v", err)
+	}
+	var reqs []map[string]interface{}
+	for _, id := range ids {
+		reqs = append(reqs, map[string]interface{}{
+			"id":        id,
+			"statement": "Requirement " + id + ".",
+			"proof": []map[string]string{
+				{"type": "unit", "target": "assembler_test.go", "command": "go test -run TestX"},
+			},
+		})
+	}
+	plan := map[string]interface{}{
+		"schema_version": "0.1",
+		"change_id":      changeID,
+		"requirements":   reqs,
+		"invariants":     []map[string]interface{}{},
+	}
+	data, _ := json.MarshalIndent(plan, "", "  ")
+	data = append(data, '\n')
+	if err := os.WriteFile(filepath.Join(dir, "verification.json"), data, 0o644); err != nil {
+		t.Fatalf("write verification plan: %v", err)
 	}
 }
 

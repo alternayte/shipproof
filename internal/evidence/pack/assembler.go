@@ -10,8 +10,10 @@ import (
 
 	"github.com/alternayte/shipproof/internal/agent"
 	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/coverage"
 	"github.com/alternayte/shipproof/internal/evidence"
 	"github.com/alternayte/shipproof/internal/git"
+	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/schema"
 	"github.com/alternayte/shipproof/internal/shaping"
 	"github.com/alternayte/shipproof/internal/verification"
@@ -79,6 +81,14 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 	}
 	pack.Verification.Checks = append(pack.Verification.Checks, evChecks...)
 
+	if requirements.Exists(root, changeID) {
+		matrix, err := coverage.Read(root, changeID, plan)
+		if err != nil {
+			return pack, fmt.Errorf("read coverage matrix: %w", err)
+		}
+		pack.Verification.Checks = append(pack.Verification.Checks, coverageChecks(matrix)...)
+	}
+
 	head := opts.HeadRev
 	if head == "" {
 		head = "HEAD"
@@ -104,6 +114,8 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 			pack.Verification.Checks = append(pack.Verification.Checks, gitCheck)
 		}
 	}
+
+	pack.UnexplainedChange = buildUnexplained(root, changeID, plan, opts.BaseRev, head)
 
 	if agentRun, err := loadAgentRun(root, changeID); err == nil {
 		pack.AgentRun = agentRun

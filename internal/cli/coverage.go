@@ -7,10 +7,8 @@ import (
 	"strings"
 
 	"github.com/alternayte/shipproof/internal/coverage"
-	"github.com/alternayte/shipproof/internal/proofs"
 	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/verification"
-	"github.com/alternayte/shipproof/internal/verify"
 )
 
 // runCoverage implements `shipproof coverage <change-id> [--json]`.
@@ -47,11 +45,6 @@ func runCoverage(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "no requirement set for %s; run `shipproof doc adopt %s --source <path>` first\n", changeID, changeID)
 		return 1
 	}
-	set, err := requirements.Load(root, changeID)
-	if err != nil {
-		fmt.Fprintf(stderr, "invalid requirement set: %v\n", err)
-		return 1
-	}
 
 	plan, err := verification.Load(verification.Path(root, changeID))
 	if err != nil {
@@ -59,25 +52,15 @@ func runCoverage(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	var results *proofs.Set
-	current := false
-	if proofs.Exists(root, changeID) {
-		loaded, err := proofs.Load(root, changeID)
-		if err != nil {
-			fmt.Fprintf(stderr, "invalid proof results: %v\n", err)
-			return 1
-		}
-		results = &loaded
-		// A run with no recorded revision is not judgeable. The phase function
-		// reads it as current, so that an unjudgeable run raises no false alarm.
-		// The coverage matrix takes the opposite bias. A row must not make a
-		// claim it cannot support, so an empty revision reads as not current.
-		if strings.TrimSpace(loaded.HeadRev) != "" {
-			current, _ = verify.IsCurrent(root, verify.Result{HeadRev: loaded.HeadRev, TreeClean: loaded.TreeClean})
-		}
+	// A run with no recorded revision is not judgeable. The phase function
+	// reads it as current, so that an unjudgeable run raises no false alarm.
+	// The coverage matrix takes the opposite bias. A row must not make a
+	// claim it cannot support, so an empty revision reads as not current.
+	matrix, err := coverage.Read(root, changeID, plan)
+	if err != nil {
+		fmt.Fprintf(stderr, "invalid requirement set or proof results: %v\n", err)
+		return 1
 	}
-
-	matrix := coverage.Build(set, plan, results, current)
 
 	if asJSON {
 		data, err := json.MarshalIndent(matrix, "", "  ")

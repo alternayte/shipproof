@@ -84,6 +84,40 @@
         "state": {"type": "string"},
         "collected_at": {"type": "string", "minLength": 1}
       }
+    },
+    "unexplained_change": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "coverage_available": { "type": "boolean" },
+        "uninstrumented_lines": { "type": "integer", "minimum": 0 },
+        "line_findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "start_line", "end_line"],
+            "properties": {
+              "file": { "type": "string" },
+              "symbol": { "type": "string" },
+              "start_line": { "type": "integer", "minimum": 1 },
+              "end_line": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "file_findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "ignore_pattern": { "type": "string" }
+            }
+          }
+        }
+      }
     }
   }
 }

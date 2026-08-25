@@ -119,6 +119,28 @@ func TestReviewEvidence(t *testing.T) {
 	}
 }
 
+func TestUnexplainedEvidenceIsOptional(t *testing.T) {
+	pack := EvidencePack{
+		SchemaVersion: "0.1",
+		ChangeID:      "SP-300",
+		Intent:        IntentEvidence{SnapshotHash: "abc123"},
+		Verification:  VerificationEvidence{Checks: []Check{}},
+		Provenance:    PackProvenance{GeneratedAt: "2026-08-14T20:00:00Z", ShipProofVersion: "0.1"},
+	}
+	if err := pack.Validate(); err != nil {
+		t.Fatalf("Validate without the section: %v", err)
+	}
+	pack.UnexplainedChange = &UnexplainedEvidence{
+		CoverageAvailable:   true,
+		UninstrumentedLines: 61,
+		LineFindings:        []UnexplainedLine{{File: "a.go", Symbol: "F", StartLine: 1, EndLine: 2}},
+		FileFindings:        []UnexplainedFile{{Path: "docs/a.md", IgnorePattern: "docs/**"}},
+	}
+	if err := pack.Validate(); err != nil {
+		t.Fatalf("Validate with the section: %v", err)
+	}
+}
+
 func readFixture(t *testing.T, category, filename string) []byte {
 	t.Helper()
 	_, currentFile, _, _ := runtime.Caller(0)
