@@ -95,3 +95,91 @@ func TestChangeStartShapingFlagMissingValue(t *testing.T) {
 		t.Errorf("expected exit 2, got %d", code)
 	}
 }
+
+func TestChangeStartForceResnapshotsAndKeepsCeremony(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofDir(t, root)
+
+	src := filepath.Join(root, "SP-040.md")
+	if err := os.WriteFile(src, []byte("# SP-040\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	RunOverrides["."] = root
+	t.Cleanup(func() { delete(RunOverrides, ".") })
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	if code := Run([]string{"change", "start", "SP-040", "--source", src, "--ceremony", "2"}, stdout, stderr); code != 0 {
+		t.Fatalf("expected exit 0, got stderr %s", stderr.String())
+	}
+
+	if err := os.WriteFile(src, []byte("# SP-040\n\nnew intent\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := Run([]string{"change", "start", "SP-040", "--source", src, "--force"}, stdout, stderr); code != 0 {
+		t.Fatalf("expected exit 0 with --force, got stderr %s", stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Ceremony: 2") {
+		t.Fatalf("--force did not keep the ceremony level:\n%s", stdout.String())
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, ".shipproof", "changes", "SP-040", "snapshot.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "new intent") {
+		t.Fatalf("--force did not re-snapshot the source document:\n%s", data)
+	}
+}
+
+func TestChangeStartWithoutForceRefusesAnExistingChange(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofDir(t, root)
+
+	src := filepath.Join(root, "SP-041.md")
+	if err := os.WriteFile(src, []byte("# SP-041\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	RunOverrides["."] = root
+	t.Cleanup(func() { delete(RunOverrides, ".") })
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	if code := Run([]string{"change", "start", "SP-041", "--source", src}, stdout, stderr); code != 0 {
+		t.Fatalf("expected exit 0, got stderr %s", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := Run([]string{"change", "start", "SP-041", "--source", src}, stdout, stderr); code != 1 {
+		t.Fatalf("expected exit 1 for an existing change, got %d", code)
+	}
+	if !strings.Contains(stderr.String(), "already exists") {
+		t.Fatalf("stderr does not carry the refusal:\n%s", stderr.String())
+	}
+}
+
+func TestChangeStartRejectsCeremonyOutOfRangeWithExitTwo(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofDir(t, root)
+
+	src := filepath.Join(root, "SP-042.md")
+	if err := os.WriteFile(src, []byte("# SP-042\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	RunOverrides["."] = root
+	t.Cleanup(func() { delete(RunOverrides, ".") })
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := Run([]string{"change", "start", "SP-042", "--source", src, "--ceremony", "4"}, stdout, stderr)
+	if code != 2 {
+		t.Fatalf("exit code = %d, want 2; stderr = %s", code, stderr.String())
+	}
+}

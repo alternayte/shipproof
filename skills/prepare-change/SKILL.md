@@ -2,7 +2,7 @@
 name: prepare-change
 description: Prepare the next ShipProof change from approved intent. Use when the next change ID is known but the scoped change description does not exist yet. Reads the SDD, PRD, or design document and writes a bounded change doc.
 metadata:
-  shipproof-version: "0.2"
+  shipproof-version: "0.3"
 ---
 
 # Prepare a change
@@ -35,8 +35,23 @@ Write a scoped change description for one independently verifiable change.
 5. Start the change record:
 
 ```bash
-shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md
+shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --ceremony <level>
 ```
+
+Use the level that `triage-change` recommends. Pass `--ceremony 0` for a
+trivial change. Level 0 needs no verification plan. Level 1 and above need one.
+
+## Refresh a stale snapshot
+
+`shipproof next` reports `INTENT_STALE` when the source document changed after
+the snapshot. Read the current source document first. Then re-snapshot it:
+
+```bash
+shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --force
+```
+
+The `--force` option rewrites the record. It keeps the recorded ceremony level,
+unless you also pass `--ceremony`.
 
 6. Confirm the record:
 

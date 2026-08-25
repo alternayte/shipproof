@@ -1,6 +1,7 @@
 /shipproof
 bin/
 docs/design/
+docs/superpowers/
 decisions.md
 .shipproof
 .claude
@@ -11,3 +12,4 @@ decisions.md
 *.test
 coverage.*
 dist/
+.superpowers/

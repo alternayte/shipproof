@@ -73,7 +73,7 @@ func Resolve(root, changeID string) (Result, error) {
 			ChangeID:    changeID,
 			Phase:       IntentStale,
 			Blocker:     fmt.Sprintf("source %s changed after the snapshot", record.SourcePath),
-			NextCommand: fmt.Sprintf("shipproof change start %s --source %s", changeID, record.SourcePath),
+			NextCommand: fmt.Sprintf("shipproof change start %s --source %s --force", changeID, record.SourcePath),
 			NextSkill:   "prepare-change",
 		}, nil
 	}
@@ -228,7 +228,8 @@ func resolvePlan(root, changeID string) (Result, bool, error) {
 	planPath := verification.Path(root, changeID)
 	if _, err := os.Stat(planPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return needsPlan(changeID, "no verification plan exists"), true, nil
+			return needsPlan(changeID, "no verification plan exists",
+				fmt.Sprintf("shipproof verification init %s", changeID)), true, nil
 		}
 		return Result{}, false, fmt.Errorf("inspect verification plan: %w", err)
 	}
@@ -238,17 +239,21 @@ func resolvePlan(root, changeID string) (Result, bool, error) {
 		return Result{}, false, fmt.Errorf("load verification plan: %w", err)
 	}
 	if len(plan.Requirements)+len(plan.Invariants) == 0 {
-		return needsPlan(changeID, "verification.json carries no requirement"), true, nil
+		return needsPlan(changeID, "verification.json carries no requirement",
+			fmt.Sprintf("shipproof verification check %s", changeID)), true, nil
 	}
 	return Result{}, false, nil
 }
 
-func needsPlan(changeID, blocker string) Result {
+// needsPlan names the command that works for the case at hand. An absent plan
+// needs verification init. An empty plan needs the author to fill it, so the
+// command names verification check, which reports what the plan lacks.
+func needsPlan(changeID, blocker, nextCommand string) Result {
 	return Result{
 		ChangeID:    changeID,
 		Phase:       NeedsPlan,
 		Blocker:     blocker,
-		NextCommand: fmt.Sprintf("shipproof verification init %s", changeID),
+		NextCommand: nextCommand,
 		NextSkill:   "plan-verification",
 	}
 }

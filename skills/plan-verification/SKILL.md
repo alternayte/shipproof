@@ -2,7 +2,7 @@
 name: plan-verification
 description: Plan how to prove a change before implementation. Use for material changes with explicit requirements, invariants, failure behavior, or risk. Prefer deterministic evidence and mark human-only checks explicitly.
 metadata:
-  shipproof-version: "0.2"
+  shipproof-version: "0.3"
 ---
 
 # Plan verification

@@ -45,6 +45,33 @@ func Path(root, changeID string) string {
 }
 
 func Start(root, changeID, sourcePath, shapingRef string, ceremony int) (Record, error) {
+	return start(root, changeID, sourcePath, shapingRef, ceremony, false)
+}
+
+// Restart re-snapshots the source document of an existing change and rewrites
+// the record. It exists because a stale intent has no other exit. A nil
+// ceremony keeps the level that the record already carries. An empty shaping
+// reference keeps the reference that the record already carries.
+func Restart(root, changeID, sourcePath, shapingRef string, ceremony *int) (Record, error) {
+	level := DefaultCeremony
+	if ceremony != nil {
+		level = *ceremony
+	}
+
+	previous, err := Load(root, changeID)
+	if err == nil {
+		if ceremony == nil {
+			level = previous.CeremonyLevel()
+		}
+		if strings.TrimSpace(shapingRef) == "" {
+			shapingRef = previous.ShapingRef
+		}
+	}
+
+	return start(root, changeID, sourcePath, shapingRef, level, true)
+}
+
+func start(root, changeID, sourcePath, shapingRef string, ceremony int, force bool) (Record, error) {
 	if ceremony < 0 || ceremony > MaxCeremony {
 		return Record{}, fmt.Errorf("ceremony must be 0 to %d; got %d", MaxCeremony, ceremony)
 	}
@@ -54,7 +81,9 @@ func Start(root, changeID, sourcePath, shapingRef string, ceremony int) (Record,
 
 	recordPath := Path(root, changeID)
 	if _, err := os.Stat(recordPath); err == nil {
-		return Record{}, fmt.Errorf("change %q already exists", changeID)
+		if !force {
+			return Record{}, fmt.Errorf("change %q already exists", changeID)
+		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return Record{}, fmt.Errorf("inspect change record: %w", err)
 	}

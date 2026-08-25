@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alternayte/shipproof/internal/change"
 	"github.com/alternayte/shipproof/internal/phase"
 )
 
@@ -95,9 +96,17 @@ func soleOpenChange(root string) (string, []string, error) {
 		if !entry.IsDir() {
 			continue
 		}
+		// A directory with no change.json is not a change. shipproof
+		// verification init creates such a directory, and counting it would
+		// report a phantom open change forever.
+		if _, err := os.Stat(change.Path(root, entry.Name())); err != nil {
+			continue
+		}
 		result, err := phase.Resolve(root, entry.Name())
 		if err != nil {
-			continue
+			// A malformed artifact is an error, never a phase. Dropping the
+			// change here would hide the corruption.
+			return "", nil, fmt.Errorf("resolve change %s: %w", entry.Name(), err)
 		}
 		if result.Phase != phase.ReadyForHuman {
 			open = append(open, entry.Name())

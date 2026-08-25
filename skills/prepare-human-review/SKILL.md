@@ -2,7 +2,7 @@
 name: prepare-human-review
 description: Prepare a focused human-review packet for an implemented change. Use when deterministic checks and automated review are complete. Identify what a human genuinely needs to inspect and why, rather than summarizing every file.
 metadata:
-  shipproof-version: "0.2"
+  shipproof-version: "0.3"
 ---
 
 # Prepare human review

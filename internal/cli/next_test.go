@@ -130,3 +130,65 @@ func newCLITestRoot(t *testing.T) string {
 	t.Cleanup(func() { delete(RunOverrides, ".") })
 	return root
 }
+
+func TestNextIgnoresADirectoryWithoutAChangeRecord(t *testing.T) {
+	root := newCLITestRoot(t)
+
+	source := filepath.Join(root, "SP-410.md")
+	if err := os.WriteFile(source, []byte("# SP-410\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"change", "start", "SP-410", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+		t.Fatalf("change start failed: %s", errOut.String())
+	}
+
+	// shipproof verification init creates such a directory before any change
+	// record exists. It must not count as an open change.
+	phantom := filepath.Join(root, ".shipproof", "changes", "SP-411")
+	if err := os.MkdirAll(phantom, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"next"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "SP-410") {
+		t.Fatalf("stdout does not resolve the sole open change:\n%s", stdout.String())
+	}
+	if strings.Contains(stdout.String()+stderr.String(), "SP-411") {
+		t.Fatalf("the phantom directory counted as an open change:\n%s%s", stdout.String(), stderr.String())
+	}
+}
+
+func TestNextSurfacesACorruptChangeRecord(t *testing.T) {
+	root := newCLITestRoot(t)
+
+	source := filepath.Join(root, "SP-420.md")
+	if err := os.WriteFile(source, []byte("# SP-420\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"change", "start", "SP-420", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+		t.Fatalf("change start failed: %s", errOut.String())
+	}
+
+	corrupt := filepath.Join(root, ".shipproof", "changes", "SP-421")
+	if err := os.MkdirAll(corrupt, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(corrupt, "change.json"), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"next"}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("expected a non-zero exit code for a corrupt change record:\n%s", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "SP-421") {
+		t.Fatalf("stderr does not name the corrupt change:\n%s", stderr.String())
+	}
+}

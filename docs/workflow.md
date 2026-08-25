@@ -25,8 +25,8 @@ shipproof next <change-id>
 ```
 
 `next` derives the current phase from the artifacts on disk. It names the
-blocker, the exact next command, and the skill that handles it. Run it, act on
-what it says, then run it again.
+blocker, the exact next command, and the skill that handles it. Run it. Act on
+what it says. Run it again.
 
 This document explains what each phase means. It is reference material. It is
 not a sequence to remember.
@@ -52,22 +52,36 @@ The agent reads the design document (or writes a short change description for ad
 The agent then records the change:
 
 ```bash
-shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md
+shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --ceremony 1
 shipproof change status <change-id>
 ```
+
+The `--ceremony` value sets how much proof the change needs. Use the level that
+`triage-change` recommends. Pass `--ceremony 0` for a trivial change. Level 0
+needs no verification plan. Level 1 and above need one.
+
+To refresh a stale snapshot, add `--force`:
+
+```bash
+shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --force
+```
+
+The `--force` option re-snapshots the source document and rewrites the record.
+It keeps the recorded ceremony level, unless you also pass `--ceremony`.
 
 ## Step 2 — Plan verification
 
 **Skill:** `plan-verification`
 
-For material changes, the agent creates and populates the verification plan.
+The agent creates and populates the verification plan.
 
 ```bash
 shipproof verification init <change-id>
 shipproof verification check <change-id>
 ```
 
-Skip this step for trivial or low-risk changes.
+At ceremony level 1 and above the verification plan is required. A change with
+no plan stays at `NEEDS_PLAN`. Skip this step only at ceremony level 0.
 
 ## Step 3 — Implement and verify
 

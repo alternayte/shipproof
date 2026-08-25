@@ -2,7 +2,7 @@
 name: produce-evidence
 description: Produce a ShipProof evidence pack and concise narrative from recorded intent, implementation, verification, and review facts. Use after change checks complete. Never manufacture evidence from prose.
 metadata:
-  shipproof-version: "0.2"
+  shipproof-version: "0.3"
 ---
 
 # Produce evidence

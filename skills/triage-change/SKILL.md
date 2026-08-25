@@ -2,7 +2,7 @@
 name: triage-change
 description: Assess a feature, fix, or issue and recommend the smallest useful ceremony level before work begins. Use when the work does not come from an existing design document and the right entry path is unclear.
 metadata:
-  shipproof-version: "0.2"
+  shipproof-version: "0.3"
 ---
 
 # Triage a change

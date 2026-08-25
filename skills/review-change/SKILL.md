@@ -2,7 +2,7 @@
 name: review-change
 description: Review an implemented change for correctness, design, complexity, tests, maintainability, integration, and common agent-generated failure patterns. Use after deterministic verification and before human approval.
 metadata:
-  shipproof-version: "0.2"
+  shipproof-version: "0.3"
 ---
 
 # Review an implemented change

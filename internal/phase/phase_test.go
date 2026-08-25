@@ -418,3 +418,56 @@ func newChangeInRepo(t *testing.T, changeID string, ceremony int) (string, strin
 	}
 	return root, source
 }
+
+func TestResolveIntentStaleNamesAWorkingCommand(t *testing.T) {
+	t.Parallel()
+
+	root, source := newChange(t, "SP-320", 2)
+	if err := os.WriteFile(source, []byte("# SP-320\n\nchanged after the snapshot\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Resolve(root, "SP-320")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if result.Phase != IntentStale {
+		t.Fatalf("Phase = %q, want %q", result.Phase, IntentStale)
+	}
+	if !strings.HasSuffix(result.NextCommand, "--force") {
+		t.Fatalf("NextCommand = %q, want a --force suffix", result.NextCommand)
+	}
+
+	// The named command must succeed, or the phase traps the change.
+	fields := strings.Fields(result.NextCommand)
+	sourceArgument := filepath.Join(root, filepath.FromSlash(fields[len(fields)-2]))
+	if _, err := change.Restart(root, "SP-320", sourceArgument, "", nil); err != nil {
+		t.Fatalf("the named command failed: %v", err)
+	}
+
+	result, err = Resolve(root, "SP-320")
+	if err != nil {
+		t.Fatalf("Resolve() after the named command error = %v", err)
+	}
+	if result.Phase == IntentStale {
+		t.Fatal("the named command left the change at INTENT_STALE")
+	}
+}
+
+func TestResolveNeedsPlanOnEmptyPlanNamesVerificationCheck(t *testing.T) {
+	t.Parallel()
+
+	root, _ := newChange(t, "SP-321", 1)
+	writePlan(t, root, "SP-321", `{"schema_version":"0.1","change_id":"SP-321","requirements":[],"invariants":[]}`)
+
+	result, err := Resolve(root, "SP-321")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if result.Phase != NeedsPlan {
+		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsPlan)
+	}
+	if result.NextCommand != "shipproof verification check SP-321" {
+		t.Fatalf("NextCommand = %q, want %q", result.NextCommand, "shipproof verification check SP-321")
+	}
+}

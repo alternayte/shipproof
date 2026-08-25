@@ -231,3 +231,83 @@ func TestStartRejectsCeremonyOutOfRange(t *testing.T) {
 		t.Fatal("expected an error for ceremony 4")
 	}
 }
+
+func TestRestartResnapshotsAndKeepsTheCeremonyLevel(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	source := filepath.Join(root, "SP-110.md")
+	if err := os.WriteFile(source, []byte("# SP-110\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	first, err := Start(root, "SP-110", source, "session-1", 2)
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+
+	if err := os.WriteFile(source, []byte("# SP-110\n\nnew intent\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := Restart(root, "SP-110", source, "", nil)
+	if err != nil {
+		t.Fatalf("Restart() error = %v", err)
+	}
+	if second.SHA256 == first.SHA256 {
+		t.Fatal("Restart() did not re-snapshot the source document")
+	}
+	if second.CeremonyLevel() != 2 {
+		t.Fatalf("CeremonyLevel() = %d, want 2", second.CeremonyLevel())
+	}
+	if second.ShapingRef != "session-1" {
+		t.Fatalf("ShapingRef = %q, want %q", second.ShapingRef, "session-1")
+	}
+
+	staleness, err := second.Staleness(root)
+	if err != nil {
+		t.Fatalf("Staleness() error = %v", err)
+	}
+	if staleness.Stale {
+		t.Fatal("the change is still stale after Restart()")
+	}
+}
+
+func TestRestartAcceptsANewCeremonyLevel(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	source := filepath.Join(root, "SP-111.md")
+	if err := os.WriteFile(source, []byte("# SP-111\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Start(root, "SP-111", source, "", 2); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+
+	level := 0
+	record, err := Restart(root, "SP-111", source, "", &level)
+	if err != nil {
+		t.Fatalf("Restart() error = %v", err)
+	}
+	if record.CeremonyLevel() != 0 {
+		t.Fatalf("CeremonyLevel() = %d, want 0", record.CeremonyLevel())
+	}
+}
+
+func TestStartWithoutForceStillRefusesAnExistingChange(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	source := filepath.Join(root, "SP-112.md")
+	if err := os.WriteFile(source, []byte("# SP-112\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Start(root, "SP-112", source, "", DefaultCeremony); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if _, err := Start(root, "SP-112", source, "", DefaultCeremony); err == nil {
+		t.Fatal("expected a refusal for an existing change")
+	} else if !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("error = %v, want an already-exists refusal", err)
+	}
+}

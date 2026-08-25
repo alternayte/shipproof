@@ -30,13 +30,14 @@ func runChange(args []string, stdout, stderr io.Writer) int {
 
 func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	if len(args) < 1 {
-		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--shaping <session-id>] [--ceremony 0|1|2|3]")
+		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--shaping <session-id>] [--ceremony 0|1|2|3] [--force]")
 		return 2
 	}
 
 	changeID := args[0]
 	var source, shapingRef string
-	ceremony := change.DefaultCeremony
+	var ceremony *int
+	force := false
 	for index := 1; index < len(args); index++ {
 		switch args[index] {
 		case "--source":
@@ -63,8 +64,14 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "--ceremony requires a level from 0 to 3; got %q\n", args[index+1])
 				return 2
 			}
-			ceremony = parsed
+			if parsed < 0 || parsed > change.MaxCeremony {
+				fmt.Fprintf(stderr, "--ceremony requires a level from 0 to %d; got %q\n", change.MaxCeremony, args[index+1])
+				return 2
+			}
+			ceremony = &parsed
 			index++
+		case "--force":
+			force = true
 		default:
 			fmt.Fprintf(stderr, "unknown option %q\n", args[index])
 			return 2
@@ -82,7 +89,16 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	record, err := change.Start(root, changeID, source, shapingRef, ceremony)
+	var record change.Record
+	if force {
+		record, err = change.Restart(root, changeID, source, shapingRef, ceremony)
+	} else {
+		level := change.DefaultCeremony
+		if ceremony != nil {
+			level = *ceremony
+		}
+		record, err = change.Start(root, changeID, source, shapingRef, level)
+	}
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
