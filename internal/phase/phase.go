@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/alternayte/shipproof/internal/change"
-	"github.com/alternayte/shipproof/internal/git"
 	"github.com/alternayte/shipproof/internal/verification"
 	"github.com/alternayte/shipproof/internal/verify"
 )
@@ -173,44 +172,11 @@ func resolveRun(root, changeID string) (Result, bool, error) {
 	return Result{}, false, nil
 }
 
-// runIsStale reports whether a recorded run still describes the working tree.
-// A run with no recorded revision cannot be judged, so it is never stale. An
-// unjudgeable run must not become a false alarm.
-//
-// The tree check excludes the ShipProof state directory. The evidence pack and
-// the review packet land there as a normal part of the flow, and counting them
-// would pin every change at RUN_STALE.
+// runIsStale delegates to the shared currency rule in internal/verify. One
+// rule, one place; the coverage matrix asks the same question.
 func runIsStale(root string, run verify.Result) (bool, string) {
-	if run.HeadRev == "" {
-		return false, ""
-	}
-
-	head, err := git.HeadRevision(root)
-	if err != nil {
-		return false, ""
-	}
-	if head != run.HeadRev {
-		return true, fmt.Sprintf("the run verified revision %s; HEAD is %s", shortRev(run.HeadRev), shortRev(head))
-	}
-	if run.TreeClean != nil && !*run.TreeClean {
-		return true, "the run verified a dirty working tree"
-	}
-
-	dirty, err := git.DirtyOutside(root, verify.StateDirectory)
-	if err != nil {
-		return false, ""
-	}
-	if dirty {
-		return true, "the working tree changed after the run"
-	}
-	return false, ""
-}
-
-func shortRev(revision string) string {
-	if len(revision) > 7 {
-		return revision[:7]
-	}
-	return revision
+	current, reason := verify.IsCurrent(root, run)
+	return !current, reason
 }
 
 func artifactPath(root, changeID, name string) string {

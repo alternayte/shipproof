@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/alternayte/shipproof/internal/git"
 )
 
 type Result struct {
@@ -37,7 +35,7 @@ func Run(root, changeID, command string) (Result, error) {
 	// Capture the tree state before the command runs. A verification command
 	// can write files, so a state captured afterward would describe a tree that
 	// the command itself changed.
-	headRev, treeClean := treeState(root)
+	headRev, treeClean := TreeState(root)
 
 	result, err := runCommand(root, RunDir(root, changeID), changeID, command)
 	if err != nil {
@@ -125,24 +123,4 @@ func runCommand(root, runDir, changeID, command string) (Result, error) {
 		StderrPath:    filepath.ToSlash(relStderr),
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 	}, nil
-}
-
-// StateDirectory is the ShipProof state directory. Tree checks exclude it,
-// because ShipProof writes its own artifacts there as a normal part of the flow.
-const StateDirectory = ".shipproof"
-
-// treeState reports the Git revision and cleanliness of root. A directory that
-// is not a Git repository yields an empty revision and a nil tree state. The
-// caller must treat both as unknown, never as clean.
-func treeState(root string) (string, *bool) {
-	head, err := git.HeadRevision(root)
-	if err != nil {
-		return "", nil
-	}
-	dirty, err := git.DirtyOutside(root, StateDirectory)
-	if err != nil {
-		return head, nil
-	}
-	clean := !dirty
-	return head, &clean
 }
