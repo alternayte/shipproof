@@ -7,12 +7,36 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
+// Proof names one way to prove a requirement. A proof carries either a
+// command that a machine runs, or a human flag with a rationale. Nothing else
+// separates a human check from an incomplete one.
 type Proof struct {
 	Type    string `json:"type"`
 	Target  string `json:"target"`
 	Command string `json:"command,omitempty"`
+	// Human marks a proof that only a person can perform.
+	Human bool `json:"human,omitempty"`
+	// Rationale states why no machine can perform this proof.
+	Rationale string `json:"rationale,omitempty"`
+	// AcceptedAt records when a person accepted a human proof, in RFC 3339.
+	// It is empty until that person accepts it.
+	AcceptedAt string `json:"accepted_at,omitempty"`
+}
+
+// IsHuman reports whether only a person can perform this proof.
+func (proof Proof) IsHuman() bool { return proof.Human }
+
+// IsAutomated reports whether this proof carries a command a machine runs.
+func (proof Proof) IsAutomated() bool {
+	return !proof.Human && strings.TrimSpace(proof.Command) != ""
+}
+
+// Accepted reports whether a person recorded acceptance of a human proof.
+func (proof Proof) Accepted() bool {
+	return proof.Human && strings.TrimSpace(proof.AcceptedAt) != ""
 }
 
 type Item struct {
@@ -67,6 +91,9 @@ func (plan Plan) Validate() error {
 				if strings.TrimSpace(proof.Target) == "" {
 					return fmt.Errorf("verification item %q proof %d target is required", item.ID, index+1)
 				}
+				if err := validateProofForm(item.ID, index, proof); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -112,4 +139,31 @@ func Load(path string) (Plan, error) {
 		return Plan{}, err
 	}
 	return plan, nil
+}
+
+// validateProofForm enforces the two proof forms. A proof with neither a
+// command nor a human flag is an incomplete proof, and the plan must not hide
+// it behind a passing check.
+func validateProofForm(itemID string, index int, proof Proof) error {
+	hasCommand := strings.TrimSpace(proof.Command) != ""
+	switch {
+	case proof.Human && hasCommand:
+		return fmt.Errorf("verification item %q proof %d carries both a command and human: true; a proof is one form or the other", itemID, index+1)
+	case proof.Human:
+		if strings.TrimSpace(proof.Rationale) == "" {
+			return fmt.Errorf("verification item %q proof %d is human and needs a rationale", itemID, index+1)
+		}
+	case hasCommand:
+		if strings.TrimSpace(proof.AcceptedAt) != "" {
+			return fmt.Errorf("verification item %q proof %d carries a command and accepted_at; only a human proof records acceptance", itemID, index+1)
+		}
+	default:
+		return fmt.Errorf("verification item %q proof %d needs a command or human: true with a rationale", itemID, index+1)
+	}
+	if accepted := strings.TrimSpace(proof.AcceptedAt); accepted != "" {
+		if _, err := time.Parse(time.RFC3339, accepted); err != nil {
+			return fmt.Errorf("verification item %q proof %d accepted_at is not an RFC 3339 timestamp: %v", itemID, index+1, err)
+		}
+	}
+	return nil
 }

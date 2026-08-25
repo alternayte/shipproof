@@ -24,7 +24,7 @@ func tiePlan(ids ...string) Plan {
 	plan := New("SP-028")
 	for _, id := range ids {
 		plan.Requirements = append(plan.Requirements, Item{
-			ID: id, Proof: []Proof{{Type: "unit", Target: "x_test.go"}},
+			ID: id, Proof: []Proof{{Type: "unit", Target: "x_test.go", Command: "go test ."}},
 		})
 	}
 	return plan
@@ -89,7 +89,7 @@ func TestTieCheckIgnoresAnInvariant(t *testing.T) {
 
 	plan := tiePlan("SP-028-R1")
 	plan.Invariants = append(plan.Invariants, Item{
-		ID: "SP-028-I1", Proof: []Proof{{Type: "unit", Target: "x_test.go"}},
+		ID: "SP-028-I1", Proof: []Proof{{Type: "unit", Target: "x_test.go", Command: "go test ."}},
 	})
 	blockers := TieCheck(tieSet("SP-028-R1"), plan)
 	if len(blockers) != 0 {

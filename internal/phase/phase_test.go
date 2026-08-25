@@ -263,7 +263,7 @@ func TestResolveNeedsReviewPacket(t *testing.T) {
 	t.Parallel()
 
 	root, _ := newChange(t, "SP-315", 1)
-	writePlan(t, root, "SP-315", `{"schema_version":"0.1","change_id":"SP-315","requirements":[{"id":"SP-315-R1","proof":[{"type":"unit","target":"x_test.go"}]}],"invariants":[]}`)
+	writePlan(t, root, "SP-315", `{"schema_version":"0.1","change_id":"SP-315","requirements":[{"id":"SP-315-R1","proof":[{"type":"unit","target":"x_test.go","command":"go test ."}]}],"invariants":[]}`)
 	writeRun(t, root, "SP-315", `{"schema_version":"0.1","change_id":"SP-315","exit_code":0,"duration_ms":10,"stdout_path":"a","stderr_path":"b","timestamp":"2026-08-25T10:00:00Z"}`)
 	writeArtifact(t, root, "SP-315", "evidence-pack.json", "{}")
 
@@ -296,7 +296,7 @@ func TestResolveReadyForHuman(t *testing.T) {
 	t.Parallel()
 
 	root, _ := newChange(t, "SP-317", 1)
-	writePlan(t, root, "SP-317", `{"schema_version":"0.1","change_id":"SP-317","requirements":[{"id":"SP-317-R1","proof":[{"type":"unit","target":"x_test.go"}]}],"invariants":[]}`)
+	writePlan(t, root, "SP-317", `{"schema_version":"0.1","change_id":"SP-317","requirements":[{"id":"SP-317-R1","proof":[{"type":"unit","target":"x_test.go","command":"go test ."}]}],"invariants":[]}`)
 	writeRun(t, root, "SP-317", `{"schema_version":"0.1","change_id":"SP-317","exit_code":0,"duration_ms":10,"stdout_path":"a","stderr_path":"b","timestamp":"2026-08-25T10:00:00Z"}`)
 	writeArtifact(t, root, "SP-317", "evidence-pack.json", "{}")
 	writeArtifact(t, root, "SP-317", "review-packet.json", "{}")
@@ -476,7 +476,7 @@ func TestResolveNeedsEvidence(t *testing.T) {
 	t.Parallel()
 
 	root, _ := newChange(t, "SP-318", 1)
-	writePlan(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","requirements":[{"id":"SP-318-R1","proof":[{"type":"unit","target":"x_test.go"}]}],"invariants":[]}`)
+	writePlan(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","requirements":[{"id":"SP-318-R1","proof":[{"type":"unit","target":"x_test.go","command":"go test ."}]}],"invariants":[]}`)
 	writeRun(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","exit_code":0,"duration_ms":10,"stdout_path":"a","stderr_path":"b","timestamp":"2026-08-25T10:00:00Z"}`)
 
 	result, err := Resolve(root, "SP-318")

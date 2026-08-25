@@ -19,8 +19,15 @@
       "properties": {
         "type": {"type": "string", "minLength": 1},
         "target": {"type": "string", "minLength": 1},
-        "command": {"type": "string"}
-      }
+        "command": {"type": "string"},
+        "human": {"type": "boolean"},
+        "rationale": {"type": "string"},
+        "accepted_at": {"type": "string", "format": "date-time"}
+      },
+      "anyOf": [
+        {"required": ["command"], "properties": {"command": {"minLength": 1}}},
+        {"required": ["human", "rationale"], "properties": {"human": {"const": true}, "rationale": {"minLength": 1}}}
+      ]
     },
     "item": {
       "type": "object",

@@ -29,7 +29,7 @@ func tieRepo(t *testing.T, plan, sidecar string) string {
 	return root
 }
 
-const tiePlanJSON = `{"schema_version":"0.1","change_id":"SP-028","requirements":[{"id":"SP-028-R1","proof":[{"type":"unit","target":"x_test.go"}]}],"invariants":[]}`
+const tiePlanJSON = `{"schema_version":"0.1","change_id":"SP-028","requirements":[{"id":"SP-028-R1","proof":[{"type":"unit","target":"x_test.go","command":"go test ."}]}],"invariants":[]}`
 
 const tieSidecarMatching = `{"schema_version":"0.1","change_id":"SP-028","adopter":"native","requirements":[{"id":"SP-028-R1","statement":"A","provenance":"observed"}]}`
 
