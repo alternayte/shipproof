@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -98,9 +99,13 @@ func soleOpenChange(root string) (string, []string, error) {
 		}
 		// A directory with no change.json is not a change. shipproof
 		// verification init creates such a directory, and counting it would
-		// report a phantom open change forever.
+		// report a phantom open change forever. Any other stat failure is a
+		// real fault. Dropping the change here would hide it.
 		if _, err := os.Stat(change.Path(root, entry.Name())); err != nil {
-			continue
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			return "", nil, fmt.Errorf("inspect change %s: %w", entry.Name(), err)
 		}
 		result, err := phase.Resolve(root, entry.Name())
 		if err != nil {

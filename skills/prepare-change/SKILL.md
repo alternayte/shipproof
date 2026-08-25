@@ -41,6 +41,12 @@ shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md -
 Use the level that `triage-change` recommends. Pass `--ceremony 0` for a
 trivial change. Level 0 needs no verification plan. Level 1 and above need one.
 
+6. Confirm the record:
+
+```bash
+shipproof change status <change-id>
+```
+
 ## Refresh a stale snapshot
 
 `shipproof next` reports `INTENT_STALE` when the source document changed after
@@ -52,12 +58,6 @@ shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md -
 
 The `--force` option rewrites the record. It keeps the recorded ceremony level,
 unless you also pass `--ceremony`.
-
-6. Confirm the record:
-
-```bash
-shipproof change status <change-id>
-```
 
 ## Rules
 

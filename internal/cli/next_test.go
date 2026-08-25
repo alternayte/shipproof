@@ -192,3 +192,44 @@ func TestNextSurfacesACorruptChangeRecord(t *testing.T) {
 		t.Fatalf("stderr does not name the corrupt change:\n%s", stderr.String())
 	}
 }
+
+func TestNextSurfacesAnUnreadableChangeDirectory(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("the root user reads a directory whose mode denies access")
+	}
+
+	root := newCLITestRoot(t)
+
+	source := filepath.Join(root, "SP-412.md")
+	if err := os.WriteFile(source, []byte("# SP-412\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"change", "start", "SP-412", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+		t.Fatalf("change start failed: %s", errOut.String())
+	}
+
+	// Deny access to a second change directory. A stat failure that is not
+	// "does not exist" is a real fault, and next must report it instead of
+	// dropping the change from the open count.
+	blocked := filepath.Join(root, ".shipproof", "changes", "SP-413")
+	if err := os.MkdirAll(blocked, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(blocked, "change.json"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(blocked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(blocked, 0o755) })
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"next"}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("exit code = 0; an unreadable change must not be dropped silently:\n%s", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "SP-413") {
+		t.Fatalf("stderr does not name the unreadable change:\n%s", stderr.String())
+	}
+}
