@@ -175,6 +175,40 @@ func TestChangeReportWithoutAgentRun(t *testing.T) {
 	}
 }
 
+func TestChangeReportRendersUnexplainedChange(t *testing.T) {
+	root, ev := setupReportTest(t, "SP-T7")
+	defer os.RemoveAll(root)
+
+	ev.UnexplainedChange = &schema.UnexplainedEvidence{
+		CoverageAvailable:   true,
+		UninstrumentedLines: 61,
+		LineFindings: []schema.UnexplainedLine{
+			{File: "internal/git/collector.go", Symbol: "withRetry", StartLine: 190, EndLine: 207},
+		},
+		FileFindings: []schema.UnexplainedFile{{Path: "docs/workflow.md", IgnorePattern: "docs/**"}},
+	}
+	setupEvidencePack(t, root, ev)
+
+	var sb strings.Builder
+	if err := GenerateChangeReport(&sb, root, "SP-T7"); err != nil {
+		t.Fatalf("GenerateChangeReport: %v", err)
+	}
+	body := sb.String()
+	for _, want := range []string{
+		"Unexplained change",
+		"withRetry",
+		"190",
+		"207",
+		"docs/workflow.md",
+		"docs/**",
+		"61",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("report holds no %q", want)
+		}
+	}
+}
+
 func TestChangeReportMissingEvidencePack(t *testing.T) {
 	root, _ := setupReportTest(t, "SP-T6")
 	defer os.RemoveAll(root)

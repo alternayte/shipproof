@@ -120,6 +120,36 @@
   {{end}}
 </section>
 
+{{if .Unexplained.Present}}
+<section>
+  <h2>Unexplained change</h2>
+  <p>No proof ran this code. The signal fails no change. It is review material.</p>
+  {{if .Unexplained.CoverageAvailable}}
+  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof ran these (observed)</h3>
+  <table>
+  <thead><tr><th>File</th><th>Symbol</th><th>Lines</th></tr></thead>
+  <tbody>
+  {{range .Unexplained.LineFindings}}
+    <tr><td><code>{{.File}}</code></td><td>{{.Symbol}}</td><td>{{.StartLine}}-{{.EndLine}}</td></tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{else}}
+  <p class="nodata">No coverage command is configured. ShipProof cannot see inside a file.</p>
+  {{end}}
+  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof names these files (derived)</h3>
+  <table>
+  <thead><tr><th>File</th></tr></thead>
+  <tbody>
+  {{range .Unexplained.FileFindings}}
+    <tr><td><code>{{.Path}}</code>{{if .IgnorePattern}} <span class="prov-badge prov-derived">ignored: {{.IgnorePattern}}</span>{{end}}</td></tr>
+  {{end}}
+  </tbody>
+  </table>
+  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">Not instrumented: {{.Unexplained.UninstrumentedLines}} changed lines. No claim made.</p>
+</section>
+{{end}}
+
 <section>
   <h2>Verification</h2>
   {{if .Verify.TotalChecks}}

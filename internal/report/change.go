@@ -13,6 +13,15 @@ type changeReportData struct {
 	Implement   implementData
 	AgentRun    agentRunData
 	Provenance  reportProvenanceData
+	Unexplained unexplainedData
+}
+
+type unexplainedData struct {
+	Present             bool
+	CoverageAvailable   bool
+	LineFindings        []schema.UnexplainedLine
+	FileFindings        []schema.UnexplainedFile
+	UninstrumentedLines int
 }
 
 type intentData struct {
@@ -147,5 +156,20 @@ func buildAgentRunData(pack schema.EvidencePack) agentRunData {
 func buildReportProvenanceData(pack schema.EvidencePack) reportProvenanceData {
 	return reportProvenanceData{
 		ShipProofVersion: pack.Provenance.ShipProofVersion,
+	}
+}
+
+// buildUnexplainedData reads the pack section. An absent section renders
+// nothing, because ShipProof made no measurement.
+func buildUnexplainedData(pack schema.EvidencePack) unexplainedData {
+	if pack.UnexplainedChange == nil {
+		return unexplainedData{}
+	}
+	return unexplainedData{
+		Present:             true,
+		CoverageAvailable:   pack.UnexplainedChange.CoverageAvailable,
+		LineFindings:        pack.UnexplainedChange.LineFindings,
+		FileFindings:        pack.UnexplainedChange.FileFindings,
+		UninstrumentedLines: pack.UnexplainedChange.UninstrumentedLines,
 	}
 }
