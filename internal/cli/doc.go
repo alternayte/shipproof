@@ -13,6 +13,15 @@ import (
 )
 
 func runDoc(args []string, stdout, stderr io.Writer) int {
+	if len(args) < 1 {
+		fmt.Fprintln(stderr, "usage: shipproof doc <status|review|adopt> ...")
+		return 2
+	}
+
+	if args[0] == "adopt" {
+		return runDocAdopt(args[1:], stdout, stderr)
+	}
+
 	if len(args) < 2 {
 		fmt.Fprintln(stderr, "usage: shipproof doc <status|review> <file> [--kind prd|sdd] [--json]")
 		return 2
