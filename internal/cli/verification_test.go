@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/proofs"
+	"github.com/alternayte/shipproof/internal/verification"
 )
 
 // tieRepo writes a change directory holding a verification plan and, when
@@ -122,4 +126,128 @@ func TestVerificationCheckTiesAPlanFileByPath(t *testing.T) {
 	if !strings.Contains(combined, "SP-028-R2") {
 		t.Fatalf("output does not report the tie blocker:\n%s", combined)
 	}
+}
+
+func TestVerificationRunWritesProofResults(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-700")
+
+	var stdout, stderr bytes.Buffer
+	if code := runVerification([]string{"run", "SP-700"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
+	}
+
+	set, err := proofs.Load(root, "SP-700")
+	if err != nil {
+		t.Fatalf("proofs.Load() error = %v", err)
+	}
+	if len(set.Results) != 2 {
+		t.Fatalf("Results = %d, want 2", len(set.Results))
+	}
+	if set.Results[0].Status != proofs.Pass {
+		t.Fatalf("result 1 status = %q", set.Results[0].Status)
+	}
+	if set.Results[1].Status != proofs.Fail {
+		t.Fatalf("result 2 status = %q", set.Results[1].Status)
+	}
+}
+
+func TestVerificationRunGateOnlyWritesNoProofResults(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-701")
+
+	var stdout, stderr bytes.Buffer
+	if code := runVerification([]string{"run", "SP-701", "--gate-only"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
+	}
+	if proofs.Exists(root, "SP-701") {
+		t.Fatal("--gate-only wrote proofs.json")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".shipproof", "runs", "SP-701", "run.json")); err != nil {
+		t.Fatalf("--gate-only wrote no run.json: %v", err)
+	}
+}
+
+func TestVerificationRunProofsOnlyWritesNoRunRecord(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-702")
+
+	var stdout, stderr bytes.Buffer
+	if code := runVerification([]string{"run", "SP-702", "--proofs-only"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
+	}
+	if !proofs.Exists(root, "SP-702") {
+		t.Fatal("--proofs-only wrote no proofs.json")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".shipproof", "runs", "SP-702", "run.json")); err == nil {
+		t.Fatal("--proofs-only wrote run.json")
+	}
+}
+
+func TestVerificationRunRejectsBothScopeFlags(t *testing.T) {
+	newVerificationRunWorkspace(t, "SP-703")
+
+	var stdout, stderr bytes.Buffer
+	if code := runVerification([]string{"run", "SP-703", "--gate-only", "--proofs-only"}, &stdout, &stderr); code != 2 {
+		t.Fatalf("exit = %d, want 2", code)
+	}
+}
+
+func TestVerificationRunWithNoPlanStatesWhyItRanNoProof(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-704")
+	if err := os.Remove(verification.Path(root, "SP-704")); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := runVerification([]string{"run", "SP-704"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "no verification plan") {
+		t.Fatalf("stdout = %q, want a stated reason", stdout.String())
+	}
+	if proofs.Exists(root, "SP-704") {
+		t.Fatal("a change with no plan wrote proofs.json")
+	}
+}
+
+// newVerificationRunWorkspace builds a repository with one started change, a
+// gate command that passes, and a plan with one passing and one failing proof.
+// It installs the RunOverrides seam so the command resolves this root from
+// the working directory without an os.Chdir call, because RunOverrides is
+// shared process state and the caller must not run this helper in parallel.
+func newVerificationRunWorkspace(t *testing.T, changeID string) string {
+	t.Helper()
+
+	root := t.TempDir()
+	// t.TempDir can return a symlinked path on macOS. Resolve it so that the
+	// root the CLI finds matches the root the test asserts on.
+	resolved, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root = resolved
+
+	if err := os.MkdirAll(filepath.Join(root, ".shipproof"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	config := "version: 1\nschema_version: \"0.1\"\nverification:\n  command: true\n"
+	if err := os.WriteFile(filepath.Join(root, ".shipproof", "config.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	source := filepath.Join(root, changeID+".md")
+	if err := os.WriteFile(source, []byte("# "+changeID+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := change.Start(root, changeID, source, "", 1); err != nil {
+		t.Fatal(err)
+	}
+
+	plan := `{"schema_version":"0.1","change_id":"` + changeID + `","requirements":[{"id":"` + changeID + `-R1","proof":[{"type":"command","target":"a","command":"true"},{"type":"command","target":"b","command":"exit 3"}]}],"invariants":[]}`
+	if err := os.WriteFile(verification.Path(root, changeID), []byte(plan+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	RunOverrides["."] = root
+	t.Cleanup(func() { delete(RunOverrides, ".") })
+
+	return root
 }

@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/proofs"
 	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/verification"
 	"github.com/alternayte/shipproof/internal/verify"
@@ -19,38 +22,7 @@ func runVerification(args []string, stdout, stderr io.Writer) int {
 	}
 	switch args[0] {
 	case "run":
-		if len(args) != 2 {
-			fmt.Fprintln(stderr, "usage: shipproof verification run <change-id>")
-			return 2
-		}
-		root, err := findRepositoryRoot(".")
-		if err != nil {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
-		cfg, err := verify.LoadConfig(root)
-		if err != nil {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
-		if _, err := change.Load(root, args[1]); err != nil {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
-		result, err := verify.Run(root, args[1], cfg.Command)
-		if err != nil {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
-		status := "passed"
-		if result.ExitCode != 0 {
-			status = "failed"
-		}
-		fmt.Fprintf(stdout, "Verification %s (exit %d, %dms)\n", status, result.ExitCode, result.DurationMs)
-		fmt.Fprintf(stdout, "stdout: %s\n", result.StdoutPath)
-		fmt.Fprintf(stdout, "stderr: %s\n", result.StderrPath)
-		fmt.Fprintf(stdout, "result: .shipproof/runs/%s/run.json\n", result.ChangeID)
-		return 0
+		return runVerificationRun(args[1:], stdout, stderr)
 	case "init":
 		if len(args) != 2 {
 			fmt.Fprintln(stderr, "usage: shipproof verification init <change-id>")
@@ -122,4 +94,116 @@ func runVerification(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "unknown verification command %q\n", args[0])
 		return 2
 	}
+}
+
+// runVerificationRun implements
+// `shipproof verification run <change-id> [--gate-only|--proofs-only]`.
+//
+// The command performs two jobs. The gate runs the repository verification
+// command and stays the authority on whether the repository passes. The
+// attribution pass runs each proof on its own and says which requirement a
+// failure belongs to. Neither job replaces the other.
+func runVerificationRun(args []string, stdout, stderr io.Writer) int {
+	changeID := ""
+	gateOnly := false
+	proofsOnly := false
+	for _, argument := range args {
+		switch argument {
+		case "--gate-only":
+			gateOnly = true
+		case "--proofs-only":
+			proofsOnly = true
+		default:
+			if strings.HasPrefix(argument, "--") || changeID != "" {
+				fmt.Fprintln(stderr, "usage: shipproof verification run <change-id> [--gate-only|--proofs-only]")
+				return 2
+			}
+			changeID = argument
+		}
+	}
+	if changeID == "" || (gateOnly && proofsOnly) {
+		fmt.Fprintln(stderr, "usage: shipproof verification run <change-id> [--gate-only|--proofs-only]")
+		return 2
+	}
+
+	root, err := findRepositoryRoot(".")
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if _, err := change.Load(root, changeID); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	// Capture the tree state once, before either pass runs. A command can
+	// write files, so a state captured afterwards would describe a tree that
+	// the run itself changed.
+	headRev, treeClean := verify.TreeState(root)
+
+	if !proofsOnly {
+		cfg, err := verify.LoadConfig(root)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		result, err := verify.Run(root, changeID, cfg.Command)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		status := "passed"
+		if result.ExitCode != 0 {
+			status = "failed"
+		}
+		fmt.Fprintf(stdout, "Gate %s (exit %d, %dms)\n", status, result.ExitCode, result.DurationMs)
+		fmt.Fprintf(stdout, "stdout: %s\n", result.StdoutPath)
+		fmt.Fprintf(stdout, "stderr: %s\n", result.StderrPath)
+		fmt.Fprintf(stdout, "result: .shipproof/runs/%s/run.json\n", changeID)
+	}
+
+	if gateOnly {
+		return 0
+	}
+
+	planPath := verification.Path(root, changeID)
+	if _, err := os.Stat(planPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(stdout, "No proof ran: no verification plan exists for %s.\n", changeID)
+			return 0
+		}
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	plan, err := verification.Load(planPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "invalid verification plan: %v\n", err)
+		return 1
+	}
+
+	set, err := proofs.Run(root, plan, headRev, treeClean)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if _, err := proofs.Save(root, set); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	passed, failed, human := 0, 0, 0
+	for _, result := range set.Results {
+		switch result.Status {
+		case proofs.Pass:
+			passed++
+		case proofs.Fail:
+			failed++
+			fmt.Fprintf(stdout, "  fail %s proof %d: %s (exit %d)\n", result.RequirementID, result.ProofIndex, result.Command, result.ExitCode)
+		case proofs.Human:
+			human++
+		}
+	}
+	fmt.Fprintf(stdout, "Proofs: %d passed, %d failed, %d human\n", passed, failed, human)
+	fmt.Fprintf(stdout, "results: .shipproof/runs/%s/proofs.json\n", changeID)
+	return 0
 }
