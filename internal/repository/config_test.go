@@ -186,3 +186,80 @@ verification:
 		t.Errorf("ignore = %#v, want empty", cfg.Verification.UnexplainedIgnore)
 	}
 }
+
+func TestParseConfigTopLevelScalarDoesNotLeakSection(t *testing.T) {
+	root := t.TempDir()
+	writeConfig(t, root, `verification:
+  command: just verify
+capture: full
+`)
+
+	cfg, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Verification.Command != "just verify" {
+		t.Errorf("command = %q, want just verify", cfg.Verification.Command)
+	}
+	if cfg.Evidence.Capture != CaptureMetadata {
+		t.Errorf("capture = %q, want metadata", cfg.Evidence.Capture)
+	}
+}
+
+func TestParseConfigTopLevelCommandDoesNotOverwriteNestedCommand(t *testing.T) {
+	root := t.TempDir()
+	writeConfig(t, root, `verification:
+  command: original
+command: hijack
+`)
+
+	cfg, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Verification.Command != "original" {
+		t.Errorf("command = %q, want original", cfg.Verification.Command)
+	}
+}
+
+func TestParseConfigRealShape(t *testing.T) {
+	root := t.TempDir()
+	writeConfig(t, root, `version: 1
+schema_version: "0.1"
+verification:
+  command: just verify
+  coverage:
+    command: go test -coverpkg=./... -coverprofile={{profile}} {{target}}
+    format: go
+  unexplained_ignore:
+    - "docs/**"
+    - "CHANGELOG.md"
+evidence:
+  capture: redacted
+language:
+  profile: ste-assisted
+`)
+
+	cfg, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Verification.Command != "just verify" {
+		t.Errorf("command = %q, want just verify", cfg.Verification.Command)
+	}
+	want := "go test -coverpkg=./... -coverprofile={{profile}} {{target}}"
+	if cfg.Verification.Coverage.Command != want {
+		t.Errorf("coverage command = %q, want %q", cfg.Verification.Coverage.Command, want)
+	}
+	if cfg.Verification.Coverage.Format != "go" {
+		t.Errorf("coverage format = %q, want go", cfg.Verification.Coverage.Format)
+	}
+	if len(cfg.Verification.UnexplainedIgnore) != 2 ||
+		cfg.Verification.UnexplainedIgnore[0] != "docs/**" ||
+		cfg.Verification.UnexplainedIgnore[1] != "CHANGELOG.md" {
+		t.Errorf("ignore = %#v", cfg.Verification.UnexplainedIgnore)
+	}
+	if cfg.Evidence.Capture != CaptureRedacted {
+		t.Errorf("capture = %q, want redacted", cfg.Evidence.Capture)
+	}
+}

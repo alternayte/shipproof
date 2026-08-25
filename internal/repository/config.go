@@ -111,6 +111,7 @@ func parseConfig(file *os.File) (Config, error) {
 		indent := indentWidth(line)
 		if indent == 0 {
 			block, blockIndent = "", -1
+			section = ""
 			if strings.HasSuffix(trimmed, ":") {
 				section = strings.TrimSuffix(trimmed, ":")
 				continue
