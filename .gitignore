@@ -13,3 +13,4 @@ decisions.md
 coverage.*
 dist/
 .superpowers/
+docs/build/
