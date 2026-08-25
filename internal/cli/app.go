@@ -30,6 +30,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runChange(args[1:], stdout, stderr)
 	case "next":
 		return runNext(args[1:], stdout, stderr)
+	case "coverage":
+		return runCoverage(args[1:], stdout, stderr)
 	case "plan":
 		return runPlan(args[1:], stdout, stderr)
 	case "skill":
@@ -82,6 +84,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof change status <change-id>")
 	fmt.Fprintln(w, "  shipproof change check <change-id>")
 	fmt.Fprintln(w, "  shipproof next [change-id] [--json]")
+	fmt.Fprintln(w, "  shipproof coverage <change-id> [--json]")
 	fmt.Fprintln(w, "  shipproof plan create <file>")
 	fmt.Fprintln(w, "  shipproof plan review")
 	fmt.Fprintln(w, "  shipproof plan sync --linear [plan-file]")
