@@ -3,6 +3,7 @@ package verify
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -307,4 +308,89 @@ func TestRunAdhocMissingCommand(t *testing.T) {
 	if _, err := RunAdhoc(root, "  "); !errors.Is(err, ErrCommandMissing) {
 		t.Fatalf("expected ErrCommandMissing, got %v", err)
 	}
+}
+
+func TestRunRecordsHeadRevisionAndCleanTree(t *testing.T) {
+	root := initVerifyTestRepo(t)
+
+	result, err := Run(root, "SP-200", "true")
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if result.HeadRev == "" {
+		t.Fatal("HeadRev is empty; want the current revision")
+	}
+	if result.TreeClean == nil || !*result.TreeClean {
+		t.Fatalf("TreeClean = %v, want a pointer to true", result.TreeClean)
+	}
+}
+
+func TestRunRecordsDirtyTree(t *testing.T) {
+	root := initVerifyTestRepo(t)
+	if err := os.WriteFile(filepath.Join(root, "tracked.txt"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Run(root, "SP-201", "true")
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if result.TreeClean == nil || *result.TreeClean {
+		t.Fatalf("TreeClean = %v, want a pointer to false", result.TreeClean)
+	}
+}
+
+func TestRunIgnoresShipproofWrites(t *testing.T) {
+	root := initVerifyTestRepo(t)
+	if err := os.MkdirAll(filepath.Join(root, ".shipproof", "changes", "SP-203"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".shipproof", "changes", "SP-203", "evidence-pack.json"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Run(root, "SP-203", "true")
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if result.TreeClean == nil || !*result.TreeClean {
+		t.Fatalf("TreeClean = %v, want a pointer to true; a ShipProof write must not dirty the tree", result.TreeClean)
+	}
+}
+
+func TestRunOutsideGitRepositoryRecordsNoRevision(t *testing.T) {
+	root := t.TempDir()
+
+	result, err := Run(root, "SP-202", "true")
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if result.HeadRev != "" {
+		t.Fatalf("HeadRev = %q, want an empty string", result.HeadRev)
+	}
+	if result.TreeClean != nil {
+		t.Fatalf("TreeClean = %v, want nil", result.TreeClean)
+	}
+}
+
+func initVerifyTestRepo(t *testing.T) string {
+	t.Helper()
+
+	root := t.TempDir()
+	runFixtureGit := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = root
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, output)
+		}
+	}
+	runFixtureGit("init")
+	runFixtureGit("config", "user.email", "test@example.com")
+	runFixtureGit("config", "user.name", "Test")
+	if err := os.WriteFile(filepath.Join(root, "tracked.txt"), []byte("original\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runFixtureGit("add", ".")
+	runFixtureGit("commit", "-m", "initial")
+	return root
 }

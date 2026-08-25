@@ -268,3 +268,27 @@ func Dirty(dir string) (bool, error) {
 	}
 	return strings.TrimSpace(string(output)) != "", nil
 }
+
+// DirtyOutside reports whether the workspace holds uncommitted changes outside
+// the excluded paths. An untracked file counts, because new source that no
+// commit holds is a real difference from the recorded revision.
+//
+// ShipProof excludes its own state directory. The evidence pack and the review
+// packet land there as a normal part of the flow, and counting them would mark
+// every run stale the moment the pack was written.
+func DirtyOutside(dir string, excludePaths ...string) (bool, error) {
+	if err := checkRepo(dir); err != nil {
+		return false, err
+	}
+	args := []string{"status", "--porcelain", "--", "."}
+	for _, path := range excludePaths {
+		args = append(args, ":(exclude)"+path)
+	}
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("read worktree status: %w", err)
+	}
+	return strings.TrimSpace(string(output)) != "", nil
+}

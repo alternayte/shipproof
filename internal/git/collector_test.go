@@ -369,3 +369,65 @@ func TestParseGitHubURL(t *testing.T) {
 		}
 	}
 }
+
+func TestDirtyOutsideIgnoresExcludedPath(t *testing.T) {
+	dir := initTestRepo(t)
+	writeAndCommit(t, dir, "source.go", "package main\n")
+
+	if err := os.MkdirAll(filepath.Join(dir, ".shipproof", "changes", "SP-001"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".shipproof", "changes", "SP-001", "evidence-pack.json"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dirty, err := Dirty(dir)
+	if err != nil {
+		t.Fatalf("Dirty() error = %v", err)
+	}
+	if !dirty {
+		t.Fatal("Dirty() = false; the untracked pack must count as a difference")
+	}
+
+	outside, err := DirtyOutside(dir, ".shipproof")
+	if err != nil {
+		t.Fatalf("DirtyOutside() error = %v", err)
+	}
+	if outside {
+		t.Fatal("DirtyOutside() = true; a write under .shipproof must not count")
+	}
+}
+
+func TestDirtyOutsideCountsSourceChange(t *testing.T) {
+	dir := initTestRepo(t)
+	writeAndCommit(t, dir, "source.go", "package main\n")
+
+	if err := os.WriteFile(filepath.Join(dir, "source.go"), []byte("package main // edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	outside, err := DirtyOutside(dir, ".shipproof")
+	if err != nil {
+		t.Fatalf("DirtyOutside() error = %v", err)
+	}
+	if !outside {
+		t.Fatal("DirtyOutside() = false; a source edit must count")
+	}
+}
+
+func TestDirtyOutsideCountsUntrackedSource(t *testing.T) {
+	dir := initTestRepo(t)
+	writeAndCommit(t, dir, "source.go", "package main\n")
+
+	if err := os.WriteFile(filepath.Join(dir, "new.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	outside, err := DirtyOutside(dir, ".shipproof")
+	if err != nil {
+		t.Fatalf("DirtyOutside() error = %v", err)
+	}
+	if !outside {
+		t.Fatal("DirtyOutside() = false; untracked source must count")
+	}
+}
