@@ -1,6 +1,6 @@
 // Package coverage derives the requirement coverage matrix. The matrix is
-// derived on demand and no agent writes it. A stored matrix would be an
-// assertion; a derived matrix is a reading of the artifacts on disk.
+// derived on demand and no agent writes it. A stored matrix is an assertion.
+// A derived matrix is a reading of the artifacts on disk.
 //
 // No state and no provenance in this package reads inferred. A row that
 // nothing proved reads unproven with unknown provenance, and it says so.
@@ -8,6 +8,7 @@ package coverage
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/alternayte/shipproof/internal/proofs"
 	"github.com/alternayte/shipproof/internal/requirements"
@@ -99,7 +100,7 @@ func classify(requirementID string, item verification.Item, planned bool, record
 			Detail: "the plan entry names no proof"}
 	}
 
-	automated, passed, failed := 0, 0, 0
+	automated, passed, failed, stale := 0, 0, 0, 0
 	humanProofs, accepted := 0, 0
 	for index, proof := range item.Proof {
 		if proof.IsHuman() {
@@ -115,6 +116,14 @@ func classify(requirementID string, item verification.Item, planned bool, record
 		automated++
 		result, ran := recorded[key(requirementID, index)]
 		if !ran {
+			continue
+		}
+		// The plan lives under .shipproof/, which the tree check excludes. An
+		// edit to a command therefore leaves the recorded result current. Match
+		// the recorded command to the command the plan now names. A result for a
+		// different command is a result for a proof that never ran.
+		if strings.TrimSpace(result.Command) != strings.TrimSpace(proof.Command) {
+			stale++
 			continue
 		}
 		switch result.Status {
@@ -138,6 +147,9 @@ func classify(requirementID string, item verification.Item, planned bool, record
 	case automated == 0 && humanProofs > 0:
 		return Row{RequirementID: requirementID, State: AwaitingHuman, Provenance: Unknown,
 			Detail: fmt.Sprintf("%d of %d human proofs carry no recorded acceptance", humanProofs-accepted, humanProofs)}
+	case automated > 0 && stale > 0:
+		return Row{RequirementID: requirementID, State: Unproven, Provenance: Unknown,
+			Detail: fmt.Sprintf("%d of %d automated proofs have a recorded result for a different command", stale, automated)}
 	case automated > 0:
 		return Row{RequirementID: requirementID, State: Unproven, Provenance: Unknown,
 			Detail: fmt.Sprintf("%d of %d automated proofs have no result at this revision", automated-passed-failed, automated)}

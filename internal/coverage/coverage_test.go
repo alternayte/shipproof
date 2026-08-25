@@ -248,3 +248,69 @@ func assertRow(t *testing.T, matrix Matrix, index int, state State, provenance P
 		t.Fatalf("row %d provenance = %q, want %q", index, row.Provenance, provenance)
 	}
 }
+
+func TestBuildUnprovenWhenARecordedPassNamesADifferentCommand(t *testing.T) {
+	t.Parallel()
+
+	matrix := Build(
+		requirementSet("SP-021-R1"),
+		planWith(verification.Item{ID: "SP-021-R1", Proof: []verification.Proof{
+			{Type: "test", Target: "b", Command: "go test ./b/"},
+		}}),
+		resultSet(
+			proofs.Result{RequirementID: "SP-021-R1", ProofIndex: 0, Command: "go test ./a/", Status: proofs.Pass},
+		),
+		true,
+	)
+	assertRow(t, matrix, 0, Unproven, Unknown)
+}
+
+func TestBuildUnprovenWhenARecordedFailureNamesADifferentCommand(t *testing.T) {
+	t.Parallel()
+
+	matrix := Build(
+		requirementSet("SP-021-R1"),
+		planWith(verification.Item{ID: "SP-021-R1", Proof: []verification.Proof{
+			{Type: "test", Target: "b", Command: "go test ./b/"},
+		}}),
+		resultSet(
+			proofs.Result{RequirementID: "SP-021-R1", ProofIndex: 0, Command: "go test ./a/", ExitCode: 1, Status: proofs.Fail},
+		),
+		true,
+	)
+	assertRow(t, matrix, 0, Unproven, Unknown)
+}
+
+func TestBuildUnprovenWhenOnlyOneOfTwoCommandsStillMatches(t *testing.T) {
+	t.Parallel()
+
+	matrix := Build(
+		requirementSet("SP-021-R1"),
+		planWith(verification.Item{ID: "SP-021-R1", Proof: []verification.Proof{
+			{Type: "test", Target: "a", Command: "go test ./a/"},
+			{Type: "test", Target: "b", Command: "go test ./b/"},
+		}}),
+		resultSet(
+			proofs.Result{RequirementID: "SP-021-R1", ProofIndex: 0, Command: "go test ./a/", Status: proofs.Pass},
+			proofs.Result{RequirementID: "SP-021-R1", ProofIndex: 1, Command: "go test ./old/", Status: proofs.Pass},
+		),
+		true,
+	)
+	assertRow(t, matrix, 0, Unproven, Unknown)
+}
+
+func TestBuildAcceptedWhenAHumanProofCarriesAnEmptyCommand(t *testing.T) {
+	t.Parallel()
+
+	matrix := Build(
+		requirementSet("SP-021-R1"),
+		planWith(verification.Item{ID: "SP-021-R1", Proof: []verification.Proof{
+			{Type: "human", Target: "a", Human: true, Rationale: "A person reads it.", AcceptedAt: "2026-08-25T10:00:00Z"},
+		}}),
+		resultSet(
+			proofs.Result{RequirementID: "SP-021-R1", ProofIndex: 0, Command: "", Status: proofs.Human},
+		),
+		true,
+	)
+	assertRow(t, matrix, 0, Accepted, Human)
+}
