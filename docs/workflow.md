@@ -69,31 +69,18 @@ shipproof verification check <change-id>
 
 Skip this step for trivial or low-risk changes.
 
-## Step 3 — Implement
+## Step 3 — Implement and verify
 
 **Skill:** `implement-change`
 
-The agent reads the intent snapshot and verification plan, then makes the smallest coherent change that satisfies the approved scope.
-
-Before writing code, the agent confirms the change is ready:
-
-```bash
-shipproof change status <change-id>
-shipproof verification check <change-id>
-```
-
-## Step 4 — Verify
-
-**Skill:** `verify-change`
-
-The agent runs the repository verification contract and confirms the intent snapshot is intact:
+The agent reads the intent snapshot and verification plan, then makes the smallest coherent change that satisfies the approved scope. The agent then runs the repository verification contract and confirms the intent snapshot is intact:
 
 ```bash
 shipproof verification run <change-id>
 shipproof change check <change-id>
 ```
 
-## Step 5 — Produce evidence
+## Step 4 — Produce evidence
 
 **Skill:** `produce-evidence`
 
@@ -103,7 +90,7 @@ The agent assembles the evidence pack from intent, implementation, and verificat
 shipproof evidence pack <change-id>
 ```
 
-## Step 6 — Prepare human review
+## Step 5 — Prepare human review
 
 **Skill:** `prepare-human-review`
 
@@ -113,7 +100,7 @@ The agent generates a focused review packet that separates proven areas from are
 shipproof review prepare <change-id>
 ```
 
-## Step 7 — Generate reports
+## Step 6 — Generate reports
 
 Generate human-readable reports from the evidence pack and review packet:
 
@@ -125,7 +112,7 @@ shipproof report project <name>
 
 Use `--output <path>` to write to a file instead of stdout.
 
-## Step 8 — Code review and commit
+## Step 7 — Code review and commit
 
 **Skill:** `review-change`
 
