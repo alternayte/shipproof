@@ -221,3 +221,48 @@ func TestCoverageWithNoRecordedRevisionReportsUnproven(t *testing.T) {
 		t.Fatalf("row 1 state = %q, want %q", matrix.Rows[0].State, coverage.Unproven)
 	}
 }
+
+// TestCoverageWithMalformedRequirementSidecarReportsThatCause writes a
+// requirement sidecar that fails to parse and confirms the CLI names the
+// requirement set, not the proof results, as the cause.
+func TestCoverageWithMalformedRequirementSidecarReportsThatCause(t *testing.T) {
+	root := newCoverageWorkspace(t, "SP-807")
+	if err := os.WriteFile(filepath.Join(root, ".shipproof", "changes", "SP-807", "requirements.json"), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := runCoverage([]string{"SP-807"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("exit = %d, want 1, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "invalid requirement set") {
+		t.Fatalf("stderr = %q, want it to name the requirement set", stderr.String())
+	}
+	if strings.Contains(stderr.String(), "invalid proof results") {
+		t.Fatalf("stderr = %q, must not name the proof results", stderr.String())
+	}
+}
+
+// TestCoverageWithMalformedProofResultsReportsThatCause writes a recorded
+// proof-results artifact that fails to parse and confirms the CLI names the
+// proof results, not the requirement set, as the cause.
+func TestCoverageWithMalformedProofResultsReportsThatCause(t *testing.T) {
+	root := newCoverageWorkspace(t, "SP-808")
+	if err := os.MkdirAll(filepath.Join(root, ".shipproof", "runs", "SP-808"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".shipproof", "runs", "SP-808", "proofs.json"), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := runCoverage([]string{"SP-808"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("exit = %d, want 1, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "invalid proof results") {
+		t.Fatalf("stderr = %q, want it to name the proof results", stderr.String())
+	}
+	if strings.Contains(stderr.String(), "invalid requirement set") {
+		t.Fatalf("stderr = %q, must not name the requirement set", stderr.String())
+	}
+}

@@ -7,6 +7,7 @@
 package coverage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,6 +16,14 @@ import (
 	"github.com/alternayte/shipproof/internal/verification"
 	"github.com/alternayte/shipproof/internal/verify"
 )
+
+// ErrRequirementSet marks a failure to load the requirement sidecar. A
+// caller uses errors.Is to tell this cause apart from ErrProofResults.
+var ErrRequirementSet = errors.New("requirement set")
+
+// ErrProofResults marks a failure to load the recorded proof results. A
+// caller uses errors.Is to tell this cause apart from ErrRequirementSet.
+var ErrProofResults = errors.New("proof results")
 
 // State names what the artifacts say about one requirement.
 type State string
@@ -171,7 +180,7 @@ func key(requirementID string, index int) string {
 func Read(root, changeID string, plan verification.Plan) (Matrix, error) {
 	set, err := requirements.Load(root, changeID)
 	if err != nil {
-		return Matrix{}, fmt.Errorf("load requirement set: %w", err)
+		return Matrix{}, fmt.Errorf("%w: %w", ErrRequirementSet, err)
 	}
 
 	var results *proofs.Set
@@ -179,7 +188,7 @@ func Read(root, changeID string, plan verification.Plan) (Matrix, error) {
 	if proofs.Exists(root, changeID) {
 		loaded, err := proofs.Load(root, changeID)
 		if err != nil {
-			return Matrix{}, fmt.Errorf("load proof results: %w", err)
+			return Matrix{}, fmt.Errorf("%w: %w", ErrProofResults, err)
 		}
 		results = &loaded
 		if strings.TrimSpace(loaded.HeadRev) != "" {

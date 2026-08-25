@@ -23,6 +23,7 @@ func coverageChecks(matrix coverage.Matrix) []schema.Check {
 			Status:     checkStatus(row.State),
 			Source:     "shipproof-coverage",
 			Provenance: checkProvenance(row.Provenance),
+			Detail:     row.Detail,
 		})
 	}
 	return checks
@@ -86,6 +87,8 @@ func buildUnexplained(root, changeID string, plan verification.Plan, base, head 
 	section := &schema.UnexplainedEvidence{
 		CoverageAvailable:   report.CoverageAvailable,
 		UninstrumentedLines: report.UninstrumentedLines,
+		LineFindings:        []schema.UnexplainedLine{},
+		FileFindings:        []schema.UnexplainedFile{},
 	}
 	for _, finding := range report.LineFindings {
 		section.LineFindings = append(section.LineFindings, schema.UnexplainedLine{

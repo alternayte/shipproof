@@ -427,6 +427,29 @@ func TestAssembleAddsOneCheckPerRequirement(t *testing.T) {
 	}
 }
 
+func TestAssembleSwallowsMalformedProofResults(t *testing.T) {
+	root := t.TempDir()
+	setupChangeWithRequirements(t, root, "SP-302", []string{"SP-302-R1"})
+
+	runsDir := filepath.Join(root, ".shipproof", "runs", "SP-302")
+	if err := os.MkdirAll(runsDir, 0o755); err != nil {
+		t.Fatalf("create runs dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(runsDir, "proofs.json"), []byte("{not json"), 0o644); err != nil {
+		t.Fatalf("write malformed proof results: %v", err)
+	}
+
+	pack, err := Assemble(root, "SP-302", Options{})
+	if err != nil {
+		t.Fatalf("Assemble must not fail on a malformed proof-results file: %v", err)
+	}
+	for _, check := range pack.Verification.Checks {
+		if strings.HasPrefix(check.ID, "coverage:") {
+			t.Errorf("unexpected coverage check %q with a malformed proof-results file", check.ID)
+		}
+	}
+}
+
 func TestAssembleWithoutASidecarAddsNoCoverageCheck(t *testing.T) {
 	root := t.TempDir()
 	setupChangeWithoutRequirements(t, root, "SP-301")

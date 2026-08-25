@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -58,7 +59,17 @@ func runCoverage(args []string, stdout, stderr io.Writer) int {
 	// claim it cannot support, so an empty revision reads as not current.
 	matrix, err := coverage.Read(root, changeID, plan)
 	if err != nil {
-		fmt.Fprintf(stderr, "invalid requirement set or proof results: %v\n", err)
+		// coverage.Read wraps ErrRequirementSet or ErrProofResults. Branch on
+		// the wrapped error so each cause prints its own top-level message,
+		// the way the code did before the extraction.
+		switch {
+		case errors.Is(err, coverage.ErrRequirementSet):
+			fmt.Fprintf(stderr, "invalid %v\n", err)
+		case errors.Is(err, coverage.ErrProofResults):
+			fmt.Fprintf(stderr, "invalid %v\n", err)
+		default:
+			fmt.Fprintf(stderr, "%v\n", err)
+		}
 		return 1
 	}
 

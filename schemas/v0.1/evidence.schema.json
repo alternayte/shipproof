@@ -43,7 +43,8 @@
               "id": {"type": "string", "minLength": 1},
               "status": {"enum": ["pass", "fail", "skip", "unknown"]},
               "source": {"type": "string"},
-              "provenance": {"enum": ["observed", "derived", "inferred", "human"]}
+              "provenance": {"enum": ["observed", "derived", "inferred", "human"]},
+              "detail": {"type": "string"}
             }
           }
         }

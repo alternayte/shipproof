@@ -81,12 +81,14 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 	}
 	pack.Verification.Checks = append(pack.Verification.Checks, evChecks...)
 
+	// SDD Section 11.6: the coverage signal never blocks a run and never
+	// fails a change. A malformed sidecar or a malformed proof-results file
+	// adds no coverage check, the same way buildUnexplained adds no finding
+	// when its own inputs are unreadable.
 	if requirements.Exists(root, changeID) {
-		matrix, err := coverage.Read(root, changeID, plan)
-		if err != nil {
-			return pack, fmt.Errorf("read coverage matrix: %w", err)
+		if matrix, err := coverage.Read(root, changeID, plan); err == nil {
+			pack.Verification.Checks = append(pack.Verification.Checks, coverageChecks(matrix)...)
 		}
-		pack.Verification.Checks = append(pack.Verification.Checks, coverageChecks(matrix)...)
 	}
 
 	head := opts.HeadRev

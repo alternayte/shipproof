@@ -146,6 +146,9 @@ type Check struct {
 	Status     string         `json:"status"`
 	Source     string         `json:"source"`
 	Provenance ProvenanceKind `json:"provenance"`
+	// Detail states the reason for the status in one sentence. It is review
+	// material, and its absence never changes the status it explains.
+	Detail string `json:"detail,omitempty"`
 }
 
 type PackProvenance struct {
