@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/verification"
 	"github.com/alternayte/shipproof/internal/verify"
 )
@@ -75,8 +76,8 @@ func runVerification(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 		path := args[1]
+		root, rootErr := findRepositoryRoot(".")
 		if _, err := os.Stat(path); err != nil {
-			root, rootErr := findRepositoryRoot(".")
 			if rootErr != nil {
 				fmt.Fprintln(stderr, rootErr)
 				return 1
@@ -88,6 +89,26 @@ func runVerification(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "invalid verification plan: %v\n", err)
 			return 1
 		}
+
+		// The tie check runs only when a requirement sidecar exists. A change
+		// adopted before the sidecar existed keeps the v0 behaviour.
+		if rootErr == nil && requirements.Exists(root, plan.ChangeID) {
+			set, err := requirements.Load(root, plan.ChangeID)
+			if err != nil {
+				fmt.Fprintf(stderr, "invalid requirement set: %v\n", err)
+				return 1
+			}
+			blockers := verification.TieCheck(set, plan)
+			if len(blockers) > 0 {
+				for _, blocker := range blockers {
+					fmt.Fprintf(stdout, "[BLOCKER] %s: %s\n", blocker.Kind, blocker.Detail)
+				}
+				fmt.Fprintf(stderr, "the requirement set and the verification plan disagree on %d identifier(s)\n", len(blockers))
+				return 1
+			}
+			fmt.Fprintf(stdout, "Requirement tie check passed: %d requirements tied to a plan entry.\n", len(set.Requirements))
+		}
+
 		fmt.Fprintf(stdout, "Verification plan is valid: %s (%d requirements, %d invariants)\n", plan.ChangeID, len(plan.Requirements), len(plan.Invariants))
 		return 0
 	default:
