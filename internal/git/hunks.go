@@ -49,13 +49,30 @@ func CollectChangedHunks(dir, base, head string) ([]FileHunks, error) {
 }
 
 // ParseHunks reads a unified diff and returns the post-image ranges.
+//
+// A file header is the "--- " and "+++ " pair that follows a "diff --git "
+// line. A body line carries a "+" or a "-" marker, so an added line whose
+// content starts with "++ " renders as "+++ ". A bare prefix scan reads that
+// body line as a file header and invents a path. The pair rule rejects it.
 func ParseHunks(diff string) []FileHunks {
 	var files []FileHunks
 	// current is an index, not a pointer. An append to files can move the
 	// backing array, and a pointer into it would then address the old copy.
 	current := -1
+	// pending is true between a "diff --git " line and the header pair it
+	// introduces. sawOld is true between the "--- " line and its "+++ " line.
+	pending, sawOld := false, false
 	for _, line := range strings.Split(diff, "\n") {
-		if strings.HasPrefix(line, "+++ ") {
+		if strings.HasPrefix(line, "diff --git ") {
+			current, pending, sawOld = -1, true, false
+			continue
+		}
+		if pending && strings.HasPrefix(line, "--- ") {
+			sawOld = true
+			continue
+		}
+		if pending && sawOld && strings.HasPrefix(line, "+++ ") {
+			pending, sawOld = false, false
 			path := strings.TrimSpace(strings.TrimPrefix(line, "+++ "))
 			if path == "/dev/null" {
 				current = -1

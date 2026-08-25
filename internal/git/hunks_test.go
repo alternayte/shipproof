@@ -85,3 +85,31 @@ func TestCollectChangedHunksOnARealRepository(t *testing.T) {
 		t.Errorf("hunk = %#v, want start 4 count 1", files[0].Hunks[0])
 	}
 }
+
+// TestParseHunksIgnoresABodyLineThatLooksLikeAHeader proves that an added
+// line whose content starts with "++ " does not create a file. The diff
+// marker turns that content into "+++ ", and a bare prefix scan invented a
+// path from it. A false path in this report is a false claim.
+func TestParseHunksIgnoresABodyLineThatLooksLikeAHeader(t *testing.T) {
+	diff := `diff --git a/internal/git/real.go b/internal/git/real.go
+index 1111111..2222222 100644
+--- a/internal/git/real.go
++++ b/internal/git/real.go
+@@ -10,0 +11,2 @@ func First() {
++++ nested
++	real
+@@ -40,0 +42,1 @@ func Second() {
++	second
+`
+
+	files := ParseHunks(diff)
+	if len(files) != 1 {
+		t.Fatalf("files = %#v, want 1", files)
+	}
+	if files[0].Path != "internal/git/real.go" {
+		t.Errorf("path = %q", files[0].Path)
+	}
+	if len(files[0].Hunks) != 2 {
+		t.Errorf("hunks = %d, want 2", len(files[0].Hunks))
+	}
+}
