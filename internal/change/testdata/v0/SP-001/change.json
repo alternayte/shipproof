@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-001",
+  "source_path": "docs/changes/SP-001-change-lifecycle.md",
+  "snapshot_path": ".shipproof/changes/SP-001/snapshot.md",
+  "sha256": "25cb602cf23ed2e4e47f3644851248e7aeca033f701bdfac51786eb09df0021c",
+  "captured_at": "2026-08-14T20:33:20Z"
+}

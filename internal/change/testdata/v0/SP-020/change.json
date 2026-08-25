@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-020",
+  "source_path": "docs/changes/SP-020-skill-evals.md",
+  "snapshot_path": ".shipproof/changes/SP-020/snapshot.md",
+  "sha256": "8abfec0fc2f83157b903ba86a1ced2d2bdac3383b40bfa72a974fa2bc3a0eb2f",
+  "captured_at": "2026-08-15T20:51:08Z"
+}

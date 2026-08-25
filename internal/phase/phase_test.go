@@ -471,3 +471,25 @@ func TestResolveNeedsPlanOnEmptyPlanNamesVerificationCheck(t *testing.T) {
 		t.Fatalf("NextCommand = %q, want %q", result.NextCommand, "shipproof verification check SP-321")
 	}
 }
+
+func TestResolveNeedsEvidence(t *testing.T) {
+	t.Parallel()
+
+	root, _ := newChange(t, "SP-318", 1)
+	writePlan(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","requirements":[{"id":"SP-318-R1","proof":[{"type":"unit","target":"x_test.go"}]}],"invariants":[]}`)
+	writeRun(t, root, "SP-318", `{"schema_version":"0.1","change_id":"SP-318","exit_code":0,"duration_ms":10,"stdout_path":"a","stderr_path":"b","timestamp":"2026-08-25T10:00:00Z"}`)
+
+	result, err := Resolve(root, "SP-318")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if result.Phase != NeedsEvidence {
+		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsEvidence)
+	}
+	if result.NextSkill != "produce-evidence" {
+		t.Fatalf("NextSkill = %q, want produce-evidence", result.NextSkill)
+	}
+	if result.NextCommand != "shipproof evidence pack SP-318" {
+		t.Fatalf("NextCommand = %q", result.NextCommand)
+	}
+}

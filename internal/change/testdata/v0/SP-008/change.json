@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-008",
+  "source_path": "docs/changes/SP-008-agent-telemetry.md",
+  "snapshot_path": ".shipproof/changes/SP-008/snapshot.md",
+  "sha256": "9f446940b27223a3a8e1dc736081772befe54f873a8b2764b2fc8e29f4d03185",
+  "captured_at": "2026-08-14T23:36:35Z"
+}

@@ -311,3 +311,79 @@ func TestStartWithoutForceStillRefusesAnExistingChange(t *testing.T) {
 		t.Fatalf("error = %v, want an already-exists refusal", err)
 	}
 }
+
+// TestLoadV0Records proves criterion S5 of the v1 spine. Every change record
+// that ShipProof v0 wrote must still load after the ceremony field arrives.
+// The tracked fixtures under testdata/v0 always run. The live records under
+// .shipproof/changes/ run as well when the directory exists, because the
+// working repository is the strongest available sample.
+func TestLoadV0Records(t *testing.T) {
+	t.Parallel()
+
+	// checkRecord loads one record. wantDefaultCeremony holds only for a
+	// record that carries no ceremony field. A live record can carry an
+	// explicit level, so the caller decides.
+	checkRecord := func(t *testing.T, root, changeID string, wantDefaultCeremony bool) {
+		t.Helper()
+
+		record, err := Load(root, changeID)
+		if err != nil {
+			t.Fatalf("Load(%s) error = %v", changeID, err)
+		}
+		if record.ChangeID != changeID {
+			t.Fatalf("ChangeID = %q, want %q", record.ChangeID, changeID)
+		}
+		if wantDefaultCeremony && record.CeremonyLevel() != DefaultCeremony {
+			t.Fatalf("CeremonyLevel() = %d, want %d", record.CeremonyLevel(), DefaultCeremony)
+		}
+	}
+
+	t.Run("fixtures", func(t *testing.T) {
+		t.Parallel()
+
+		entries, err := os.ReadDir(filepath.Join("testdata", "v0"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(entries) == 0 {
+			t.Fatal("testdata/v0 holds no record")
+		}
+
+		root := t.TempDir()
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			changeID := entry.Name()
+			source := filepath.Join("testdata", "v0", changeID, "change.json")
+			data, err := os.ReadFile(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dir := filepath.Join(root, ".shipproof", "changes", changeID)
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "change.json"), data, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			checkRecord(t, root, changeID, true)
+		}
+	})
+
+	t.Run("live", func(t *testing.T) {
+		t.Parallel()
+
+		root := filepath.Join("..", "..")
+		entries, err := os.ReadDir(filepath.Join(root, ".shipproof", "changes"))
+		if err != nil {
+			t.Skipf("no live change directory: %v", err)
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			checkRecord(t, root, entry.Name(), false)
+		}
+	})
+}
