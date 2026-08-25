@@ -146,7 +146,9 @@ func SetValue(root, key, value string, scope Scope) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tree.set(strings.Split(key, "."), value)
+	if err := tree.set(strings.Split(key, "."), value); err != nil {
+		return "", fmt.Errorf("%s: cannot set %s, because %w. Edit the file by hand", path, key, err)
+	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", fmt.Errorf("create config directory: %w", err)

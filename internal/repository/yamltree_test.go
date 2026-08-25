@@ -67,44 +67,39 @@ func TestGetValueMissingKeyReturnsErrKeyNotFound(t *testing.T) {
 	}
 }
 
-// TestSetValueOnSequenceKeyDropsTheWrittenValue documents a real limitation:
-// yamlTree.set does not clear sequenceItems, so setting a key that already
-// holds a sequence updates the in-memory node value, but render still
-// prints the old sequence and the new scalar value never reaches disk. A
-// caller that runs `shipproof config set verification.unexplained_ignore
-// ...` against an existing sequence loses the write silently. This test
-// pins the current behaviour; it does not endorse it.
-func TestSetValueOnSequenceKeyDropsTheWrittenValue(t *testing.T) {
+// TestSetValueOnSequenceKeyFailsLoudly proves that a write to a key that
+// holds a list fails and names the file and the key. yamlTree stores a list
+// as opaque raw lines, so it cannot replace one with a scalar. It reported
+// success before, and the value never reached disk. A lost write is
+// tolerable. A lost write that reports success is not.
+func TestSetValueOnSequenceKeyFailsLoudly(t *testing.T) {
 	root := t.TempDir()
 	writeLocalConfig(t, root, sequenceFixture)
 
-	path, err := SetValue(root, "verification.unexplained_ignore", "scalar-value", ScopeLocal)
-	if err != nil {
-		t.Fatalf("SetValue: %v", err)
+	_, err := SetValue(root, "verification.unexplained_ignore", "scalar-value", ScopeLocal)
+	if err == nil {
+		t.Fatal("SetValue reported success on a key that holds a list")
+	}
+	if !errors.Is(err, ErrSequenceValue) {
+		t.Fatalf("err = %v, want ErrSequenceValue", err)
+	}
+	if !strings.Contains(err.Error(), "verification.unexplained_ignore") {
+		t.Errorf("the message does not name the key: %v", err)
+	}
+	if !strings.Contains(err.Error(), LocalConfigPath(root)) {
+		t.Errorf("the message does not name the file: %v", err)
 	}
 
-	contents, err := os.ReadFile(path)
+	contents, err := os.ReadFile(LocalConfigPath(root))
 	if err != nil {
 		t.Fatal(err)
 	}
 	written := string(contents)
-
 	if strings.Contains(written, "scalar-value") {
-		t.Fatal("expected limitation did not reproduce: the scalar value reached disk")
+		t.Error("the refused value reached disk")
 	}
 	if !strings.Contains(written, `- "docs/**"`) {
-		t.Fatal("expected the stale sequence to remain on disk, but it is gone")
-	}
-
-	// GetValue reads the file fresh, so it reports the sequence key as
-	// absent (a sequence is not a gettable scalar), not the value the
-	// caller thought it had just set.
-	value, _, err := GetValue(root, "verification.unexplained_ignore")
-	if err == nil {
-		t.Fatalf("GetValue after SetValue = %q, want ErrKeyNotFound", value)
-	}
-	if !errors.Is(err, ErrKeyNotFound) {
-		t.Fatalf("err = %v, want ErrKeyNotFound", err)
+		t.Error("the refused write removed the existing list")
 	}
 }
 

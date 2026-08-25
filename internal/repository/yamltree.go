@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -117,7 +118,12 @@ func (tree *yamlTree) get(path []string) (string, bool) {
 	return "", false
 }
 
-func (tree *yamlTree) set(path []string, value string) {
+// ErrSequenceValue reports a key that holds a list. yamlTree stores a list as
+// opaque raw lines, and it cannot replace one with a scalar. The write fails
+// loudly, because a silent loss is worse than a refusal.
+var ErrSequenceValue = errors.New("the key holds a list")
+
+func (tree *yamlTree) set(path []string, value string) error {
 	nodes := &tree.nodes
 	var node *yamlNode
 	for depth, key := range path {
@@ -127,10 +133,13 @@ func (tree *yamlTree) set(path []string, value string) {
 			*nodes = append(*nodes, node)
 		}
 		if depth == len(path)-1 {
+			if len(node.sequenceItems) > 0 {
+				return ErrSequenceValue
+			}
 			node.value = value
 			node.mapping = false
 			node.children = nil
-			return
+			return nil
 		}
 		node.mapping = true
 		if node.value == emptyMapping {
@@ -138,6 +147,7 @@ func (tree *yamlTree) set(path []string, value string) {
 		}
 		nodes = &node.children
 	}
+	return nil
 }
 
 // keys returns the child key names under a path in document order.
