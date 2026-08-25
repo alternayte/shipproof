@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alternayte/shipproof/internal/schema"
@@ -263,6 +264,57 @@ func TestWriteReviewPacket(t *testing.T) {
 	}
 	if readBack.ChangeID != "SP-006" {
 		t.Errorf("expected change_id SP-006, got %s", readBack.ChangeID)
+	}
+}
+
+func TestPrepareLeadsWithUnexplainedChange(t *testing.T) {
+	root := t.TempDir()
+	pack := makeEvidencePack("SP-006", []schema.Check{})
+	pack.UnexplainedChange = &schema.UnexplainedEvidence{
+		CoverageAvailable:   true,
+		UninstrumentedLines: 61,
+		LineFindings: []schema.UnexplainedLine{
+			{File: "internal/git/collector.go", Symbol: "withRetry", StartLine: 190, EndLine: 207},
+		},
+		FileFindings: []schema.UnexplainedFile{{Path: "docs/workflow.md", IgnorePattern: "docs/**"}},
+	}
+	writeEvidencePack(t, root, "SP-006", pack)
+
+	packet, err := Prepare(root, "SP-006")
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	if packet.UnexplainedChange == nil {
+		t.Fatal("packet holds no unexplained-change section")
+	}
+	if packet.UnexplainedChange.UninstrumentedLines != 61 {
+		t.Errorf("uninstrumented = %d, want 61", packet.UnexplainedChange.UninstrumentedLines)
+	}
+
+	data, err := json.Marshal(packet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(data)
+	if !strings.Contains(body, "unexplained_change") {
+		t.Fatalf("packet JSON holds no section: %s", body)
+	}
+	if strings.Index(body, "unexplained_change") > strings.Index(body, "\"intent\"") {
+		t.Error("the unexplained-change section does not lead the packet")
+	}
+}
+
+func TestPrepareWithoutTheSectionOmitsIt(t *testing.T) {
+	root := t.TempDir()
+	pack := makeEvidencePack("SP-006", []schema.Check{})
+	writeEvidencePack(t, root, "SP-006", pack)
+
+	packet, err := Prepare(root, "SP-006")
+	if err != nil {
+		t.Fatalf("Prepare: %v", err)
+	}
+	if packet.UnexplainedChange != nil {
+		t.Errorf("section = %#v, want nil", packet.UnexplainedChange)
 	}
 }
 

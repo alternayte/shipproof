@@ -10,13 +10,16 @@ import (
 )
 
 type ReviewPacket struct {
-	SchemaVersion  string            `json:"schema_version"`
-	ChangeID       string            `json:"change_id"`
-	Intent         IntentSection     `json:"intent"`
-	GitSummary     GitSummarySection `json:"git_summary"`
-	AlreadyProven  []ProvenCheck     `json:"already_proven"`
-	HumanAttention []AttentionCheck  `json:"human_attention"`
-	Unknown        []UnknownCheck    `json:"unknown"`
+	SchemaVersion string `json:"schema_version"`
+	ChangeID      string `json:"change_id"`
+	// UnexplainedChange leads the packet. A reviewer reads the code no proof
+	// ran before the reviewer reads what the proofs did cover.
+	UnexplainedChange *schema.UnexplainedEvidence `json:"unexplained_change,omitempty"`
+	Intent            IntentSection               `json:"intent"`
+	GitSummary        GitSummarySection           `json:"git_summary"`
+	AlreadyProven     []ProvenCheck               `json:"already_proven"`
+	HumanAttention    []AttentionCheck            `json:"human_attention"`
+	Unknown           []UnknownCheck              `json:"unknown"`
 }
 
 type IntentSection struct {
@@ -73,6 +76,7 @@ func Prepare(root, changeID string) (ReviewPacket, error) {
 		ChangeID:      changeID,
 	}
 
+	packet.UnexplainedChange = pack.UnexplainedChange
 	packet.Intent = buildIntentSection(pack)
 	packet.GitSummary = buildGitSummary(pack)
 	packet.AlreadyProven = buildAlreadyProven(pack)
