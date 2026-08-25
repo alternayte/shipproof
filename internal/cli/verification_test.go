@@ -251,3 +251,32 @@ func newVerificationRunWorkspace(t *testing.T, changeID string) string {
 
 	return root
 }
+
+// writeConfigWithCoverage overwrites config.yaml with a coverage command that
+// writes a fixed profile to {{profile}}. The caller supplies a root that
+// newVerificationRunWorkspace already built.
+func writeConfigWithCoverage(t *testing.T, root string) {
+	t.Helper()
+
+	config := "version: 1\nschema_version: \"0.1\"\nverification:\n  command: true\n  coverage:\n    command: printf 'mode: set\\nm/internal/a/a.go:1.1,2.2 1 1\\n' > {{profile}}\n"
+	if err := os.WriteFile(filepath.Join(root, ".shipproof", "config.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestVerificationRunWritesAMergedProfile(t *testing.T) {
+	root := newVerificationRunWorkspace(t, "SP-200")
+	writeConfigWithCoverage(t, root)
+
+	var stdout, stderr bytes.Buffer
+	code := runVerification([]string{"run", "SP-200", "--proofs-only"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "coverage:") {
+		t.Errorf("stdout names no merged profile: %s", stdout.String())
+	}
+	if _, err := os.Stat(proofs.MergedProfilePath(root, "SP-200")); err != nil {
+		t.Errorf("merged profile missing: %v", err)
+	}
+}

@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/covprofile"
 	"github.com/alternayte/shipproof/internal/proofs"
+	"github.com/alternayte/shipproof/internal/repository"
 	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/verification"
 	"github.com/alternayte/shipproof/internal/verify"
@@ -184,7 +186,21 @@ func runVerificationRun(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	set, err := proofs.Run(root, plan, headRev, treeClean)
+	var coverageOptions *proofs.Coverage
+	if cfg, err := repository.LoadConfig(root); err == nil {
+		if template := strings.TrimSpace(cfg.Verification.Coverage.Command); template != "" {
+			coverageOptions = &proofs.Coverage{
+				Command: template,
+				Dir:     proofs.CoverageDir(root, changeID),
+			}
+			if err := os.RemoveAll(coverageOptions.Dir); err != nil {
+				fmt.Fprintln(stderr, err)
+				return 1
+			}
+		}
+	}
+
+	set, err := proofs.Run(root, plan, headRev, treeClean, coverageOptions)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -208,5 +224,60 @@ func runVerificationRun(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "Proofs: %d passed, %d failed, %d human\n", passed, failed, human)
 	fmt.Fprintf(stdout, "results: .shipproof/runs/%s/proofs.json\n", changeID)
+
+	if coverageOptions != nil {
+		merged, count := mergeProfiles(root, changeID, coverageOptions.Dir)
+		if merged != "" {
+			fmt.Fprintf(stdout, "coverage: %s (%d profiles)\n", merged, count)
+		}
+	}
 	return 0
+}
+
+// mergeProfiles joins every per-proof profile into one. It returns the
+// repository-relative merged path and the count of profiles it read. A failure
+// returns an empty path, because coverage never fails a run.
+func mergeProfiles(root, changeID, dir string) (string, int) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", 0
+	}
+	modulePath := covprofile.ModulePath(root)
+	merged := &strings.Builder{}
+	merged.WriteString("mode: set\n")
+	count := 0
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".out") || name == "merged.out" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			continue
+		}
+		if _, err := covprofile.Parse(strings.NewReader(string(data)), modulePath); err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" || strings.HasPrefix(trimmed, "mode:") {
+				continue
+			}
+			merged.WriteString(trimmed)
+			merged.WriteString("\n")
+		}
+		count++
+	}
+	if count == 0 {
+		return "", 0
+	}
+	path := proofs.MergedProfilePath(root, changeID)
+	if err := os.WriteFile(path, []byte(merged.String()), 0o644); err != nil {
+		return "", 0
+	}
+	relative, err := filepath.Rel(root, path)
+	if err != nil {
+		return path, count
+	}
+	return filepath.ToSlash(relative), count
 }
