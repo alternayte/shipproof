@@ -128,3 +128,61 @@ func TestLoadEvidenceConfigInvalidCapture(t *testing.T) {
 		t.Fatal("expected error for invalid capture level")
 	}
 }
+
+func TestParseConfigNestedCoverage(t *testing.T) {
+	root := t.TempDir()
+	writeConfig(t, root, `version: 1
+verification:
+  command: just verify
+  coverage:
+    command: go test -coverpkg=./... -coverprofile={{profile}} {{target}}
+    format: go
+  unexplained_ignore:
+    - "docs/**"
+    - "CHANGELOG.md"
+evidence:
+  capture: metadata
+`)
+
+	cfg, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Verification.Command != "just verify" {
+		t.Errorf("command = %q, want just verify", cfg.Verification.Command)
+	}
+	want := "go test -coverpkg=./... -coverprofile={{profile}} {{target}}"
+	if cfg.Verification.Coverage.Command != want {
+		t.Errorf("coverage command = %q, want %q", cfg.Verification.Coverage.Command, want)
+	}
+	if cfg.Verification.Coverage.Format != "go" {
+		t.Errorf("coverage format = %q, want go", cfg.Verification.Coverage.Format)
+	}
+	if len(cfg.Verification.UnexplainedIgnore) != 2 ||
+		cfg.Verification.UnexplainedIgnore[0] != "docs/**" ||
+		cfg.Verification.UnexplainedIgnore[1] != "CHANGELOG.md" {
+		t.Errorf("ignore = %#v", cfg.Verification.UnexplainedIgnore)
+	}
+	if cfg.Evidence.Capture != CaptureMetadata {
+		t.Errorf("capture = %q", cfg.Evidence.Capture)
+	}
+}
+
+func TestParseConfigWithoutCoverage(t *testing.T) {
+	root := t.TempDir()
+	writeConfig(t, root, `version: 1
+verification:
+  command: just verify
+`)
+
+	cfg, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Verification.Coverage.Command != "" {
+		t.Errorf("coverage command = %q, want empty", cfg.Verification.Coverage.Command)
+	}
+	if len(cfg.Verification.UnexplainedIgnore) != 0 {
+		t.Errorf("ignore = %#v, want empty", cfg.Verification.UnexplainedIgnore)
+	}
+}

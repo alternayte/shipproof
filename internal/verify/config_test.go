@@ -105,3 +105,27 @@ verification:
 		t.Fatalf("command = %q, want %q", cfg.Command, "go test ./...")
 	}
 }
+
+func TestLoadConfigIgnoresNestedCoverageCommand(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".shipproof")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := `verification:
+  coverage:
+    command: go test -coverprofile={{profile}} {{target}}
+  command: just verify
+`
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadConfig(root)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Command != "just verify" {
+		t.Errorf("command = %q, want just verify", cfg.Command)
+	}
+}

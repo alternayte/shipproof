@@ -30,7 +30,20 @@ type Config struct {
 }
 
 type VerificationConfig struct {
+	Command  string
+	Coverage CoverageConfig
+	// UnexplainedIgnore holds glob patterns. A changed file that matches a
+	// pattern appears in the report with its reason and counts toward no
+	// total.
+	UnexplainedIgnore []string
+}
+
+type CoverageConfig struct {
+	// Command is a template. {{profile}} takes the output profile path and
+	// {{target}} takes the proof target.
 	Command string
+	// Format names the profile dialect. Only "go" is supported.
+	Format string
 }
 
 type EvidenceConfig struct {
@@ -77,11 +90,16 @@ func parseConfigFile(root string) (Config, error) {
 	return parseConfig(file)
 }
 
+// parseConfig reads the small YAML subset that ShipProof writes. It supports
+// one top-level section, one nested block inside a section, and a list of
+// scalar items under a key.
 func parseConfig(file *os.File) (Config, error) {
 	cfg := Config{Evidence: EvidenceConfig{Capture: CaptureMetadata}}
 
 	scanner := bufio.NewScanner(file)
 	section := ""
+	block := ""
+	blockIndent := -1
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)
@@ -90,8 +108,23 @@ func parseConfig(file *os.File) (Config, error) {
 			continue
 		}
 
-		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") && strings.HasSuffix(trimmed, ":") {
-			section = strings.TrimSuffix(trimmed, ":")
+		indent := indentWidth(line)
+		if indent == 0 {
+			block, blockIndent = "", -1
+			if strings.HasSuffix(trimmed, ":") {
+				section = strings.TrimSuffix(trimmed, ":")
+				continue
+			}
+		}
+		if blockIndent >= 0 && indent <= blockIndent {
+			block, blockIndent = "", -1
+		}
+
+		if item, ok := strings.CutPrefix(trimmed, "- "); ok {
+			if section == "verification" && block == "unexplained_ignore" {
+				cfg.Verification.UnexplainedIgnore = append(
+					cfg.Verification.UnexplainedIgnore, strings.Trim(strings.TrimSpace(item), `"'`))
+			}
 			continue
 		}
 
@@ -99,17 +132,12 @@ func parseConfig(file *os.File) (Config, error) {
 		if !ok {
 			continue
 		}
-
-		switch section {
-		case "verification":
-			if key == "command" {
-				cfg.Verification.Command = value
-			}
-		case "evidence":
-			if key == "capture" {
-				cfg.Evidence.Capture = CaptureLevel(value)
-			}
+		if value == "" {
+			block, blockIndent = key, indent
+			continue
 		}
+
+		assign(&cfg, section, block, key, value)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -123,6 +151,41 @@ func parseConfig(file *os.File) (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func assign(cfg *Config, section, block, key, value string) {
+	switch section {
+	case "verification":
+		switch block {
+		case "":
+			if key == "command" {
+				cfg.Verification.Command = value
+			}
+		case "coverage":
+			switch key {
+			case "command":
+				cfg.Verification.Coverage.Command = value
+			case "format":
+				cfg.Verification.Coverage.Format = value
+			}
+		}
+	case "evidence":
+		if block == "" && key == "capture" {
+			cfg.Evidence.Capture = CaptureLevel(value)
+		}
+	}
+}
+
+// indentWidth counts the leading whitespace of one line. A tab counts as one.
+func indentWidth(line string) int {
+	width := 0
+	for _, character := range line {
+		if character != ' ' && character != '\t' {
+			break
+		}
+		width++
+	}
+	return width
 }
 
 func splitKV(line string) (string, string, bool) {
