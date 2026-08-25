@@ -26,7 +26,14 @@ type InstallResult struct {
 	CanonicalCreated int
 	HarnessCreated   int
 	Existing         []string
+	Retired          []string
 }
+
+// retiredSkills name skill directories that ShipProof no longer ships. Install
+// removes them by default. A retired skill left in a harness directory still
+// answers to an agent, which is worse than the loss of a local edit to a skill
+// that no longer exists.
+var retiredSkills = []string{"verify-change"}
 
 func ParseTarget(value string) (Target, error) {
 	switch Target(value) {
@@ -50,7 +57,7 @@ func targetDirectory(root string, target Target) string {
 	}
 }
 
-func Install(root string, target Target, force bool) (InstallResult, error) {
+func Install(root string, target Target, force bool, keepRetired bool) (InstallResult, error) {
 	var result InstallResult
 	canonicalRoot := filepath.Join(root, ".shipproof", "skills")
 	harnessRoot := targetDirectory(root, target)
@@ -62,6 +69,21 @@ func Install(root string, target Target, force bool) (InstallResult, error) {
 	}
 	if err := os.MkdirAll(harnessRoot, 0o755); err != nil {
 		return result, fmt.Errorf("create harness skills directory: %w", err)
+	}
+
+	if !keepRetired {
+		for _, name := range retiredSkills {
+			for _, base := range []string{canonicalRoot, harnessRoot} {
+				directory := filepath.Join(base, name)
+				if _, err := os.Stat(directory); err != nil {
+					continue
+				}
+				if err := os.RemoveAll(directory); err != nil {
+					return result, fmt.Errorf("remove retired skill %s: %w", name, err)
+				}
+				result.Retired = append(result.Retired, directory)
+			}
+		}
 	}
 
 	var sourceFiles []string

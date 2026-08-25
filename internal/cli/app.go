@@ -77,7 +77,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof verification init <change-id>")
 	fmt.Fprintln(w, "  shipproof verification check <change-id-or-file>")
 	fmt.Fprintln(w, "  shipproof verify [change-id]")
-	fmt.Fprintln(w, "  shipproof harness install <claude|cursor|codex|opencode|agents> [directory] [--force]")
+	fmt.Fprintln(w, "  shipproof harness install <claude|cursor|codex|opencode|agents> [directory] [--force] [--keep-retired]")
 	fmt.Fprintln(w, "  shipproof change start <change-id> --source <path> [--ceremony 0|1|2|3]")
 	fmt.Fprintln(w, "  shipproof change status <change-id>")
 	fmt.Fprintln(w, "  shipproof change check <change-id>")
