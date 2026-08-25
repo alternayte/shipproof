@@ -7,6 +7,16 @@ metadata:
 
 # Produce evidence
 
+## Confirm the phase
+
+```bash
+shipproof next <change-id>
+```
+
+Act on the phase it reports. When it names a different skill, use that skill
+first. The repository is the source of truth. Do not rely on chat history to
+decide the next step.
+
 Build narrative from recorded evidence, never the reverse.
 
 1. Collect the intent snapshot and requirement map.

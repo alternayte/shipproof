@@ -16,7 +16,6 @@ The files in this directory are the source packages distributed by ShipProof. Ha
 - `plan-verification`
 - `prepare-change`
 - `implement-change`
-- `verify-change`
 - `review-change`
 - `prepare-human-review`
 - `produce-evidence`

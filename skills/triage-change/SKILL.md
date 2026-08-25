@@ -61,3 +61,16 @@ Both product behavior and technical design contain material unresolved decisions
 - The user can override the recommendation.
 - Do not default to Level 2 because more ceremony feels safer.
 - Do not recommend Level 0 when the acceptance criteria have more than one reasonable interpretation.
+
+## Record the level
+
+The level is a recorded property of the change, not advice. Pass it when the
+change starts:
+
+```bash
+shipproof change start <change-id> --source <path> --ceremony <0|1|2|3>
+```
+
+Level 0 skips the verification plan and the human-review packet. Levels 1 to 3
+require both. `shipproof next` reads the recorded level to decide which phases
+apply.

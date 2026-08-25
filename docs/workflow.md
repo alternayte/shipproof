@@ -18,28 +18,30 @@ shipproof harness install claude
 shipproof harness install opencode
 ```
 
-## Entry paths
+## The one command you need
 
-ShipProof supports two entry paths. Choose the one that fits the work.
+```bash
+shipproof next <change-id>
+```
 
-### Path A — Change from an existing design
+`next` derives the current phase from the artifacts on disk. It names the
+blocker, the exact next command, and the skill that handles it. Run it, act on
+what it says, then run it again.
 
-Use this path when a PRD, SDD, or approved design document already describes the work. The backlog contains ordered change IDs and one-line descriptions.
+This document explains what each phase means. It is reference material. It is
+not a sequence to remember.
 
-Start at Step 1.
-
-### Path B — Ad-hoc feature or fix
-
-Use this path when the work does not come from a formal design document. The change starts from a bug report, a feature idea, a user request, or an issue tracker entry.
-
-Use the `triage-change` skill. The agent assesses the work and recommends a ceremony level:
-
-- **Level 0** — the change is clear enough to implement directly. Use `prepare-change` to write a short change description and start at Step 1.
-- **Level 1** — the change has unclear behavior or acceptance. Use `shape-prd` with `shipproof shape issue` to clarify intent through a short interview, then start at Step 1.
-- **Level 2** — the change needs a PRD or SDD. Use `shape-prd` or `shape-sdd` to produce the document, then use `decompose-plan` to break it into bounded changes, then start at Step 1 for each change.
-- **Level 3** — the change needs both a PRD and an SDD. Shape both documents before decomposition.
-
-The user can override the recommendation.
+| Phase | Meaning | Skill |
+|---|---|---|
+| `NO_CHANGE` | No change record exists | `prepare-change` |
+| `INTENT_STALE` | The source document changed after the snapshot | `prepare-change` |
+| `NEEDS_PLAN` | The verification plan is absent or empty | `plan-verification` |
+| `NEEDS_RUN` | No run record exists | `implement-change` |
+| `RUN_STALE` | The run does not describe the current tree | `implement-change` |
+| `RUN_FAILED` | The newest run exited non-zero | `implement-change` |
+| `NEEDS_EVIDENCE` | The run passed and no pack exists | `produce-evidence` |
+| `NEEDS_REVIEW_PACKET` | The pack exists and no packet exists | `prepare-human-review` |
+| `READY_FOR_HUMAN` | Every artifact is present and current | `review-change` |
 
 ## Step 1 — Prepare the change
 
@@ -147,8 +149,7 @@ Linear sync requires `LINEAR_API_KEY` and `LINEAR_TEAM_ID` environment variables
 |---|---|---|
 | Prepare | `prepare-change` | `change start`, `change status` |
 | Plan verification | `plan-verification` | `verification init`, `verification check` |
-| Implement | `implement-change` | `change status`, `verification check` |
-| Verify | `verify-change` | `verification run`, `change check` |
+| Implement | `implement-change` | `change status`, `verification check`, `verification run`, `change check` |
 | Evidence | `produce-evidence` | `evidence pack` |
 | Human review | `prepare-human-review` | `review prepare` |
 | Reports | none | `report change`, `report pr-summary`, `report project` |

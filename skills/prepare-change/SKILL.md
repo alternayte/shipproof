@@ -7,6 +7,16 @@ metadata:
 
 # Prepare a change
 
+## Confirm the phase
+
+```bash
+shipproof next <change-id>
+```
+
+Act on the phase it reports. When it names a different skill, use that skill
+first. The repository is the source of truth. Do not rely on chat history to
+decide the next step.
+
 Write a scoped change description for one independently verifiable change.
 
 ## Workflow

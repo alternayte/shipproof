@@ -7,6 +7,16 @@ metadata:
 
 # Plan verification
 
+## Confirm the phase
+
+```bash
+shipproof next <change-id>
+```
+
+Act on the phase it reports. When it names a different skill, use that skill
+first. The repository is the source of truth. Do not rely on chat history to
+decide the next step.
+
 Map important intent to proof before implementation details bias the tests.
 
 Create the repository-owned plan first when it does not exist:

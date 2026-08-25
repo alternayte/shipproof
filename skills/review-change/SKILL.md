@@ -7,6 +7,16 @@ metadata:
 
 # Review an implemented change
 
+## Confirm the phase
+
+```bash
+shipproof next <change-id>
+```
+
+Act on the phase it reports. When it names a different skill, use that skill
+first. The repository is the source of truth. Do not rely on chat history to
+decide the next step.
+
 Review the change against its approved intent, not against an imagined broader product.
 
 Check:

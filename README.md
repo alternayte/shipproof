@@ -40,6 +40,22 @@ Every piece of evidence carries a provenance label: `observed`, `derived`, `infe
 
 ## Commands
 
+### Delivery phase
+
+```bash
+shipproof next
+shipproof next SP-002
+shipproof next SP-002 --json
+```
+
+`next` derives the current delivery phase from the artifacts on disk. It reports
+the phase, the blocker, the exact next command, and the skill that handles it.
+ShipProof stores no cursor, so the answer stays correct when an agent acts out
+of band.
+
+With no change identifier, `next` resolves the single change that is not
+`READY_FOR_HUMAN`.
+
 ### Document review
 
 ```bash
@@ -66,7 +82,7 @@ Shaping sessions persist under `.shipproof/shaping/` as compact JSON decision le
 ### Change management
 
 ```bash
-shipproof change start SP-002 --source docs/prd/retries.md
+shipproof change start SP-002 --source docs/prd/retries.md --ceremony 1
 shipproof change status SP-002
 shipproof change check SP-002
 ```
@@ -121,7 +137,7 @@ shipproof skill eval record prd-ready-stop --condition without --file result.jso
 shipproof skill eval results --regression
 ```
 
-ShipProof ships with 15 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
+ShipProof ships with 14 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
 
 Skill eval runs are recorded under `benchmarks/skill-evals/` with conditions `without`, `previous`, and `candidate`. `skill eval results --regression` flags candidate runs that fail a task the baseline passed, recall fewer blockers, or raise the false blocker rate.
 
@@ -136,8 +152,7 @@ Built-in skills cover the full delivery cycle:
 | `record-decision` | Create an architecture decision record. |
 | `decompose-plan` | Decompose intent into independently verifiable changes. |
 | `plan-verification` | Plan how to prove a change before implementation. |
-| `implement-change` | Implement one approved change against its verification plan. |
-| `verify-change` | Verify a change with deterministic checks. |
+| `implement-change` | Implement one approved change against its verification plan, then verify it. |
 | `review-change` | Review an implemented change for correctness and agent failure patterns. |
 | `prepare-human-review` | Prepare a focused human-review packet. |
 | `produce-evidence` | Produce a versioned evidence pack from recorded facts. |

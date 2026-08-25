@@ -7,6 +7,16 @@ metadata:
 
 # Prepare human review
 
+## Confirm the phase
+
+```bash
+shipproof next <change-id>
+```
+
+Act on the phase it reports. When it names a different skill, use that skill
+first. The repository is the source of truth. Do not rely on chat history to
+decide the next step.
+
 Reduce review effort without hiding uncertainty.
 
 Generate the evidence pack first when it does not exist:
