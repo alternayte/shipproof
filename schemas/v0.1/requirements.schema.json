@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipproof.dev/schemas/v0.1/requirements.schema.json",
+  "title": "ShipProof requirement set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "change_id", "adopter", "requirements"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "change_id": {"type": "string", "minLength": 1},
+    "adopter": {"enum": ["native", "foreign"]},
+    "source_path": {"type": "string"},
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/requirement"}
+    }
+  },
+  "$defs": {
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "provenance"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "statement": {"type": "string", "minLength": 1},
+        "source_anchor": {"type": "string"},
+        "provenance": {"enum": ["observed", "human"]},
+        "confirmed_at": {"type": "string"}
+      }
+    }
+  }
+}
