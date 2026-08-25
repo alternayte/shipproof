@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipproof.dev/schemas/v0.1/proofs.schema.json",
+  "title": "ShipProof per-proof results",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "change_id", "timestamp", "results"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "change_id": {"type": "string", "minLength": 1},
+    "head_rev": {"type": "string"},
+    "tree_clean": {"type": "boolean"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "results": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/result"}
+    }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_id", "proof_index", "exit_code", "duration_ms", "status"],
+      "properties": {
+        "requirement_id": {"type": "string", "minLength": 1},
+        "proof_index": {"type": "integer", "minimum": 0},
+        "command": {"type": "string"},
+        "exit_code": {"type": "integer"},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "status": {"enum": ["pass", "fail", "human"]}
+      }
+    }
+  }
+}
