@@ -70,7 +70,7 @@ Deterministic checks catch structural gaps (missing problem statement, absent sc
 
 The CLI does not invoke an LLM. A clean deterministic result does not guarantee semantic completeness.
 
-`doc adopt` extracts the requirement set from a source document into `.shipproof/changes/<change-id>/requirements.json`. A document in the `docs/changes/` format adopts with `observed` provenance and no human step. Any other document prints a proposal and needs `--confirm`, and then it writes with `human` provenance.
+`doc adopt` extracts the requirement set from a source document into `.shipproof/changes/<change-id>/requirements.json`. A document in the `docs/changes/` format adopts with `observed` provenance and no human step. Any other document prints a proposal and needs `--confirm`. With `--confirm`, it writes with `human` provenance.
 
 ### Shaping sessions
 
