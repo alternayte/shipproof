@@ -104,6 +104,11 @@ func Save(root string, set Set) (string, error) {
 	if err := set.Validate(); err != nil {
 		return "", err
 	}
+	// A foreign extraction is a proposal until a person confirms it. Writing
+	// an unconfirmed proposal would record a guess as a fact.
+	if set.RequiresConfirmation() {
+		return "", ErrUnconfirmed
+	}
 	path := Path(root, set.ChangeID)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", fmt.Errorf("create change directory: %w", err)
