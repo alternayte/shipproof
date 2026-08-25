@@ -120,13 +120,13 @@ shipproof coverage SP-002 --json
 
 `shipproof verify` runs the configured repository verification command. With a change ID it behaves like `verification run` and writes a structured run result. Without one, logs go to `.shipproof/runs/adhoc/` and the command's exit code is returned.
 
-Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target. A proof carries either a `command`, or `human: true` with a `rationale`. `verification check` rejects a proof that carries neither.
+Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target. A proof carries either a non-empty `command`, or `human: true` with a `rationale`. `verification check` rejects a proof that carries neither.
 
 `verification check` also compares the requirement set against the plan when a requirement sidecar exists. A requirement with no plan entry blocks. A plan entry with no requirement blocks. Invariants take no part in the tie check.
 
-`verification run` performs two jobs. The gate runs the repository verification command and decides whether the repository passes. The attribution pass runs each proof on its own and records one result per proof in `.shipproof/runs/<change-id>/proofs.json`. A green attribution never masks a red gate. Use `--gate-only` to skip the attribution pass, and `--proofs-only` to skip the gate. Both flags together is an error.
+`verification run` performs two jobs. The gate runs the repository verification command. It decides whether the repository passes. The attribution pass runs each proof on its own. It records one result per proof in `.shipproof/runs/<change-id>/proofs.json`. A green attribution never masks a red gate. Use `--gate-only` to skip the attribution pass. Use `--proofs-only` to skip the gate. Do not use both flags together.
 
-`shipproof coverage <change-id>` reports what each requirement proved at the current revision. It derives the matrix on demand and writes nothing.
+`shipproof coverage <change-id>` reports what each requirement proved at the current revision. It derives the matrix on demand. It writes nothing.
 
 ### Reports
 

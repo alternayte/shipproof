@@ -97,8 +97,8 @@ shipproof change check <change-id>
 shipproof coverage <change-id>
 ```
 
-`--gate-only` skips the attribution pass. `--proofs-only` skips the gate. Both
-flags together is an error.
+`--gate-only` skips the attribution pass. `--proofs-only` skips the gate. Do
+not use both flags together.
 
 `shipproof coverage <change-id>` reports what each requirement proved at the
 current revision.

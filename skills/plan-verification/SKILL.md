@@ -43,8 +43,8 @@ Do not require an elaborate verification plan for a trivial low-risk change.
 
 A proof carries one of two forms.
 
-- An automated proof carries a `command`. ShipProof runs it and records the
-  exit code.
+- An automated proof carries a non-empty `command`. ShipProof runs it.
+  ShipProof records the exit code.
 - A human proof carries `human: true` and a `rationale`. The rationale states
   why no machine can perform the check. ShipProof runs nothing for it.
 

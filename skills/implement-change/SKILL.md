@@ -37,14 +37,14 @@ shipproof verification run <change-id>
 ```
 
 `verification run` performs two jobs. The gate runs the repository verification
-command and decides whether the repository passes. The attribution pass runs
-each proof on its own and records one result per proof in
+command. It decides whether the repository passes. The attribution pass runs
+each proof on its own. It records one result per proof in
 `.shipproof/runs/<change-id>/proofs.json`.
 
 A green attribution never masks a red gate. Read both.
 
-Use `--gate-only` to skip the attribution pass, and `--proofs-only` to skip the
-gate. Both flags together is an error.
+Use `--gate-only` to skip the attribution pass. Use `--proofs-only` to skip
+the gate. Do not use both flags together.
 
 After the run, read `shipproof coverage <change-id>`. It states what each
 requirement proved.
