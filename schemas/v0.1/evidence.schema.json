@@ -4,47 +4,111 @@
   "title": "ShipProof Evidence Pack",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "change_id", "intent", "verification", "provenance"],
+  "required": [
+    "schema_version",
+    "change_id",
+    "intent",
+    "verification",
+    "provenance"
+  ],
   "properties": {
-    "schema_version": {"const": "0.1"},
-    "change_id": {"type": "string", "minLength": 1},
+    "schema_version": {
+      "const": "0.1"
+    },
+    "change_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "intent": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["snapshot_hash", "requirements"],
+      "required": [
+        "snapshot_hash",
+        "requirements"
+      ],
       "properties": {
-        "snapshot_hash": {"type": "string", "minLength": 1},
+        "snapshot_hash": {
+          "type": "string",
+          "minLength": 1
+        },
         "requirements": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id"],
+            "required": [
+              "id"
+            ],
             "properties": {
-              "id": {"type": "string", "minLength": 1},
-              "verification_refs": {"type": "array", "items": {"type": "string"}}
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "verification_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           }
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "current_source_hash": {
+          "type": "string"
         }
       }
     },
     "verification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["checks"],
+      "required": [
+        "checks"
+      ],
       "properties": {
         "checks": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "status", "source", "provenance"],
+            "required": [
+              "id",
+              "status",
+              "source",
+              "provenance"
+            ],
             "properties": {
-              "id": {"type": "string", "minLength": 1},
-              "status": {"enum": ["pass", "fail", "skip", "unknown"]},
-              "source": {"type": "string"},
-              "provenance": {"enum": ["observed", "derived", "inferred", "human"]},
-              "detail": {"type": "string"}
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "skip",
+                  "unknown"
+                ]
+              },
+              "source": {
+                "type": "string"
+              },
+              "provenance": {
+                "enum": [
+                  "observed",
+                  "derived",
+                  "inferred",
+                  "human"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              }
             }
           }
         }
@@ -53,56 +117,128 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generated_at", "shipproof_version"],
+      "required": [
+        "generated_at",
+        "shipproof_version"
+      ],
       "properties": {
-        "generated_at": {"type": "string", "minLength": 1},
-        "shipproof_version": {"type": "string", "minLength": 1}
+        "generated_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shipproof_version": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "readiness": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["shaping_ref", "blocker_count"],
+      "required": [
+        "shaping_ref"
+      ],
       "properties": {
-        "shaping_ref": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
-        "blocker_count": {"type": "integer", "minimum": 0}
+        "shaping_ref": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "blocker_count": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "review": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "pr_number", "pr_url", "collected_at"],
+      "required": [
+        "source",
+        "pr_url",
+        "collected_at"
+      ],
       "properties": {
-        "source": {"type": "string", "minLength": 1},
-        "pr_number": {"type": "integer", "minimum": 1},
-        "pr_url": {"type": "string", "minLength": 1},
-        "opened_at": {"type": "string"},
-        "first_review_at": {"type": "string"},
-        "review_count": {"type": "integer", "minimum": 0},
-        "comment_count": {"type": "integer", "minimum": 0},
-        "distinct_reviewers": {"type": "integer", "minimum": 0},
-        "reviewer_logins": {"type": "array", "items": {"type": "string"}},
-        "state": {"type": "string"},
-        "collected_at": {"type": "string", "minLength": 1}
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pr_number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pr_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opened_at": {
+          "type": "string"
+        },
+        "first_review_at": {
+          "type": "string"
+        },
+        "review_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "comment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distinct_reviewers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewer_logins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "collected_at": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "unexplained_change": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "coverage_available": { "type": "boolean" },
-        "uninstrumented_lines": { "type": "integer", "minimum": 0 },
+        "coverage_available": {
+          "type": "boolean"
+        },
+        "uninstrumented_lines": {
+          "type": "integer",
+          "minimum": 0
+        },
         "line_findings": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["file", "start_line", "end_line"],
+            "required": [
+              "file",
+              "start_line",
+              "end_line"
+            ],
             "properties": {
-              "file": { "type": "string" },
-              "symbol": { "type": "string" },
-              "start_line": { "type": "integer", "minimum": 1 },
-              "end_line": { "type": "integer", "minimum": 1 }
+              "file": {
+                "type": "string"
+              },
+              "symbol": {
+                "type": "string"
+              },
+              "start_line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "end_line": {
+                "type": "integer",
+                "minimum": 1
+              }
             }
           }
         },
@@ -111,10 +247,169 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path"],
+            "required": [
+              "path"
+            ],
             "properties": {
-              "path": { "type": "string" },
-              "ignore_pattern": { "type": "string" }
+              "path": {
+                "type": "string"
+              },
+              "ignore_pattern": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "coverage_available",
+        "line_findings",
+        "file_findings",
+        "uninstrumented_lines"
+      ]
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commits": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hash",
+              "author",
+              "timestamp",
+              "subject"
+            ],
+            "properties": {
+              "hash": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "changed_files": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "additions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deletions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diff_stat": {
+          "type": "string"
+        }
+      }
+    },
+    "agent_run": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "agent_version": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "ended_at": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "cost": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "output": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "tool_call_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exit_status": {
+          "type": "string"
+        },
+        "raw_log_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "agent_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "findings"
+      ],
+      "properties": {
+        "runner": {
+          "type": "string"
+        },
+        "findings": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "summary",
+              "provenance"
+            ],
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provenance": {
+                "const": "inferred"
+              }
             }
           }
         }
