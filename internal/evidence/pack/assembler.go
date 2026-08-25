@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/alternayte/shipproof/internal/agent"
@@ -23,6 +25,10 @@ type Options struct {
 	EvidenceFiles []string
 	BaseRev       string
 	HeadRev       string
+	// Warn receives one line for a section the pack omits. It is nil when
+	// the caller wants no report. Silence is the wrong default for a signal
+	// whose purpose is to be read.
+	Warn io.Writer
 }
 
 func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) {
@@ -117,7 +123,18 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 		}
 	}
 
-	pack.UnexplainedChange = buildUnexplained(root, changeID, plan, opts.BaseRev, head)
+	// Section 11.6: the unexplained-change signal is review material, and a
+	// reader must know when it is absent. The documented flow passes no
+	// --base, so the recorded base revision stands in for it.
+	base, baseSource := resolveBase(root, changeID, opts.BaseRev)
+	if base == "" {
+		warn(opts.Warn, "unexplained change: the section is omitted, because no base revision is known. Pass --base <rev>.")
+	} else {
+		pack.UnexplainedChange = buildUnexplained(root, changeID, plan, base, head)
+		if pack.UnexplainedChange == nil {
+			warn(opts.Warn, fmt.Sprintf("unexplained change: the section is omitted, because git could not read the range %s..%s from %s.", base, head, baseSource))
+		}
+	}
 
 	if agentRun, err := loadAgentRun(root, changeID); err == nil {
 		pack.AgentRun = agentRun
@@ -167,6 +184,28 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 	}
 
 	return pack, nil
+}
+
+// resolveBase picks the base revision for the changed-line diff. The option
+// wins. The agent execution record stands in when the option is empty. The
+// second result names the source, for the message that reports a failure.
+func resolveBase(root, changeID, option string) (string, string) {
+	if base := strings.TrimSpace(option); base != "" {
+		return base, "the --base option"
+	}
+	execution, err := agent.LoadExecution(root, changeID)
+	if err != nil {
+		return "", ""
+	}
+	return strings.TrimSpace(execution.Execution.BaseRevision), "the recorded agent run"
+}
+
+// warn writes one line for an omitted section. A nil writer reports nothing.
+func warn(writer io.Writer, message string) {
+	if writer == nil {
+		return
+	}
+	fmt.Fprintln(writer, message)
 }
 
 func WritePack(root string, pack schema.EvidencePack) error {

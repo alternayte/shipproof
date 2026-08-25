@@ -48,7 +48,7 @@ func runEvidencePack(args []string, stdout, stderr io.Writer) int {
 	}
 
 	changeID := args[0]
-	var opts pack.Options
+	opts := pack.Options{Warn: stderr}
 
 	for i := 1; i < len(args); i++ {
 		switch args[i] {

@@ -25,6 +25,8 @@ Generate the evidence pack first when it does not exist:
 shipproof evidence pack <change-id>
 ```
 
+ShipProof reads the base revision from the recorded agent run. Pass `--base <rev>` when no agent run recorded one. Without a base revision the pack carries no unexplained-change section, and the command says so on stderr.
+
 Generate the review packet:
 
 ```bash

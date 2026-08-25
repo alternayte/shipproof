@@ -145,6 +145,8 @@ The agent assembles the evidence pack from intent, implementation, and verificat
 shipproof evidence pack <change-id>
 ```
 
+ShipProof reads the base revision from the recorded agent run. Pass `--base <rev>` when no agent run recorded one. Without a base revision the pack carries no unexplained-change section, and the command says so on stderr.
+
 ## Step 5 — Prepare human review
 
 **Skill:** `prepare-human-review`

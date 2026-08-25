@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alternayte/shipproof/internal/agent"
 	"github.com/alternayte/shipproof/internal/coverage"
 	"github.com/alternayte/shipproof/internal/schema"
 	"github.com/alternayte/shipproof/internal/verification"
@@ -85,5 +86,63 @@ func TestBuildUnexplainedMarshalsEmptyFindingsAsArrays(t *testing.T) {
 	}
 	if strings.Contains(body, `"line_findings":null`) || strings.Contains(body, `"file_findings":null`) {
 		t.Fatalf("marshaled pack holds null instead of an empty array: %s", body)
+	}
+}
+
+// TestAssembleFallsBackToTheRecordedBaseRevision proves that the documented
+// invocation, which passes no --base, still carries the unexplained-change
+// section. The agent execution record holds the base revision the run
+// started from.
+func TestAssembleFallsBackToTheRecordedBaseRevision(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-902", "abc123")
+	setupVerificationPlan(t, root, "SP-902")
+
+	initGitRepo(t, root)
+	base := writeAndCommit(t, root, "initial.txt", "first")
+	writeAndCommit(t, root, "second.txt", "second")
+
+	record := agent.ExecutionRecord{
+		SchemaVersion: "0.1",
+		Change:        "SP-902",
+		Execution:     agent.ExecutionMeta{Runner: "claude", BaseRevision: base, ResultRevision: base},
+	}
+	if _, err := agent.SaveExecution(root, record); err != nil {
+		t.Fatal(err)
+	}
+
+	var warnings strings.Builder
+	assembled, err := Assemble(root, "SP-902", Options{Warn: &warnings})
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if assembled.UnexplainedChange == nil {
+		t.Fatalf("the section is missing, warnings = %q", warnings.String())
+	}
+	if warnings.Len() != 0 {
+		t.Errorf("Assemble warned about a section it produced: %q", warnings.String())
+	}
+}
+
+// TestAssembleReportsAnOmittedUnexplainedSection proves that a pack with no
+// base revision at all says so on the warning writer. Silence is the wrong
+// default for a signal whose purpose is to be read.
+func TestAssembleReportsAnOmittedUnexplainedSection(t *testing.T) {
+	root := t.TempDir()
+	setupShipProofRoot(t, root)
+	setupChangeRecord(t, root, "SP-903", "abc123")
+	setupVerificationPlan(t, root, "SP-903")
+
+	var warnings strings.Builder
+	assembled, err := Assemble(root, "SP-903", Options{Warn: &warnings})
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if assembled.UnexplainedChange != nil {
+		t.Fatal("the section is present without any base revision")
+	}
+	if !strings.Contains(warnings.String(), "unexplained change") {
+		t.Errorf("Assemble omitted the section in silence: %q", warnings.String())
 	}
 }
