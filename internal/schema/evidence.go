@@ -148,9 +148,15 @@ type IntentEvidence struct {
 }
 
 type Check struct {
-	ID         string         `json:"id"`
-	Status     string         `json:"status"`
-	Source     string         `json:"source"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Source string `json:"source"`
+	// Grade is one of the three grades of Section 6. It answers the audit
+	// question "Is the result machine-observed or asserted?" without an
+	// external lookup table.
+	Grade string `json:"grade"`
+	// Provenance is the finer machine label that Section 6 permits. Grade
+	// collapses it to three values for a reader.
 	Provenance ProvenanceKind `json:"provenance"`
 	// Detail states the reason for the status in one sentence. It is review
 	// material, and its absence never changes the status it explains.
@@ -206,6 +212,11 @@ func (pack EvidencePack) Validate() error {
 		case ProvenanceObserved, ProvenanceDerived, ProvenanceInferred, ProvenanceHuman:
 		default:
 			return fmt.Errorf("checks[%d].provenance is invalid", index)
+		}
+		switch check.Grade {
+		case "observed", "stated", "claimed":
+		default:
+			return fmt.Errorf("checks[%d].grade is invalid", index)
 		}
 	}
 

@@ -1,13 +1,29 @@
 {
-  "schema_version": "0.2",
+  "schema_version": "0.3",
   "change_id": "",
-  "verdict": {"verdict": "NOT PROVEN", "reason": "no proof ran.", "next": "run `shipproof prove`."},
-  "intent": {"snapshot_hash": "sha256:abc123", "stale": false},
+  "verdict": {
+    "verdict": "NOT PROVEN",
+    "reason": "no proof ran.",
+    "next": "run `shipproof prove`."
+  },
+  "intent": {
+    "snapshot_hash": "sha256:abc123",
+    "stale": false
+  },
   "requirements": [],
   "checks": [],
-  "unexplained_change": {"measured": false, "coverage_available": false, "line_findings": [], "file_findings": [], "uninstrumented_lines": 0},
+  "unexplained_change": {
+    "measured": false,
+    "coverage_available": false,
+    "line_findings": [],
+    "file_findings": [],
+    "uninstrumented_lines": 0
+  },
   "agent": null,
   "attestation": null,
   "empty_sections": {},
-  "provenance": {"generated_at": "2026-08-13T20:00:00Z", "shipproof_version": "0.3.0-dev"}
+  "provenance": {
+    "generated_at": "2026-08-13T20:00:00Z",
+    "shipproof_version": "0.3.0-dev"
+  }
 }

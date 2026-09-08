@@ -163,6 +163,13 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 		}
 	}
 
+	// One pass sets the grade on every check, whatever produced it. A
+	// producer therefore cannot forget the field, and the grade cannot
+	// disagree with the label it collapses.
+	for index := range pack.Checks {
+		pack.Checks[index].Grade = string(grade.FromProvenance(pack.Checks[index].Provenance))
+	}
+
 	pack.Requirements = requirementRows(root, changeID, plan)
 
 	// Decision D2 of Section 15. A local pack stays unsigned. Step 5 of the

@@ -248,7 +248,7 @@ func TestFullPackValidates(t *testing.T) {
 			State: "proven", Grade: "observed", Detail: "1 automated proofs passed at this revision"},
 	}
 	pack.Checks = []Check{
-		{ID: "verification:run", Status: "pass", Source: "shipproof-runner", Provenance: ProvenanceObserved, Detail: "the gate passed"},
+		{ID: "verification:run", Status: "pass", Source: "shipproof-runner", Grade: "observed", Provenance: ProvenanceObserved, Detail: "the gate passed"},
 	}
 	pack.Agent = &AgentEvidence{
 		Provider: "anthropic", AgentVersion: "1.0", Model: "opus", StartedAt: "2026-08-25T08:00:00Z",
@@ -327,10 +327,10 @@ func TestRecordedPacksValidate(t *testing.T) {
 // pack that breaks four rules at once.
 func TestTheCheckerRejectsAnInvalidPack(t *testing.T) {
 	body := `{
-	  "schema_version": "0.2",
+	  "schema_version": "0.3",
 	  "intent": {"snapshot_hash": "", "stale": false},
-	  "checks": [{"id": "a", "status": "bogus", "source": "s", "provenance": "observed"}],
-	  "provenance": {"generated_at": "now", "shipproof_version": "0.2"},
+	  "checks": [{"id": "a", "status": "bogus", "source": "s", "grade": "observed", "provenance": "observed"}],
+	  "provenance": {"generated_at": "now", "shipproof_version": "0.3"},
 	  "surprise": true
 	}`
 	var value any

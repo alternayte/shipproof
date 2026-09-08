@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2",
+  "schema_version": "0.3",
   "change_id": "SP-1",
   "verdict": {
     "verdict": "PROVEN",
@@ -22,13 +22,21 @@
   "requirements": [
     {
       "id": "SDD-R01",
-      "proof_refs": ["unit-test:init-layout"],
+      "proof_refs": [
+        "unit-test:init-layout"
+      ],
       "state": "proven",
       "grade": "observed"
     }
   ],
   "checks": [
-    {"id": "unit-tests", "status": "pass", "source": "go-test", "provenance": "observed"}
+    {
+      "id": "unit-tests",
+      "status": "pass",
+      "source": "go-test",
+      "provenance": "observed",
+      "grade": "observed"
+    }
   ],
   "unexplained_change": {
     "measured": true,
