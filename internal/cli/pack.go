@@ -20,19 +20,32 @@ import (
 // writes the HTML change report. It replaces the old `evidence pack`,
 // `telemetry collect`, and `report change` verbs.
 func runPack(args []string, stdout, stderr io.Writer) int {
-	const usage = "usage: shipproof pack [change-id] [--base <rev>] [--head <rev>] [--adapter <claude|opencode>] [--output <path>]\n       shipproof pack --verify <file>"
+	const usage = "usage: shipproof pack [change-id] [--base <rev>] [--head <rev>] [--adapter <claude|opencode>] [--output <path>]\n" +
+		"       shipproof pack --verify <file>\n" +
+		"       shipproof pack --payload <file>\n" +
+		"       shipproof pack --comment <file>\n" +
+		"       shipproof pack --attach <file> --signature <path> --certificate <path> --subject <rev>"
 
-	// `--verify` reads one written pack and checks its signature. It touches
-	// no repository state, so it runs before every other option.
+	// These options read one written pack. They touch no repository state, so
+	// they run before every other option.
 	for index := 0; index < len(args); index++ {
-		if args[index] != "--verify" {
-			continue
+		switch args[index] {
+		case "--verify", "--payload", "--comment", "--attach":
+			if index+1 >= len(args) {
+				fmt.Fprintf(stderr, "%s requires a path\n", args[index])
+				return 2
+			}
+			switch args[index] {
+			case "--verify":
+				return runPackVerify(args[index+1], stdout, stderr)
+			case "--payload":
+				return runPackPayload(args[index+1], stdout, stderr)
+			case "--comment":
+				return runPackComment(args[index+1], stdout, stderr)
+			default:
+				return runPackAttach(args[index+1], args, stdout, stderr)
+			}
 		}
-		if index+1 >= len(args) {
-			fmt.Fprintln(stderr, "--verify requires a path")
-			return 2
-		}
-		return runPackVerify(args[index+1], stdout, stderr)
 	}
 
 	changeID := ""

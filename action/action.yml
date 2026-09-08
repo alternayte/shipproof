@@ -1,0 +1,116 @@
+name: ShipProof evidence pack
+description: Build the evidence pack for a pull request, sign it, upload it, and post the verdict.
+author: Nate Anderson-Tennant
+
+inputs:
+  change-id:
+    description: The change identifier. It defaults to the sole open change.
+    required: false
+    default: ""
+  version:
+    description: The ShipProof version to install. Use "source" to build from the checkout.
+    required: false
+    default: source
+  sign:
+    description: Sign the pack with keyless Sigstore. Set it to "false" to skip the signature.
+    required: false
+    default: "true"
+  comment:
+    description: Post one comment on the pull request.
+    required: false
+    default: "true"
+
+outputs:
+  verdict:
+    description: The verdict word. It is PROVEN, NOT PROVEN, or FAILED.
+    value: ${{ steps.pack.outputs.verdict }}
+  pack-path:
+    description: The path of the written evidence pack.
+    value: ${{ steps.pack.outputs.pack-path }}
+
+runs:
+  using: composite
+  steps:
+    # Step 1 of Section 9.1. Install the binary.
+    - name: Install ShipProof
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "${{ inputs.version }}" = "source" ]; then
+          go build -o "$RUNNER_TEMP/shipproof" ./cmd/shipproof
+        else
+          curl -fsSL -o "$RUNNER_TEMP/shipproof" \
+            "https://github.com/alternayte/shipproof/releases/download/${{ inputs.version }}/shipproof-linux-amd64"
+          chmod +x "$RUNNER_TEMP/shipproof"
+        fi
+        echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+    # Step 2 of Section 9.1. Run pack over the pull-request range.
+    - name: Build the evidence pack
+      id: pack
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE="$(git merge-base "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}")"
+        HEAD="${{ github.event.pull_request.head.sha }}"
+        CHANGE="${{ inputs.change-id }}"
+
+        shipproof pack $CHANGE --base "$BASE" --head "$HEAD"
+
+        PACK="$(ls .shipproof/changes/*/evidence-pack.json | head -1)"
+        echo "pack-path=$PACK" >> "$GITHUB_OUTPUT"
+        echo "base=$BASE" >> "$GITHUB_OUTPUT"
+        echo "head=$HEAD" >> "$GITHUB_OUTPUT"
+        # The verdict word is the first line of the block, without its label.
+        VERDICT="$(python3 -c "import json,sys;print(json.load(open('$PACK'))['verdict']['verdict'])")"
+        echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+
+    # Section 10. Keyless Sigstore signs the canonical payload. Decision D2
+    # makes the build system the only signer.
+    - name: Install cosign
+      if: inputs.sign == 'true'
+      uses: sigstore/cosign-installer@v3
+
+    - name: Sign the evidence pack
+      if: inputs.sign == 'true'
+      shell: bash
+      env:
+        PACK: ${{ steps.pack.outputs.pack-path }}
+        HEAD: ${{ steps.pack.outputs.head }}
+      run: |
+        set -euo pipefail
+        # ShipProof prints the exact bytes that the signature must cover. The
+        # canonical payload excludes the attestation block itself.
+        shipproof pack --payload "$PACK" > "$RUNNER_TEMP/payload.json"
+        cosign sign-blob --yes \
+          --output-signature "$RUNNER_TEMP/signature.b64" \
+          --output-certificate "$RUNNER_TEMP/certificate.pem" \
+          "$RUNNER_TEMP/payload.json"
+        shipproof pack --attach "$PACK" \
+          --signature "$RUNNER_TEMP/signature.b64" \
+          --certificate "$RUNNER_TEMP/certificate.pem" \
+          --subject "$HEAD"
+        # A pack that does not verify must never reach the artifact store.
+        shipproof pack --verify "$PACK"
+
+    # Step 3 of Section 9.1. Upload the pack as a build artifact.
+    - name: Upload the evidence pack
+      uses: actions/upload-artifact@v4
+      with:
+        name: shipproof-evidence-pack
+        path: ${{ steps.pack.outputs.pack-path }}
+        if-no-files-found: error
+
+    # Step 4 of Section 9.1. Post one comment with the verdict block.
+    - name: Post the verdict comment
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PACK: ${{ steps.pack.outputs.pack-path }}
+      run: |
+        set -euo pipefail
+        shipproof pack --comment "$PACK" > "$RUNNER_TEMP/comment.md"
+        gh pr comment "${{ github.event.pull_request.number }}" \
+          --body-file "$RUNNER_TEMP/comment.md" \
+          --repo "${{ github.repository }}"
