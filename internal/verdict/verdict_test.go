@@ -287,3 +287,36 @@ func TestAFailedClaimedCheckDoesNotFail(t *testing.T) {
 		t.Fatalf("verdict = %q, want %q; reason %q", block.Verdict, Proven, block.Reason)
 	}
 }
+
+// TestTheReasonLineAgrees holds the grammar of the count line. A reader who
+// meets "All 1 requirement carry a proof" stops trusting the page.
+func TestTheReasonLineAgrees(t *testing.T) {
+	one := coverage.Matrix{ChangeID: "SP-1", RunCurrent: true, Rows: []coverage.Row{
+		{RequirementID: "R1", State: coverage.Proven, Provenance: coverage.Observed},
+	}}
+	block := Decide(Input{
+		ChangeID: "SP-1", Phase: phase.Result{Phase: phase.ReadyForHuman},
+		Matrix: one, HasMatrix: true, Unexplained: zero(),
+	})
+	if strings.Contains(block.Reason, "requirement carry") {
+		t.Fatalf("the reason line does not agree: %q", block.Reason)
+	}
+	if !strings.Contains(block.Reason, "The 1 requirement carries a proof") {
+		t.Fatalf("reason = %q", block.Reason)
+	}
+}
+
+// TestAnUnknownCountNamesHowToMeasureIt holds rule 3 of Section 5: the next
+// action must be one runnable command that moves the reader forward. Telling a
+// reader to re-run the command they just ran does not.
+func TestAnUnknownCountNamesHowToMeasureIt(t *testing.T) {
+	block := Decide(Input{
+		ChangeID: "SP-1",
+		Phase:    phase.Result{ChangeID: "SP-1", Phase: phase.ReadyForHuman, NextCommand: "shipproof pack SP-1"},
+		Matrix:   provenMatrix(), HasMatrix: true,
+		// The count is not measured.
+	})
+	if !strings.Contains(block.Next, "--base") {
+		t.Fatalf("next = %q, want the command that measures the count", block.Next)
+	}
+}

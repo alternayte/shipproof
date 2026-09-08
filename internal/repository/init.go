@@ -5,19 +5,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type InitResult struct {
 	CreatedDirectories []string
 	CreatedFiles       []string
 	ExistingFiles      []string
+	// Gate is the verification command that init chose for this repository.
+	Gate string
+	// GateDetected reports whether a build tool in the repository named the
+	// command. A false value means that init fell back to a command that
+	// always passes, and the user must replace it.
+	GateDetected bool
 }
 
 var initialFiles = map[string]string{
 	".shipproof/config.yaml": `version: 1
 schema_version: "0.1"
 verification:
-  command: just verify
+  command: {{gate}}
   # coverage:
   #   command: go test -coverpkg=./... -coverprofile={{profile}} ./{{target}}/
   #   format: go
@@ -94,7 +101,12 @@ func Initialize(root string) (InitResult, error) {
 		}
 	}
 
+	gate, detected := DetectGate(root)
+	result.Gate = gate
+	result.GateDetected = detected
+
 	for relative, contents := range initialFiles {
+		contents = strings.ReplaceAll(contents, "{{gate}}", gate)
 		path := filepath.Join(root, filepath.FromSlash(relative))
 		if _, err := os.Stat(path); err == nil {
 			result.ExistingFiles = append(result.ExistingFiles, path)
@@ -110,4 +122,38 @@ func Initialize(root string) (InitResult, error) {
 	}
 
 	return result, nil
+}
+
+// gateCandidate names a build tool, the file that proves the repository uses
+// it, and the command that runs its checks.
+type gateCandidate struct {
+	Marker  string
+	Command string
+}
+
+// gateCandidates are tried in order. The first marker that exists wins.
+var gateCandidates = []gateCandidate{
+	{"justfile", "just verify"},
+	{"Justfile", "just verify"},
+	{"Makefile", "make test"},
+	{"package.json", "npm test"},
+	{"go.mod", "go test ./..."},
+	{"Cargo.toml", "cargo test"},
+	{"pyproject.toml", "pytest"},
+}
+
+// DetectGate picks a verification command that the repository can actually
+// run. The first verdict a new user sees must never read FAILED because of a
+// build tool they do not use.
+//
+// A directory that matches nothing gets a command that always passes. It
+// proves nothing, and the second result reports that honestly, which is better
+// than a failure the user cannot act on.
+func DetectGate(root string) (command string, detected bool) {
+	for _, candidate := range gateCandidates {
+		if _, err := os.Stat(filepath.Join(root, candidate.Marker)); err == nil {
+			return candidate.Command, true
+		}
+	}
+	return "true", false
 }

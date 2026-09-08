@@ -33,6 +33,12 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	}
 
 	fmt.Fprintf(stdout, "Initialized ShipProof in %s\n", abs)
+	if result.GateDetected {
+		fmt.Fprintf(stdout, "Gate: %s. Change it in .shipproof/config.yaml.\n", result.Gate)
+	} else {
+		fmt.Fprintf(stdout, "Gate: %s. No build tool was found, so this command passes and proves nothing.\n", result.Gate)
+		fmt.Fprintln(stdout, "      Put your test command in .shipproof/config.yaml under verification.command.")
+	}
 	fmt.Fprintf(stdout, "Created %d directories and %d files.\n", len(result.CreatedDirectories), len(result.CreatedFiles))
 	if len(result.ExistingFiles) > 0 {
 		fmt.Fprintf(stdout, "Kept %d existing files unchanged.\n", len(result.ExistingFiles))

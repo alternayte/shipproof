@@ -68,8 +68,58 @@ func TestInitializeWritesALoadableConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
-	if config.Verification.Command != "just verify" {
-		t.Fatalf("verification.command = %q, want %q", config.Verification.Command, "just verify")
+	// SP-037. Initialize picks a gate the repository can run, so a bare
+	// directory gets the fallback rather than a build tool it does not hold.
+	want, _ := DetectGate(root)
+	if config.Verification.Command != want {
+		t.Fatalf("verification.command = %q, want %q", config.Verification.Command, want)
+	}
+}
+
+// TestInitializeDetectsTheGate covers SP-037. The first verdict a new user
+// sees must never read FAILED because of a build tool they do not use.
+func TestInitializeDetectsTheGate(t *testing.T) {
+	cases := []struct{ marker, want string }{
+		{"justfile", "just verify"},
+		{"Makefile", "make test"},
+		{"package.json", "npm test"},
+		{"go.mod", "go test ./..."},
+	}
+	for _, testCase := range cases {
+		root := t.TempDir()
+		if err := os.WriteFile(filepath.Join(root, testCase.marker), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		result, err := Initialize(root)
+		if err != nil {
+			t.Fatalf("Initialize: %v", err)
+		}
+		if !result.GateDetected {
+			t.Errorf("%s: Initialize reported no detection", testCase.marker)
+		}
+		config, err := LoadConfig(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if config.Verification.Command != testCase.want {
+			t.Errorf("%s: command = %q, want %q", testCase.marker, config.Verification.Command, testCase.want)
+		}
+	}
+}
+
+// TestInitializeFallsBackToARunnableGate covers the directory that matches
+// nothing. The fallback proves nothing, and Initialize says so.
+func TestInitializeFallsBackToARunnableGate(t *testing.T) {
+	root := t.TempDir()
+	result, err := Initialize(root)
+	if err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+	if result.GateDetected {
+		t.Fatal("Initialize claimed a detection in a bare directory")
+	}
+	if result.Gate != "true" {
+		t.Fatalf("gate = %q, want the command that always passes", result.Gate)
 	}
 }
 

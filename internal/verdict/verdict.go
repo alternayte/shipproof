@@ -153,8 +153,16 @@ func staleReason(input Input, counts tally) string {
 }
 
 func provenReason(counts tally) string {
-	return fmt.Sprintf("All %s carry a proof. No changed line is left over.",
-		plural(counts.total, "requirement"))
+	return fmt.Sprintf("%s. No changed line is left over.", carriesAProof(counts.total))
+}
+
+// carriesAProof states the count and agrees with it. "All 1 requirement carry"
+// reads wrong, and a reader who meets it stops trusting the page.
+func carriesAProof(total int) string {
+	if total == 1 {
+		return "The 1 requirement carries a proof"
+	}
+	return fmt.Sprintf("All %d requirements carry a proof", total)
 }
 
 // informationalPrefixes names the check identifiers that ShipProof produces to
@@ -221,8 +229,7 @@ func openReason(input Input, counts tally) string {
 		return fmt.Sprintf("%d of %d requirements have no proof. %s",
 			len(counts.open), counts.total, lineSentence(input))
 	}
-	return fmt.Sprintf("All %s carry a proof. %s",
-		plural(counts.total, "requirement"), lineSentence(input))
+	return fmt.Sprintf("%s. %s", carriesAProof(counts.total), lineSentence(input))
 }
 
 // lineSentence reports the unexplained change count. An unmeasured count says
@@ -247,6 +254,13 @@ func nextAction(input Input, counts tally) string {
 	if len(counts.open) > 0 {
 		return fmt.Sprintf("run `%s` after you add a proof for %s.",
 			command, list(counts.open))
+	}
+	// An unmeasured count is the only thing left between here and PROVEN, so
+	// name the command that measures it. Repeating the command the reader just
+	// ran moves nobody forward.
+	if input.Unexplained == nil && counts.total > 0 && counts.settled == counts.total {
+		identifier := strings.TrimSpace(input.ChangeID)
+		return fmt.Sprintf("run `shipproof pack %s --base <the revision you started from>` to count the lines no requirement explains.", identifier)
 	}
 	return fmt.Sprintf("run `%s`.", command)
 }

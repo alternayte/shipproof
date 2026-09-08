@@ -213,3 +213,25 @@ func runBinary(t *testing.T, binary, root string, arguments ...string) {
 		t.Fatalf("%v: %v\n%s", arguments, err, out)
 	}
 }
+
+// TestTheU1PacketScriptExists keeps the comprehension review runnable. The
+// review document names the script, and a named file must exist.
+func TestTheU1PacketScriptExists(t *testing.T) {
+	path := filepath.Join("..", "..", "scripts", "u1-packet.sh")
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("scripts/u1-packet.sh does not exist: %v", err)
+	}
+	if info.Mode()&0o111 == 0 {
+		t.Error("scripts/u1-packet.sh is not executable")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"report-a.html", "report-b.html", "report-c.html"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("the script never writes %s", want)
+		}
+	}
+}

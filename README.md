@@ -2,41 +2,140 @@
 
 Evidence for AI-assisted software delivery.
 
-ShipProof is a CLI tool that helps teams produce verifiable evidence of what was built, why, and whether it works. It provides five commands, portable Agent Skills, and a versioned evidence contract that keeps AI-assisted work auditable.
+ShipProof reads the intent document your spec tool produced, watches what your
+repository and your tools report, and publishes one evidence pack with an
+honest verdict. It names every changed line that no requirement explains.
 
-## Quick start
+It answers one question that a spec tool does not:
+
+> Does the shipped diff match the intent, and which parts remain unproven?
+
+## Install
+
+Pick one. Neither needs a clone of this repository.
+
+**Download the binary.** No Go needed.
+
+```bash
+# macOS (Apple silicon). Change darwin_arm64 for your platform.
+curl -fsSL -o shipproof.tar.gz \
+  https://github.com/alternayte/shipproof/releases/latest/download/shipproof_darwin_arm64.tar.gz
+tar -xzf shipproof.tar.gz shipproof
+sudo mv shipproof /usr/local/bin/
+shipproof version
+```
+
+Four platforms are published: `darwin_arm64`, `darwin_amd64`, `linux_arm64`,
+and `linux_amd64`. Every release also carries `checksums.txt`.
+
+**Or build it with Go.**
 
 ```bash
 go install github.com/alternayte/shipproof/cmd/shipproof@latest
+```
+
+## Quickstart
+
+Five steps, in your own repository. Each one prints what to do next.
+
+**1. Set up.**
+
+```bash
+cd your-project
 shipproof init .
 ```
 
-`shipproof init` creates a `.shipproof/` directory with templates and a repository verification command, and it installs the ShipProof instructions into every harness path. It never overwrites existing files.
+It creates `.shipproof/`, and it picks a test command by looking for a
+`justfile`, a `Makefile`, a `package.json`, a `go.mod`, a `Cargo.toml`, or a
+`pyproject.toml`. It tells you which one it chose. If it found none, open
+`.shipproof/config.yaml` and put your test command under
+`verification.command`.
 
-## Concepts
+**2. Point it at what you meant to build.**
 
-### Readiness states
+```bash
+shipproof start SP-1 --intent docs/my-feature.md
+```
 
-Every document has a finite readiness state:
+Any document works: an OpenSpec proposal, a Spec Kit specification, or a plain
+Markdown list. ShipProof records its hash, and it proposes the requirements it
+can read. Confirm them:
 
-| State | Meaning |
+```bash
+shipproof start SP-1 --confirm-requirements
+```
+
+**3. Say how each requirement gets proven.**
+
+Open `.shipproof/changes/SP-1/verification.json` and give each requirement a
+command that exits 0 when it holds. Mark a requirement human when no command
+can judge it.
+
+**4. Get the answer.**
+
+```bash
+shipproof pack SP-1
+```
+
+It runs your tests, runs each proof, writes the evidence pack, and renders an
+HTML report. You get three lines:
+
+```
+VERDICT: NOT PROVEN
+2 of 7 requirements have no proof. 14 changed lines match no requirement.
+NEXT: run `shipproof prove SP-1` after you add a proof for R3 and R5.
+```
+
+**5. Check where you stand at any time.**
+
+```bash
+shipproof status SP-1
+```
+
+That is the whole loop. `shipproof pack` runs step 4's proofs for you, so
+`start` and `pack` are enough.
+
+## The verdict
+
+Three verdicts exist. No score exists, because a percentage invites a debate.
+
+| Verdict | Meaning |
 |---|---|
-| `SHAPING` | Material information is still being gathered. |
-| `BLOCKED` | A missing decision or contradiction prevents responsible progression. |
-| `READY_WITH_ASSUMPTIONS` | No blocker remains but accepted assumptions or known risks exist. |
-| `READY` | No blocker remains for the next stage. |
+| `PROVEN` | Every requirement has a passing observed proof or an accepted human proof. No unexplained change remains. |
+| `NOT PROVEN` | The work is incomplete or unproven. The reason is stated. |
+| `FAILED` | A proof ran and failed, or your test command failed. |
 
-Blockers and unresolved decisions prevent readiness. Suggestions and nits do not.
+## The three grades
 
-### Finding classes
+Every check in a pack carries one grade, so a reader can tell a measurement
+from an assertion.
 
-ShipProof classifies every finding so teams know what matters:
+| Grade | Meaning |
+|---|---|
+| `observed` | A tool ran and a machine recorded the result. |
+| `stated` | A person accepted it and signed for it. |
+| `claimed` | Someone asserted it and no tool confirmed it. |
 
-`BLOCKER`, `DECISION`, `ASSUMPTION`, `RISK`, `SUGGESTION`, `NIT`.
+A `claimed` check never proves a requirement. The report says so on the page.
 
-### Evidence provenance
+## Unknown stays unknown
 
-Every piece of evidence carries a provenance label: `observed`, `derived`, `inferred`, or `human`. These labels prevent generated estimates from being confused with measured results.
+A field that no tool reported is absent from the pack, and `empty_sections`
+states why. A count that ShipProof could not measure reads "not known". It
+never reads zero.
+
+## In continuous integration
+
+A local pack is not audit-grade. Add the action, and the build system signs
+the pack and posts the verdict on the pull request.
+
+```yaml
+- uses: alternayte/shipproof/action@main
+```
+
+See [docs/hooks.md](docs/hooks.md) to run ShipProof from your agent, and
+[docs/controls.md](docs/controls.md) to map each pack field onto the audit
+question it answers.
 
 ## Commands
 
@@ -171,8 +270,8 @@ credential file, and refuses a configuration key that looks like a secret.
 - `BLOCKED`: the runner is unusable, or it cannot enforce the role policy.
 
 A runner claim is never evidence. ShipProof records the base and result Git
-revisions, then runs its own verification. Adversarial reviewer findings enter
-the evidence pack as agent-inferred. They are never labeled as observed.
+revisions, then runs its own verification. A reviewer finding enters the
+evidence pack as a `claimed` check. It is never graded `observed`.
 
 ## Evidence capture levels
 
@@ -191,7 +290,7 @@ The public reference application should use `full` where practical. Client repos
 
 - Repository files are the source of truth.
 - Core contracts do not depend on any issue tracker or agent vendor.
-- Observed, derived, inferred, and human-supplied evidence stay distinct.
+- An observed result, a stated result, and a claimed result stay distinct.
 - A failing deterministic check is always reported as a failure.
 - A document is complete enough when it supports the next decision.
 - The language profile is STE-assisted. It does not claim ASD-STE100 certification.
