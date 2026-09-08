@@ -198,3 +198,71 @@ func TestVerifyRejectsAnUnsignedPack(t *testing.T) {
 		t.Fatalf("the error never says that the pack is unsigned: %v", err)
 	}
 }
+
+// TestVerifyAcceptsEveryCertificateEncoding holds the encodings that a real
+// signer produces. `cosign sign-blob` base64-encodes its output by default, so
+// the certificate arrives as base64 around the PEM. A verifier that reads only
+// raw PEM rejects a true signature.
+func TestVerifyAcceptsEveryCertificateEncoding(t *testing.T) {
+	pack := samplePack()
+	certificate, signature := signFor(t, pack, "workflow")
+
+	block, _ := pem.Decode([]byte(certificate))
+	if block == nil {
+		t.Fatal("the fixture is not PEM")
+	}
+
+	encodings := map[string]string{
+		"raw PEM":       certificate,
+		"base64 of PEM": base64.StdEncoding.EncodeToString([]byte(certificate)),
+		"base64 of DER": base64.StdEncoding.EncodeToString(block.Bytes),
+	}
+	// A signer often wraps base64 output in newlines. Those must not matter.
+	encodings["base64 of PEM with newlines"] = wrapLines(
+		base64.StdEncoding.EncodeToString([]byte(certificate)), 64)
+
+	for name, encoded := range encodings {
+		candidate := pack
+		candidate.Attestation = &schema.AttestationEvidence{
+			Format: "in-toto", Signature: signature, Certificate: encoded, Subject: "1cceb33",
+		}
+		result, err := Verify(candidate)
+		if err != nil {
+			t.Errorf("%s: Verify: %v", name, err)
+			continue
+		}
+		if !result.SignatureValid {
+			t.Errorf("%s: the signature did not verify", name)
+		}
+	}
+}
+
+func wrapLines(text string, width int) string {
+	var out []string
+	for len(text) > width {
+		out = append(out, text[:width])
+		text = text[width:]
+	}
+	out = append(out, text)
+	return strings.Join(out, "\n")
+}
+
+// TestVerifyAcceptsAWrappedSignature holds the other half of the signer
+// contract. A base64 signature that carries newlines is still the signature.
+func TestVerifyAcceptsAWrappedSignature(t *testing.T) {
+	pack := samplePack()
+	certificate, signature := signFor(t, pack, "workflow")
+	pack.Attestation = &schema.AttestationEvidence{
+		Format:      "in-toto",
+		Signature:   wrapLines(signature, 32),
+		Certificate: certificate,
+		Subject:     "1cceb33",
+	}
+	result, err := Verify(pack)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if !result.SignatureValid {
+		t.Fatal("a wrapped signature did not verify")
+	}
+}

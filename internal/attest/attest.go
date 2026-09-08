@@ -29,6 +29,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/alternayte/shipproof/internal/schema"
 )
@@ -194,7 +195,9 @@ func Verify(pack schema.EvidencePack) (Result, error) {
 	}
 	result.CertificateSubject = certificateSubject(certificate)
 
-	signature, err := base64.StdEncoding.DecodeString(block.Signature)
+	// A signer wraps base64 output in newlines. Remove every space first, the
+	// same way the certificate is read.
+	signature, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(block.Signature), ""))
 	if err != nil {
 		return result, fmt.Errorf("decode the signature: %w", err)
 	}
@@ -220,12 +223,35 @@ func Verify(pack schema.EvidencePack) (Result, error) {
 	return result, nil
 }
 
-func parseCertificate(pemText string) (*x509.Certificate, error) {
-	block, _ := pem.Decode([]byte(pemText))
-	if block == nil {
-		return nil, errors.New("the certificate is not PEM")
+// parseCertificate reads the certificate in every encoding that a signer
+// produces. `cosign sign-blob` base64-encodes its output by default, so the
+// certificate arrives as base64 around the PEM rather than as the PEM itself.
+// A verifier that reads only raw PEM rejects a true signature.
+//
+// The order is: raw PEM, then base64 of a PEM, then base64 of the raw DER.
+func parseCertificate(text string) (*x509.Certificate, error) {
+	if block, _ := pem.Decode([]byte(text)); block != nil {
+		certificate, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse the certificate: %w", err)
+		}
+		return certificate, nil
 	}
-	certificate, err := x509.ParseCertificate(block.Bytes)
+
+	// A signer wraps base64 output in newlines. Remove every space first.
+	compact := strings.Join(strings.Fields(text), "")
+	decoded, err := base64.StdEncoding.DecodeString(compact)
+	if err != nil {
+		return nil, errors.New("the certificate is neither PEM nor base64")
+	}
+	if block, _ := pem.Decode(decoded); block != nil {
+		certificate, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse the certificate: %w", err)
+		}
+		return certificate, nil
+	}
+	certificate, err := x509.ParseCertificate(decoded)
 	if err != nil {
 		return nil, fmt.Errorf("parse the certificate: %w", err)
 	}
