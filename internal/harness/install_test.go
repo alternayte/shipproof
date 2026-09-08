@@ -18,8 +18,8 @@ func TestInstallClaudeCreatesCanonicalAndHarnessSkills(t *testing.T) {
 		t.Fatalf("unexpected result: %+v", result)
 	}
 	for _, path := range []string{
-		filepath.Join(root, ".shipproof", "skills", "shape-prd", "SKILL.md"),
-		filepath.Join(root, ".claude", "skills", "shape-prd", "SKILL.md"),
+		filepath.Join(root, ".shipproof", "skills", "prepare-change", "SKILL.md"),
+		filepath.Join(root, ".claude", "skills", "prepare-change", "SKILL.md"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
@@ -34,7 +34,7 @@ func TestInstallCursorUsesPortableAgentsDirectory(t *testing.T) {
 	if _, err := Install(root, TargetCursor, false, false); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	path := filepath.Join(root, ".agents", "skills", "review-sdd", "SKILL.md")
+	path := filepath.Join(root, ".agents", "skills", "review-change", "SKILL.md")
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("expected %s: %v", path, err)
 	}
@@ -47,7 +47,7 @@ func TestInstallDoesNotOverwriteModifiedSkill(t *testing.T) {
 	if _, err := Install(root, TargetClaude, false, false); err != nil {
 		t.Fatalf("first Install: %v", err)
 	}
-	path := filepath.Join(root, ".claude", "skills", "shape-prd", "SKILL.md")
+	path := filepath.Join(root, ".claude", "skills", "prepare-change", "SKILL.md")
 	if err := os.WriteFile(path, []byte("custom\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -95,5 +95,36 @@ func TestInstallKeepsRetiredSkillOnRequest(t *testing.T) {
 	}
 	if _, err := os.Stat(stale); err != nil {
 		t.Fatalf("retired skill directory was removed despite keepRetired: %v", err)
+	}
+}
+
+// TestInstallRemovesCutSkills covers SP-023. An earlier install left the cut
+// skills on disk. A new install must remove each one.
+func TestInstallRemovesCutSkills(t *testing.T) {
+	root := t.TempDir()
+
+	cut := []string{
+		"shape-prd", "shape-sdd", "review-prd", "review-sdd",
+		"decompose-plan", "triage-change", "record-decision", "benchmark-run",
+	}
+	for _, name := range cut {
+		stale := filepath.Join(root, ".claude", "skills", name)
+		if err := os.MkdirAll(stale, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(stale, "SKILL.md"), []byte("# cut\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, err := Install(root, TargetClaude, false, false); err != nil {
+		t.Fatalf("Install() error = %v", err)
+	}
+
+	for _, name := range cut {
+		stale := filepath.Join(root, ".claude", "skills", name)
+		if _, err := os.Stat(stale); !os.IsNotExist(err) {
+			t.Errorf("cut skill %s still exists: %v", name, err)
+		}
 	}
 }

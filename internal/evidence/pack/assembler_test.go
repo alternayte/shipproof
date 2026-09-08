@@ -750,29 +750,6 @@ func revParseHead(t *testing.T, dir string) string {
 	return strings.TrimSpace(string(out))
 }
 
-func TestAssembleReadiness(t *testing.T) {
-	root := t.TempDir()
-	setupShipProofRoot(t, root)
-	setupChangeRecordWithShapingRef(t, root, "SP-012", "abc123", "test-session")
-	setupVerificationPlan(t, root, "SP-012")
-	setupShapingSession(t, root, "test-session", 2)
-
-	pack, err := Assemble(root, "SP-012", Options{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if pack.Readiness == nil {
-		t.Fatal("readiness must not be nil when shaping ref and session exist")
-	}
-	if pack.Readiness.ShapingRef != "test-session" {
-		t.Errorf("readiness.shaping_ref = %q, want test-session", pack.Readiness.ShapingRef)
-	}
-	if pack.Readiness.BlockerCount != 2 {
-		t.Errorf("readiness.blocker_count = %d, want 2", pack.Readiness.BlockerCount)
-	}
-}
-
 func TestAssembleReadinessWithoutRef(t *testing.T) {
 	root := t.TempDir()
 	setupShipProofRoot(t, root)
@@ -786,44 +763,6 @@ func TestAssembleReadinessWithoutRef(t *testing.T) {
 
 	if pack.Readiness != nil {
 		t.Error("readiness must be nil when the change record has no shaping ref")
-	}
-}
-
-func TestAssembleReadinessMissingSession(t *testing.T) {
-	root := t.TempDir()
-	setupShipProofRoot(t, root)
-	setupChangeRecordWithShapingRef(t, root, "SP-012", "abc123", "missing-session")
-	setupVerificationPlan(t, root, "SP-012")
-
-	pack, err := Assemble(root, "SP-012", Options{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if pack.Readiness != nil {
-		t.Error("readiness must be nil when the shaping session file is missing")
-	}
-}
-
-func setupChangeRecordWithShapingRef(t *testing.T, root, changeID, sha256, shapingRef string) {
-	t.Helper()
-	dir := filepath.Join(root, ".shipproof", "changes", changeID)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("create change dir: %v", err)
-	}
-	record := map[string]string{
-		"schema_version": "0.1",
-		"change_id":      changeID,
-		"source_path":    "docs/changes/" + changeID + "-test.md",
-		"snapshot_path":  ".shipproof/changes/" + changeID + "/snapshot.md",
-		"sha256":         sha256,
-		"shaping_ref":    shapingRef,
-		"captured_at":    "2026-08-14T20:00:00Z",
-	}
-	data, _ := json.MarshalIndent(record, "", "  ")
-	data = append(data, '\n')
-	if err := os.WriteFile(filepath.Join(dir, "change.json"), data, 0o644); err != nil {
-		t.Fatalf("write change record: %v", err)
 	}
 }
 
@@ -864,48 +803,6 @@ func setupShapingSession(t *testing.T, root, sessionID string, blockerCount int)
 	}
 }
 
-func TestAssembleReview(t *testing.T) {
-	root := t.TempDir()
-	setupShipProofRoot(t, root)
-	setupChangeRecord(t, root, "SP-014", "abc123")
-	setupVerificationPlan(t, root, "SP-014")
-	setupReviewFile(t, root, "SP-014")
-
-	pack, err := Assemble(root, "SP-014", Options{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if pack.Review == nil {
-		t.Fatal("review must not be nil when review.json exists")
-	}
-	if pack.Review.Source != "github" {
-		t.Errorf("review.source = %q, want github", pack.Review.Source)
-	}
-	if pack.Review.PRNumber != 42 {
-		t.Errorf("review.pr_number = %d, want 42", pack.Review.PRNumber)
-	}
-
-	found := false
-	for _, check := range pack.Verification.Checks {
-		if check.ID == "github:review" {
-			found = true
-			if check.Status != "pass" {
-				t.Errorf("github:review status = %q, want pass", check.Status)
-			}
-			if check.Source != "github" {
-				t.Errorf("github:review source = %q, want github", check.Source)
-			}
-			if check.Provenance != schema.ProvenanceObserved {
-				t.Errorf("github:review provenance = %q, want observed", check.Provenance)
-			}
-		}
-	}
-	if !found {
-		t.Error("github:review check not found")
-	}
-}
-
 func TestAssembleWithoutReview(t *testing.T) {
 	root := t.TempDir()
 	setupShipProofRoot(t, root)
@@ -924,26 +821,6 @@ func TestAssembleWithoutReview(t *testing.T) {
 		if check.ID == "github:review" {
 			t.Error("github:review check must not exist without review.json")
 		}
-	}
-}
-
-func TestAssembleMalformedReview(t *testing.T) {
-	root := t.TempDir()
-	setupShipProofRoot(t, root)
-	setupChangeRecord(t, root, "SP-014", "abc123")
-	setupVerificationPlan(t, root, "SP-014")
-
-	dir := filepath.Join(root, ".shipproof", "changes", "SP-014")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("create change dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "review.json"), []byte("{not json"), 0o644); err != nil {
-		t.Fatalf("write malformed review.json: %v", err)
-	}
-
-	_, err := Assemble(root, "SP-014", Options{})
-	if err == nil {
-		t.Fatal("expected error for malformed review.json")
 	}
 }
 

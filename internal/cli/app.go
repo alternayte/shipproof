@@ -17,9 +17,9 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "doc":
-		return runDoc(args[1:], stdout, stderr)
+		return runRemoved("doc", stderr)
 	case "shape":
-		return runShape(args[1:], stdout, stderr)
+		return runRemoved("shape", stderr)
 	case "verification":
 		return runVerification(args[1:], stdout, stderr)
 	case "verify":
@@ -33,7 +33,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "coverage":
 		return runCoverage(args[1:], stdout, stderr)
 	case "plan":
-		return runPlan(args[1:], stdout, stderr)
+		return runRemoved("plan", stderr)
 	case "skill":
 		return runSkill(args[1:], stdout, stderr)
 	case "evidence":
@@ -41,7 +41,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "review":
 		return runReview(args[1:], stdout, stderr)
 	case "linear":
-		return runLinear(args[1:], stdout, stderr)
+		return runRemoved("linear", stderr)
 	case "telemetry":
 		return runTelemetry(args[1:], stdout, stderr)
 	case "report":
@@ -70,11 +70,6 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  shipproof init [directory]")
-	fmt.Fprintln(w, "  shipproof doc status <file> [--kind prd|sdd] [--json]")
-	fmt.Fprintln(w, "  shipproof doc review <file> [--kind prd|sdd] [--json]")
-	fmt.Fprintln(w, "  shipproof shape <prd|sdd|issue> <subject> [--id id] [--source path]")
-	fmt.Fprintln(w, "  shipproof shape status <id> [--json]")
-	fmt.Fprintln(w, "  shipproof shape check <id-or-file>")
 	fmt.Fprintln(w, "  shipproof verification run <change-id> [--gate-only|--proofs-only]")
 	fmt.Fprintln(w, "  shipproof verification init <change-id>")
 	fmt.Fprintln(w, "  shipproof verification check <change-id-or-file>")
@@ -85,18 +80,10 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof change check <change-id>")
 	fmt.Fprintln(w, "  shipproof next [change-id] [--json]")
 	fmt.Fprintln(w, "  shipproof coverage <change-id> [--json]")
-	fmt.Fprintln(w, "  shipproof plan create <file>")
-	fmt.Fprintln(w, "  shipproof plan review")
-	fmt.Fprintln(w, "  shipproof plan sync --linear [plan-file]")
 	fmt.Fprintln(w, "  shipproof skill check [catalog-directory]")
-	fmt.Fprintln(w, "  shipproof skill eval <check|list|show|record|results> ...")
 	fmt.Fprintln(w, "  shipproof evidence pack <change-id> [--base <rev>] [--head <rev>]")
-	fmt.Fprintln(w, "  shipproof evidence review <change-id>")
 	fmt.Fprintln(w, "  shipproof telemetry collect <change-id> --adapter <claude|opencode> [--dir <path>]")
 	fmt.Fprintln(w, "  shipproof review prepare <change-id>")
-	fmt.Fprintln(w, "  shipproof linear issue <identifier>")
-	fmt.Fprintln(w, "  shipproof linear project <name>")
-	fmt.Fprintln(w, "  shipproof linear sync <plan-file>")
 	fmt.Fprintln(w, "  shipproof report change <change-id> [--output path]")
 	fmt.Fprintln(w, "  shipproof report pr-summary <change-id> [--output path]")
 	fmt.Fprintln(w, "  shipproof report project <name> [--output path]")

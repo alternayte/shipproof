@@ -2,7 +2,7 @@
 
 Evidence for AI-assisted software delivery.
 
-ShipProof is a CLI tool that helps teams produce verifiable evidence of what was built, why, and whether it works. It provides portable Agent Skills, deterministic document checks, and a versioned evidence contract that keeps AI-assisted work auditable.
+ShipProof is a CLI tool that helps teams produce verifiable evidence of what was built, why, and whether it works. It provides portable Agent Skills and a versioned evidence contract that keeps AI-assisted work auditable.
 
 ## Quick start
 
@@ -11,7 +11,7 @@ go install github.com/alternayte/shipproof/cmd/shipproof@latest
 shipproof init .
 ```
 
-`shipproof init` creates a `.shipproof/` directory with templates, a glossary, and a repository verification command. It never overwrites existing files.
+`shipproof init` creates a `.shipproof/` directory with templates and a repository verification command. It never overwrites existing files.
 
 ## Concepts
 
@@ -56,33 +56,6 @@ of band.
 With no change identifier, `next` resolves the single change that is not
 `READY_FOR_HUMAN`.
 
-### Document review
-
-```bash
-shipproof doc status docs/prd/retries.md
-shipproof doc review docs/prd/retries.md
-shipproof doc review design.md --kind sdd --json
-shipproof doc adopt SP-002 --source docs/changes/SP-002-retries.md
-shipproof doc adopt SP-002 --source design.md --confirm
-```
-
-Deterministic checks catch structural gaps (missing problem statement, absent scope), unresolved placeholders, and contextless quality attributes. Semantic review is performed by the portable Agent Skills inside the coding harness.
-
-The CLI does not invoke an LLM. A clean deterministic result does not guarantee semantic completeness.
-
-`doc adopt` extracts the requirement set from a source document into `.shipproof/changes/<change-id>/requirements.json`. A document in the `docs/changes/` format adopts with `observed` provenance and no human step. Any other document prints a proposal and needs `--confirm`. With `--confirm`, it writes with `human` provenance. `doc adopt` refuses to overwrite an existing requirement set. Pass `--force` to replace it.
-
-### Shaping sessions
-
-```bash
-shipproof shape prd "Webhook retries" --id webhook-retries
-shipproof shape sdd "Secret rotation" --id secret-rotation --source design.md
-shipproof shape status webhook-retries
-shipproof shape check webhook-retries
-```
-
-Shaping sessions persist under `.shipproof/shaping/` as compact JSON decision ledgers. Each session tracks decisions, assumptions, risks, unknowns, and readiness state. State transitions are validated for consistency.
-
 ### Change management
 
 ```bash
@@ -94,16 +67,6 @@ shipproof change check SP-002
 Each change captures an immutable intent snapshot with SHA-256 provenance. Change records live under `.shipproof/changes/<change-id>/`.
 
 `change status` and `change check` also report intent staleness. When the source document changes after the snapshot, the intent is stale and the change needs re-verification. Evidence packs carry an `intent:staleness` check.
-
-### Plans
-
-```bash
-shipproof plan create docs/design/delivery-plan.md
-shipproof plan review
-shipproof plan sync --linear [issues.json]
-```
-
-`plan create` snapshots a design document as a plan record under `.shipproof/plans/`. `plan review` validates every plan record, its snapshot hash, and its source staleness. `plan sync --linear` creates the Linear project and issues from a decomposed issue list after human approval. Without an explicit file, it uses the single `issues.json` under `.shipproof/plans/`.
 
 ### Verification plans
 
@@ -146,32 +109,19 @@ shipproof harness install claude
 shipproof harness install cursor
 shipproof harness install codex
 shipproof skill check
-shipproof skill eval list
-shipproof skill eval record prd-ready-stop --condition without --file result.json
-shipproof skill eval results --regression
 ```
 
-ShipProof ships with 14 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
+ShipProof ships with 6 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
 
-Skill eval runs are recorded under `benchmarks/skill-evals/` with conditions `without`, `previous`, and `candidate`. `skill eval results --regression` flags candidate runs that fail a task the baseline passed, recall fewer blockers, or raise the false blocker rate.
-
-Built-in skills cover the full delivery cycle:
+Built-in skills cover the delivery cycle:
 
 | Skill | Purpose |
 |---|---|
-| `shape-prd` | Shape a PRD through a bounded interview. |
-| `review-prd` | Review a PRD for material product-intent defects. |
-| `shape-sdd` | Shape an SDD through a bounded technical interview. |
-| `review-sdd` | Review an SDD for correctness and design gaps. |
-| `record-decision` | Create an architecture decision record. |
-| `decompose-plan` | Decompose intent into independently verifiable changes. |
 | `plan-verification` | Plan how to prove a change before implementation. |
 | `implement-change` | Implement one approved change against its verification plan, then verify it. |
 | `review-change` | Review an implemented change for correctness and agent failure patterns. |
 | `prepare-human-review` | Prepare a focused human-review packet. |
 | `produce-evidence` | Produce a versioned evidence pack from recorded facts. |
-| `benchmark-run` | Run one benchmark task from a fixed commit and record the result without exposing hidden evaluation material. |
-| `triage-change` | Assess a feature, fix, or issue and recommend the smallest useful ceremony level. |
 | `prepare-change` | Prepare the next ShipProof change from approved intent. |
 
 ### Agent execution
@@ -272,10 +222,8 @@ go build ./cmd/shipproof
 
 ```text
 .shipproof/
-  shaping/    Session state for PRD, SDD, and issue shaping.
   changes/    Change records with intent snapshots and verification plans.
   evidence/   Evidence packs with provenance labels.
-  decisions/  Architecture decision records.
   templates/  PRD and SDD reference templates.
   skills/     Canonical skill copies installed at harness time.
 ```

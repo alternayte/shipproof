@@ -16,7 +16,7 @@ func TestStartAndLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-001", src, "", DefaultCeremony)
+	record, err := Start(root, "SP-001", src, DefaultCeremony)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -51,10 +51,10 @@ func TestDuplicateStartFails(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "SP-002", src, "", DefaultCeremony); err != nil {
+	if _, err := Start(root, "SP-002", src, DefaultCeremony); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Start(root, "SP-002", src, "", DefaultCeremony); err == nil {
+	if _, err := Start(root, "SP-002", src, DefaultCeremony); err == nil {
 		t.Fatal("expected duplicate start error")
 	}
 }
@@ -68,7 +68,7 @@ func TestVerifyHashDetectsTampering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "SP-003", src, "", DefaultCeremony); err != nil {
+	if _, err := Start(root, "SP-003", src, DefaultCeremony); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +100,7 @@ func TestStartRejectsEmptyChangeID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "", src, "", DefaultCeremony); err == nil {
+	if _, err := Start(root, "", src, DefaultCeremony); err == nil {
 		t.Fatal("expected error for empty change id")
 	}
 }
@@ -109,56 +109,8 @@ func TestStartRejectsMissingSource(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
-	if _, err := Start(root, "SP-005", filepath.Join(root, "missing.md"), "", DefaultCeremony); err == nil {
+	if _, err := Start(root, "SP-005", filepath.Join(root, "missing.md"), DefaultCeremony); err == nil {
 		t.Fatal("expected error for missing source")
-	}
-}
-
-func TestStartWithShapingRef(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	src := filepath.Join(root, "test.md")
-	if err := os.WriteFile(src, []byte("content"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	record, err := Start(root, "SP-020", src, "complete-metrics", DefaultCeremony)
-	if err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
-	if record.ShapingRef != "complete-metrics" {
-		t.Fatalf("shaping_ref = %q, want %q", record.ShapingRef, "complete-metrics")
-	}
-
-	loaded, err := Load(root, "SP-020")
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if loaded.ShapingRef != "complete-metrics" {
-		t.Fatalf("loaded shaping_ref = %q, want %q", loaded.ShapingRef, "complete-metrics")
-	}
-}
-
-func TestLoadRecordWithoutShapingRef(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	src := filepath.Join(root, "test.md")
-	if err := os.WriteFile(src, []byte("content"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := Start(root, "SP-021", src, "", DefaultCeremony); err != nil {
-		t.Fatal(err)
-	}
-
-	loaded, err := Load(root, "SP-021")
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if loaded.ShapingRef != "" {
-		t.Fatalf("shaping_ref should be empty, got %q", loaded.ShapingRef)
 	}
 }
 
@@ -171,7 +123,7 @@ func TestStartRecordsCeremonyZero(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := Start(root, "SP-100", source, "", 0)
+	record, err := Start(root, "SP-100", source, 0)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -227,7 +179,7 @@ func TestStartRejectsCeremonyOutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Start(root, "SP-101", source, "", 4); err == nil {
+	if _, err := Start(root, "SP-101", source, 4); err == nil {
 		t.Fatal("expected an error for ceremony 4")
 	}
 }
@@ -240,7 +192,7 @@ func TestRestartResnapshotsAndKeepsTheCeremonyLevel(t *testing.T) {
 	if err := os.WriteFile(source, []byte("# SP-110\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	first, err := Start(root, "SP-110", source, "session-1", 2)
+	first, err := Start(root, "SP-110", source, 2)
 	if err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
@@ -249,7 +201,7 @@ func TestRestartResnapshotsAndKeepsTheCeremonyLevel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	second, err := Restart(root, "SP-110", source, "", nil)
+	second, err := Restart(root, "SP-110", source, nil)
 	if err != nil {
 		t.Fatalf("Restart() error = %v", err)
 	}
@@ -258,9 +210,6 @@ func TestRestartResnapshotsAndKeepsTheCeremonyLevel(t *testing.T) {
 	}
 	if second.CeremonyLevel() != 2 {
 		t.Fatalf("CeremonyLevel() = %d, want 2", second.CeremonyLevel())
-	}
-	if second.ShapingRef != "session-1" {
-		t.Fatalf("ShapingRef = %q, want %q", second.ShapingRef, "session-1")
 	}
 
 	staleness, err := second.Staleness(root)
@@ -280,12 +229,12 @@ func TestRestartAcceptsANewCeremonyLevel(t *testing.T) {
 	if err := os.WriteFile(source, []byte("# SP-111\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Start(root, "SP-111", source, "", 2); err != nil {
+	if _, err := Start(root, "SP-111", source, 2); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
 
 	level := 0
-	record, err := Restart(root, "SP-111", source, "", &level)
+	record, err := Restart(root, "SP-111", source, &level)
 	if err != nil {
 		t.Fatalf("Restart() error = %v", err)
 	}
@@ -302,10 +251,10 @@ func TestStartWithoutForceStillRefusesAnExistingChange(t *testing.T) {
 	if err := os.WriteFile(source, []byte("# SP-112\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Start(root, "SP-112", source, "", DefaultCeremony); err != nil {
+	if _, err := Start(root, "SP-112", source, DefaultCeremony); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
-	if _, err := Start(root, "SP-112", source, "", DefaultCeremony); err == nil {
+	if _, err := Start(root, "SP-112", source, DefaultCeremony); err == nil {
 		t.Fatal("expected a refusal for an existing change")
 	} else if !strings.Contains(err.Error(), "already exists") {
 		t.Fatalf("error = %v, want an already-exists refusal", err)

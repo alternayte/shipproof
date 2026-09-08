@@ -3,6 +3,7 @@ package repository
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -69,5 +70,26 @@ func TestInitializeWritesALoadableConfig(t *testing.T) {
 	}
 	if config.Verification.Command != "just verify" {
 		t.Fatalf("verification.command = %q, want %q", config.Verification.Command, "just verify")
+	}
+}
+
+// TestInitWritesNoLanguagePolicy covers SP-023. The STE lint is gone, so the
+// default config must hold no language policy and init must write no glossary.
+func TestInitWritesNoLanguagePolicy(t *testing.T) {
+	root := t.TempDir()
+	if _, err := Initialize(root); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, ".shipproof", "config.yaml"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if strings.Contains(string(data), "language:") {
+		t.Errorf("default config still holds a language policy:\n%s", data)
+	}
+
+	if _, err := os.Stat(filepath.Join(root, ".shipproof", "glossary.yaml")); !os.IsNotExist(err) {
+		t.Errorf("init still writes a glossary: %v", err)
 	}
 }

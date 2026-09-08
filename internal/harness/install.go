@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	skillassets "github.com/alternayte/shipproof/skills"
 )
@@ -33,7 +32,17 @@ type InstallResult struct {
 // removes them by default. A retired skill left in a harness directory still
 // answers to an agent, which is worse than the loss of a local edit to a skill
 // that no longer exists.
-var retiredSkills = []string{"verify-change"}
+var retiredSkills = []string{
+	"verify-change",
+	"shape-prd",
+	"shape-sdd",
+	"review-prd",
+	"review-sdd",
+	"decompose-plan",
+	"triage-change",
+	"record-decision",
+	"benchmark-run",
+}
 
 func ParseTarget(value string) (Target, error) {
 	switch Target(value) {
@@ -91,7 +100,7 @@ func Install(root string, target Target, force bool, keepRetired bool) (InstallR
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() || path == "README.md" || strings.HasPrefix(path, "evals/") {
+		if entry.IsDir() || path == "README.md" {
 			return nil
 		}
 		sourceFiles = append(sourceFiles, path)

@@ -41,7 +41,7 @@ func newCoverageWorkspace(t *testing.T, changeID string) string {
 	if err := os.WriteFile(source, []byte("# "+changeID+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := change.Start(root, changeID, source, "", 1); err != nil {
+	if _, err := change.Start(root, changeID, source, 1); err != nil {
 		t.Fatal(err)
 	}
 

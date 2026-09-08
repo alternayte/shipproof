@@ -25,16 +25,6 @@ verification:
   #   - "docs/**"
 evidence:
   capture: metadata
-language:
-  profile: ste-assisted
-  procedural_sentence_max_words: 20
-  descriptive_sentence_max_words: 25
-`,
-	".shipproof/glossary.yaml": `technical_names:
-  - ShipProof
-technical_verbs:
-  - verify
-  - deploy
 `,
 	".shipproof/templates/prd.md": `# <Product or feature name>
 

@@ -120,7 +120,7 @@ func newChange(t *testing.T, changeID string, ceremony int) (string, string) {
 	if err := os.WriteFile(source, []byte("# "+changeID+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := change.Start(root, changeID, source, "", ceremony); err != nil {
+	if _, err := change.Start(root, changeID, source, ceremony); err != nil {
 		t.Fatalf("change.Start() error = %v", err)
 	}
 	return root, source
@@ -437,7 +437,7 @@ func newChangeInRepo(t *testing.T, changeID string, ceremony int) (string, strin
 			t.Fatalf("git %v: %v\n%s", args, err, output)
 		}
 	}
-	if _, err := change.Start(root, changeID, source, "", ceremony); err != nil {
+	if _, err := change.Start(root, changeID, source, ceremony); err != nil {
 		t.Fatalf("change.Start() error = %v", err)
 	}
 	return root, source
@@ -465,7 +465,7 @@ func TestResolveIntentStaleNamesAWorkingCommand(t *testing.T) {
 	// The named command must succeed, or the phase traps the change.
 	fields := strings.Fields(result.NextCommand)
 	sourceArgument := filepath.Join(root, filepath.FromSlash(fields[len(fields)-2]))
-	if _, err := change.Restart(root, "SP-320", sourceArgument, "", nil); err != nil {
+	if _, err := change.Restart(root, "SP-320", sourceArgument, nil); err != nil {
 		t.Fatalf("the named command failed: %v", err)
 	}
 

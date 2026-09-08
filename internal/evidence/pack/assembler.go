@@ -17,7 +17,6 @@ import (
 	"github.com/alternayte/shipproof/internal/git"
 	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/schema"
-	"github.com/alternayte/shipproof/internal/shaping"
 	"github.com/alternayte/shipproof/internal/verification"
 )
 
@@ -158,22 +157,6 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 		})
 	}
 
-	pack.Readiness = loadReadiness(root, record)
-
-	review, err := loadReview(root, changeID)
-	if err != nil {
-		return pack, err
-	}
-	if review != nil {
-		pack.Review = review
-		pack.Verification.Checks = append(pack.Verification.Checks, schema.Check{
-			ID:         "github:review",
-			Status:     "pass",
-			Source:     "github",
-			Provenance: schema.ProvenanceObserved,
-		})
-	}
-
 	pack.Provenance = schema.PackProvenance{
 		GeneratedAt:      time.Now().UTC().Format(time.RFC3339),
 		ShipProofVersion: schema.CurrentVersion,
@@ -307,40 +290,6 @@ func loadAgentRun(root, changeID string) (*schema.AgentRunMetadata, error) {
 	}
 
 	return &run, nil
-}
-
-func loadReadiness(root string, record change.Record) *schema.ReadinessEvidence {
-	if record.ShapingRef == "" {
-		return nil
-	}
-
-	session, _, err := shaping.Load(root, record.ShapingRef)
-	if err != nil {
-		return nil
-	}
-
-	return &schema.ReadinessEvidence{
-		ShapingRef:   record.ShapingRef,
-		BlockerCount: len(session.Readiness.Blockers),
-	}
-}
-
-func loadReview(root, changeID string) (*schema.ReviewEvidence, error) {
-	reviewPath := filepath.Join(root, ".shipproof", "changes", changeID, "review.json")
-	data, err := os.ReadFile(reviewPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("read review.json: %w", err)
-	}
-
-	var review schema.ReviewEvidence
-	if err := json.Unmarshal(data, &review); err != nil {
-		return nil, fmt.Errorf("parse review.json: %w", err)
-	}
-
-	return &review, nil
 }
 
 func implementationFromGit(meta git.Metadata) schema.ImplementationEvidence {

@@ -56,9 +56,9 @@ shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md -
 shipproof change status <change-id>
 ```
 
-The `--ceremony` value sets how much proof the change needs. Use the level that
-`triage-change` recommends. Pass `--ceremony 0` for a trivial change. Level 0
-needs no verification plan. Level 1 and above need one.
+The `--ceremony` value sets how much proof the change needs. Pass `--ceremony 0`
+for a trivial change. Level 0 needs no verification plan. Level 1 and above need
+one.
 
 To refresh a stale snapshot, add `--force`:
 
@@ -175,18 +175,6 @@ Use `--output <path>` to write to a file instead of stdout.
 
 The agent reviews the implementation against the approved intent. After review, commit the implementation, change record, and evidence artifacts.
 
-## Optional — Sync to Linear
-
-When the change maps to a Linear issue or project:
-
-```bash
-shipproof linear issue <identifier>
-shipproof linear project <name>
-shipproof linear sync <plan-file>
-```
-
-Linear sync requires `LINEAR_API_KEY` and `LINEAR_TEAM_ID` environment variables.
-
 ## Which skill to use at each step
 
 | Step | Skill | CLI commands |
@@ -198,21 +186,6 @@ Linear sync requires `LINEAR_API_KEY` and `LINEAR_TEAM_ID` environment variables
 | Human review | `prepare-human-review` | `review prepare` |
 | Reports | none | `report change`, `report pr-summary`, `report project` |
 | Code review | `review-change` | none |
-| Linear sync | none | `linear issue`, `linear project`, `linear sync` |
-
-## Shaping skills
-
-Use these skills before Step 1 when the intent needs clarification:
-
-| Skill | Purpose |
-|---|---|
-| `triage-change` | Assess work and recommend a ceremony level |
-| `shape-prd` | Shape product intent through a bounded interview |
-| `shape-sdd` | Shape technical design through a bounded interview |
-| `review-prd` | Independent review of a PRD |
-| `review-sdd` | Independent review of an SDD |
-| `decompose-plan` | Break a large document into independently verifiable changes |
-| `record-decision` | Record a durable architectural decision as an ADR |
 
 ## Starting a new session
 

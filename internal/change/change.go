@@ -18,7 +18,6 @@ type Record struct {
 	SourcePath    string `json:"source_path"`
 	SnapshotPath  string `json:"snapshot_path"`
 	SHA256        string `json:"sha256"`
-	ShapingRef    string `json:"shaping_ref,omitempty"`
 	Ceremony      *int   `json:"ceremony,omitempty"`
 	CapturedAt    string `json:"captured_at"`
 }
@@ -44,15 +43,14 @@ func Path(root, changeID string) string {
 	return filepath.Join(root, ".shipproof", "changes", changeID, "change.json")
 }
 
-func Start(root, changeID, sourcePath, shapingRef string, ceremony int) (Record, error) {
-	return start(root, changeID, sourcePath, shapingRef, ceremony, false)
+func Start(root, changeID, sourcePath string, ceremony int) (Record, error) {
+	return start(root, changeID, sourcePath, ceremony, false)
 }
 
 // Restart re-snapshots the source document of an existing change and rewrites
 // the record. It exists because a stale intent has no other exit. A nil
-// ceremony keeps the level that the record already carries. An empty shaping
-// reference keeps the reference that the record already carries.
-func Restart(root, changeID, sourcePath, shapingRef string, ceremony *int) (Record, error) {
+// ceremony keeps the level that the record already carries.
+func Restart(root, changeID, sourcePath string, ceremony *int) (Record, error) {
 	level := DefaultCeremony
 	if ceremony != nil {
 		level = *ceremony
@@ -63,15 +61,12 @@ func Restart(root, changeID, sourcePath, shapingRef string, ceremony *int) (Reco
 		if ceremony == nil {
 			level = previous.CeremonyLevel()
 		}
-		if strings.TrimSpace(shapingRef) == "" {
-			shapingRef = previous.ShapingRef
-		}
 	}
 
-	return start(root, changeID, sourcePath, shapingRef, level, true)
+	return start(root, changeID, sourcePath, level, true)
 }
 
-func start(root, changeID, sourcePath, shapingRef string, ceremony int, force bool) (Record, error) {
+func start(root, changeID, sourcePath string, ceremony int, force bool) (Record, error) {
 	if ceremony < 0 || ceremony > MaxCeremony {
 		return Record{}, fmt.Errorf("ceremony must be 0 to %d; got %d", MaxCeremony, ceremony)
 	}
@@ -134,7 +129,6 @@ func start(root, changeID, sourcePath, shapingRef string, ceremony int, force bo
 		SourcePath:    relSource,
 		SnapshotPath:  relSnapshot,
 		SHA256:        hashHex,
-		ShapingRef:    strings.TrimSpace(shapingRef),
 		Ceremony:      &ceremony,
 		CapturedAt:    time.Now().UTC().Format(time.RFC3339),
 	}

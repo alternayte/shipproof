@@ -10,14 +10,15 @@ import (
 
 func runSkill(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: shipproof skill <check|eval> ...")
+		fmt.Fprintln(stderr, "usage: shipproof skill check [catalog-directory]")
 		return 2
 	}
 	if args[0] == "eval" {
-		return runSkillEval(args[1:], stdout, stderr)
+		fmt.Fprintln(stderr, "shipproof skill eval is gone. Skill evals are not a ShipProof feature.")
+		return 2
 	}
 	if args[0] != "check" {
-		fmt.Fprintln(stderr, "usage: shipproof skill <check|eval> ...")
+		fmt.Fprintln(stderr, "usage: shipproof skill check [catalog-directory]")
 		return 2
 	}
 	path := "skills"

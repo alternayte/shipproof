@@ -30,12 +30,12 @@ func runChange(args []string, stdout, stderr io.Writer) int {
 
 func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	if len(args) < 1 {
-		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--shaping <session-id>] [--ceremony 0|1|2|3] [--force]")
+		fmt.Fprintln(stderr, "usage: shipproof change start <change-id> --source <path> [--ceremony 0|1|2|3] [--force]")
 		return 2
 	}
 
 	changeID := args[0]
-	var source, shapingRef string
+	var source string
 	var ceremony *int
 	force := false
 	for index := 1; index < len(args); index++ {
@@ -46,13 +46,6 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 				return 2
 			}
 			source = args[index+1]
-			index++
-		case "--shaping":
-			if index+1 >= len(args) {
-				fmt.Fprintln(stderr, "--shaping requires a session id")
-				return 2
-			}
-			shapingRef = args[index+1]
 			index++
 		case "--ceremony":
 			if index+1 >= len(args) {
@@ -91,13 +84,13 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 
 	var record change.Record
 	if force {
-		record, err = change.Restart(root, changeID, source, shapingRef, ceremony)
+		record, err = change.Restart(root, changeID, source, ceremony)
 	} else {
 		level := change.DefaultCeremony
 		if ceremony != nil {
 			level = *ceremony
 		}
-		record, err = change.Start(root, changeID, source, shapingRef, level)
+		record, err = change.Start(root, changeID, source, level)
 	}
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -109,9 +102,6 @@ func runChangeStart(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Source: %s\n", record.SourcePath)
 	fmt.Fprintf(stdout, "Snapshot: %s\n", record.SnapshotPath)
 	fmt.Fprintf(stdout, "SHA-256: %s\n", record.SHA256)
-	if record.ShapingRef != "" {
-		fmt.Fprintf(stdout, "Shaping: %s\n", record.ShapingRef)
-	}
 	fmt.Fprintf(stdout, "Ceremony: %d\n", record.CeremonyLevel())
 	fmt.Fprintf(stdout, "Captured: %s\n", record.CapturedAt)
 	fmt.Fprintf(stdout, "Record: %s\n", filepath.ToSlash(rel))
@@ -146,9 +136,6 @@ func runChangeStatus(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Source: %s\n", record.SourcePath)
 	fmt.Fprintf(stdout, "Snapshot: %s\n", record.SnapshotPath)
 	fmt.Fprintf(stdout, "SHA-256: %s\n", record.SHA256)
-	if record.ShapingRef != "" {
-		fmt.Fprintf(stdout, "Shaping: %s\n", record.ShapingRef)
-	}
 	fmt.Fprintf(stdout, "Captured: %s\n", record.CapturedAt)
 	fmt.Fprintf(stdout, "Verification plan: %s\n", planStatus)
 
