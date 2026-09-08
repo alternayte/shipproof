@@ -5,11 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/alternayte/shipproof/internal/coverage"
 	"github.com/alternayte/shipproof/internal/phase"
 	"github.com/alternayte/shipproof/internal/requirements"
+	"github.com/alternayte/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/verdict"
 	"github.com/alternayte/shipproof/internal/verification"
 )
 
@@ -66,11 +70,22 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 	// phase and a blocker, and those answer the user's question.
 	matrix, matrixErr := readCoverage(root, changeID)
 
+	// The verdict is the whole answer for a reader with no ShipProof
+	// knowledge. It states the outcome, the counts, and one next command.
+	block := verdict.Decide(verdict.Input{
+		ChangeID:    changeID,
+		Phase:       result,
+		Matrix:      matrix,
+		HasMatrix:   matrixErr == nil,
+		Unexplained: readUnexplainedCount(root, changeID),
+	})
+
 	if asJSON {
 		payload := struct {
+			Verdict verdict.Block `json:"verdict"`
 			phase.Result
 			Coverage *coverage.Matrix `json:"coverage,omitempty"`
-		}{Result: result}
+		}{Verdict: block, Result: result}
 		if matrixErr == nil {
 			payload.Coverage = &matrix
 		}
@@ -83,6 +98,8 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
+	fmt.Fprint(stdout, block.String())
+	fmt.Fprintln(stdout)
 	fmt.Fprintf(stdout, "change    %s\n", result.ChangeID)
 	fmt.Fprintf(stdout, "phase     %s\n", result.Phase)
 	if result.Blocker != "" {
@@ -129,6 +146,34 @@ func readCoverage(root, changeID string) (coverage.Matrix, error) {
 		return coverage.Matrix{}, err
 	}
 	return coverage.Read(root, changeID, plan)
+}
+
+// readUnexplainedCount reports the number of changed lines that match no
+// requirement. Only a written pack holds that measurement. A missing pack, an
+// unreadable pack, or a pack with no coverage returns nil. A nil count means
+// not known. It never means zero.
+func readUnexplainedCount(root, changeID string) *int {
+	path := filepath.Join(root, ".shipproof", "changes", changeID, "evidence-pack.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var pack schema.EvidencePack
+	if err := json.Unmarshal(data, &pack); err != nil {
+		return nil
+	}
+	if pack.UnexplainedChange == nil || !pack.UnexplainedChange.CoverageAvailable {
+		return nil
+	}
+	total := 0
+	for _, finding := range pack.UnexplainedChange.LineFindings {
+		span := finding.EndLine - finding.StartLine + 1
+		if span < 1 {
+			span = 1
+		}
+		total += span
+	}
+	return &total
 }
 
 // errNoRequirementSet reports a change that holds no requirement set. It is a
