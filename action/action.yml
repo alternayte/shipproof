@@ -93,6 +93,11 @@ runs:
 
     # Section 10. Keyless Sigstore signs the canonical payload. Decision D2
     # makes the build system the only signer.
+    # cosign-installer stays at v3 on purpose. Its v4 installs cosign v3,
+    # where `sign-blob` requires a --bundle flag and writes a bundle instead
+    # of a separate signature and certificate. That would change the signing
+    # flow below, and v3 was never a Node 20 action, so the deprecation does
+    # not force the move. Take that upgrade on its own, with its own proof.
     - name: Install cosign
       if: inputs.sign == 'true' && steps.pack.outputs.found == 'true'
       uses: sigstore/cosign-installer@v3
@@ -123,7 +128,7 @@ runs:
     # Step 3 of Section 9.1. Upload the pack as a build artifact.
     - name: Upload the evidence pack
       if: steps.pack.outputs.found == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: shipproof-evidence-pack
         path: ${{ steps.pack.outputs.pack-path }}

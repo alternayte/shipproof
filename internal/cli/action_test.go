@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -66,5 +67,55 @@ func TestTheActionNamesNoCutCommand(t *testing.T) {
 		if strings.Contains(body, word) {
 			t.Fatalf("the action names the removed reference %q", word)
 		}
+	}
+}
+
+// TestNoActionTargetsNodeTwenty keeps the workflows off a deprecated runtime.
+// GitHub forces a Node 20 action onto Node 24 today and will stop doing so.
+var nodeTwentyMajors = map[string]string{
+	"actions/checkout":             "v7",
+	"actions/setup-go":             "v7",
+	"actions/upload-artifact":      "v7",
+	"goreleaser/goreleaser-action": "v7",
+}
+
+func TestNoActionTargetsNodeTwenty(t *testing.T) {
+	files := []string{
+		filepath.Join("..", "..", ".github", "workflows", "ci.yml"),
+		filepath.Join("..", "..", ".github", "workflows", "release.yml"),
+		filepath.Join("..", "..", ".github", "workflows", "evidence.yml"),
+		filepath.Join("..", "..", "action", "action.yml"),
+	}
+	pattern := regexp.MustCompile(`uses:\s+([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)@(v\d+)`)
+
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, match := range pattern.FindAllStringSubmatch(string(data), -1) {
+			want, tracked := nodeTwentyMajors[match[1]]
+			if !tracked {
+				continue
+			}
+			if match[2] != want {
+				t.Errorf("%s pins %s@%s, and %s runs on a supported runtime",
+					filepath.Base(file), match[1], match[2], want)
+			}
+		}
+	}
+}
+
+// TestCosignInstallerStaysOnV3 records a deliberate exclusion. Its v4 installs
+// cosign v3, where `sign-blob` needs a --bundle flag and writes a bundle
+// instead of a separate signature and certificate. That upgrade changes the
+// signing flow and needs its own proof.
+func TestCosignInstallerStaysOnV3(t *testing.T) {
+	body := readAction(t)
+	if !strings.Contains(body, "sigstore/cosign-installer@v3") {
+		t.Fatal("the cosign installer moved without a change document")
+	}
+	if !strings.Contains(body, "--bundle flag") {
+		t.Fatal("the action does not record why the installer stays on v3")
 	}
 }
