@@ -1,0 +1,15 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-1",
+  "adopter": "foreign",
+  "source_path": "intent.md",
+  "requirements": [
+    {
+      "id": "SP-1-R1",
+      "statement": "MUST reject a request when the caller is over the configured limit.",
+      "source_anchor": "- MUST reject a request when the caller is over the configured limit.",
+      "provenance": "human",
+      "confirmed_at": "2026-09-08T22:10:29Z"
+    }
+  ]
+}

@@ -23,6 +23,12 @@ jobs:
           # ShipProof has no third-party dependency, so there is no go.sum
           # to key a module cache on.
           cache: false
+      # Row P2 of the definition of done: a workflow run on a sample
+      # repository uploads a pack artifact. ShipProof itself holds only the
+      # historical changes of SP-001 to SP-020, and AGENTS.md pauses the
+      # self-hosted workflow, so the sample project is the subject.
       - uses: ./action
         with:
           version: source
+          working-directory: examples/sample-project
+          change-id: SP-1

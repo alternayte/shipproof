@@ -1,0 +1,11 @@
+version: 1
+schema_version: "0.1"
+verification:
+  command: go test ./...
+  # coverage:
+  #   command: go test -coverpkg=./... -coverprofile={{profile}} ./{{target}}/
+  #   format: go
+  # unexplained_ignore:
+  #   - "docs/**"
+evidence:
+  capture: metadata

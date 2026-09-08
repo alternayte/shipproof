@@ -19,8 +19,15 @@ inputs:
     description: Post one comment on the pull request.
     required: false
     default: "true"
+  working-directory:
+    description: The directory that holds the .shipproof state. It defaults to the repository root.
+    required: false
+    default: "."
 
 outputs:
+  found:
+    description: Whether an open change existed. It is "false" when the action had nothing to pack.
+    value: ${{ steps.pack.outputs.found }}
   verdict:
     description: The verdict word. It is PROVEN, NOT PROVEN, or FAILED.
     value: ${{ steps.pack.outputs.verdict }}
@@ -49,33 +56,53 @@ runs:
     - name: Build the evidence pack
       id: pack
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        BASE="$(git merge-base "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}")"
-        HEAD="${{ github.event.pull_request.head.sha }}"
         CHANGE="${{ inputs.change-id }}"
 
+        # A repository with no open change has nothing to prove. Say so and
+        # stop. A red build with no cause is worse than no build.
+        if [ ! -d .shipproof/changes ] || [ -z "$(ls -A .shipproof/changes 2>/dev/null)" ]; then
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::No ShipProof change exists here. Run \`shipproof start\` to open one."
+          exit 0
+        fi
+        if [ -z "$CHANGE" ] && [ "$(ls -1 .shipproof/changes | wc -l)" -gt 1 ]; then
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::Several changes are open. Pass change-id to name the one to pack."
+          exit 0
+        fi
+        echo "found=true" >> "$GITHUB_OUTPUT"
+
+        BASE="$(git merge-base "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}")"
+        HEAD="${{ github.event.pull_request.head.sha }}"
+
+        # A failure here is real: the change exists and the pack could not be
+        # built. Rule 1 of Section 7 makes a missing pack a defect, never a
+        # silent skip.
         shipproof pack $CHANGE --base "$BASE" --head "$HEAD"
 
         PACK="$(ls .shipproof/changes/*/evidence-pack.json | head -1)"
-        echo "pack-path=$PACK" >> "$GITHUB_OUTPUT"
+        echo "pack-path=${{ inputs.working-directory }}/$PACK" >> "$GITHUB_OUTPUT"
+        echo "local-pack=$PACK" >> "$GITHUB_OUTPUT"
         echo "base=$BASE" >> "$GITHUB_OUTPUT"
         echo "head=$HEAD" >> "$GITHUB_OUTPUT"
-        # The verdict word is the first line of the block, without its label.
         VERDICT="$(python3 -c "import json,sys;print(json.load(open('$PACK'))['verdict']['verdict'])")"
         echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
 
     # Section 10. Keyless Sigstore signs the canonical payload. Decision D2
     # makes the build system the only signer.
     - name: Install cosign
-      if: inputs.sign == 'true'
+      if: inputs.sign == 'true' && steps.pack.outputs.found == 'true'
       uses: sigstore/cosign-installer@v3
 
     - name: Sign the evidence pack
-      if: inputs.sign == 'true'
+      if: inputs.sign == 'true' && steps.pack.outputs.found == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
-        PACK: ${{ steps.pack.outputs.pack-path }}
+        PACK: ${{ steps.pack.outputs.local-pack }}
         HEAD: ${{ steps.pack.outputs.head }}
       run: |
         set -euo pipefail
@@ -95,6 +122,7 @@ runs:
 
     # Step 3 of Section 9.1. Upload the pack as a build artifact.
     - name: Upload the evidence pack
+      if: steps.pack.outputs.found == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: shipproof-evidence-pack
@@ -103,11 +131,12 @@ runs:
 
     # Step 4 of Section 9.1. Post one comment with the verdict block.
     - name: Post the verdict comment
-      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      if: inputs.comment == 'true' && github.event_name == 'pull_request' && steps.pack.outputs.found == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         GH_TOKEN: ${{ github.token }}
-        PACK: ${{ steps.pack.outputs.pack-path }}
+        PACK: ${{ steps.pack.outputs.local-pack }}
       run: |
         set -euo pipefail
         shipproof pack --comment "$PACK" > "$RUNNER_TEMP/comment.md"
