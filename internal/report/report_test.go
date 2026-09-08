@@ -113,11 +113,11 @@ func TestChangeReportRendersVerification(t *testing.T) {
 	if !strings.Contains(html, "observed") {
 		t.Error("output should contain observed badge")
 	}
-	if !strings.Contains(html, "inferred") {
-		t.Error("output should contain inferred badge")
+	if !strings.Contains(html, "claimed") {
+		t.Error("output should contain claimed badge")
 	}
-	if !strings.Contains(html, "human") {
-		t.Error("output should contain human badge")
+	if !strings.Contains(html, "stated") {
+		t.Error("output should contain stated badge")
 	}
 }
 
@@ -249,6 +249,9 @@ func TestHTMLWellFormed(t *testing.T) {
 	}
 }
 
+// TestProvenanceBadges asserts the three grades of Section 6. The four old
+// classes are gone. A derived label and an inferred label both render as
+// claimed, and a human label renders as stated.
 func TestProvenanceBadges(t *testing.T) {
 	root, ev := setupReportTest(t, "SP-T12")
 	defer os.RemoveAll(root)
@@ -269,17 +272,15 @@ func TestProvenanceBadges(t *testing.T) {
 	}
 
 	html := sb.String()
-	if !strings.Contains(html, "prov-observed") {
-		t.Error("HTML should contain prov-observed class")
+	for _, class := range []string{"prov-observed", "prov-stated", "prov-claimed"} {
+		if !strings.Contains(html, class) {
+			t.Errorf("HTML should contain the %s class", class)
+		}
 	}
-	if !strings.Contains(html, "prov-derived") {
-		t.Error("HTML should contain prov-derived class")
-	}
-	if !strings.Contains(html, "prov-inferred") {
-		t.Error("HTML should contain prov-inferred class")
-	}
-	if !strings.Contains(html, "prov-human") {
-		t.Error("HTML should contain prov-human class")
+	for _, class := range []string{"prov-derived", "prov-inferred", "prov-human"} {
+		if strings.Contains(html, class) {
+			t.Errorf("HTML must not contain the old %s class", class)
+		}
 	}
 }
 

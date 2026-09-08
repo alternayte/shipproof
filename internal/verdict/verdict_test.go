@@ -6,6 +6,7 @@ import (
 
 	"github.com/alternayte/shipproof/internal/coverage"
 	"github.com/alternayte/shipproof/internal/phase"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func provenMatrix() coverage.Matrix {
@@ -176,5 +177,70 @@ func TestEveryPhaseProducesANextCommand(t *testing.T) {
 		if !strings.Contains(block.Next, "shipproof ") {
 			t.Fatalf("phase %s produced next %q", name, block.Next)
 		}
+	}
+}
+
+// TestAClaimedCheckNeverProvesARequirement is the proof for row H2 of the
+// definition of done.
+func TestAClaimedCheckNeverProvesARequirement(t *testing.T) {
+	matrix := coverage.Matrix{
+		ChangeID:   "SP-030",
+		RunCurrent: true,
+		Rows: []coverage.Row{
+			{RequirementID: "R1", State: coverage.Proven, Provenance: coverage.Observed},
+			{RequirementID: "R2", State: coverage.Unproven, Provenance: coverage.Unknown},
+		},
+	}
+	for _, label := range []schema.ProvenanceKind{schema.ProvenanceDerived, schema.ProvenanceInferred, "guessed"} {
+		block := Decide(Input{
+			ChangeID:  "SP-030",
+			Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.ReadyForHuman},
+			Matrix:    matrix,
+			HasMatrix: true,
+			Checks: []schema.Check{
+				{ID: "R2", Status: "pass", Source: "agent", Provenance: label},
+			},
+			Unexplained: zero(),
+		})
+		if block.Verdict != NotProven {
+			t.Fatalf("a %q check produced %q, want %q", label, block.Verdict, NotProven)
+		}
+		if !strings.Contains(block.Reason, "1 of 2 requirements have no proof") {
+			t.Fatalf("reason = %q", block.Reason)
+		}
+	}
+}
+
+func TestAFailedObservedCheckFails(t *testing.T) {
+	block := Decide(Input{
+		ChangeID:  "SP-030",
+		Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.ReadyForHuman},
+		Matrix:    provenMatrix(),
+		HasMatrix: true,
+		Checks: []schema.Check{
+			{ID: "gofmt", Status: "fail", Source: "junit", Provenance: schema.ProvenanceObserved},
+		},
+		Unexplained: zero(),
+	})
+	if block.Verdict != Failed {
+		t.Fatalf("verdict = %q, want %q", block.Verdict, Failed)
+	}
+}
+
+// TestAFailedClaimedCheckDoesNotFail holds the other half of the rule. An
+// agent claim is not evidence in either direction.
+func TestAFailedClaimedCheckDoesNotFail(t *testing.T) {
+	block := Decide(Input{
+		ChangeID:  "SP-030",
+		Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.ReadyForHuman},
+		Matrix:    provenMatrix(),
+		HasMatrix: true,
+		Checks: []schema.Check{
+			{ID: "review", Status: "fail", Source: "agent", Provenance: schema.ProvenanceInferred},
+		},
+		Unexplained: zero(),
+	})
+	if block.Verdict != Proven {
+		t.Fatalf("verdict = %q, want %q; reason %q", block.Verdict, Proven, block.Reason)
 	}
 }

@@ -72,12 +72,14 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 
 	// The verdict is the whole answer for a reader with no ShipProof
 	// knowledge. It states the outcome, the counts, and one next command.
+	pack, hasPack := readEvidencePack(root, changeID)
 	block := verdict.Decide(verdict.Input{
 		ChangeID:    changeID,
 		Phase:       result,
 		Matrix:      matrix,
 		HasMatrix:   matrixErr == nil,
-		Unexplained: readUnexplainedCount(root, changeID),
+		Unexplained: unexplainedCount(pack, hasPack),
+		Checks:      pack.Verification.Checks,
 	})
 
 	if asJSON {
@@ -148,21 +150,28 @@ func readCoverage(root, changeID string) (coverage.Matrix, error) {
 	return coverage.Read(root, changeID, plan)
 }
 
-// readUnexplainedCount reports the number of changed lines that match no
-// requirement. Only a written pack holds that measurement. A missing pack, an
-// unreadable pack, or a pack with no coverage returns nil. A nil count means
-// not known. It never means zero.
-func readUnexplainedCount(root, changeID string) *int {
+// readEvidencePack loads the written pack for one change. A missing pack and
+// an unreadable pack both report false. The caller must not read the value
+// when the second result is false.
+func readEvidencePack(root, changeID string) (schema.EvidencePack, bool) {
 	path := filepath.Join(root, ".shipproof", "changes", changeID, "evidence-pack.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return schema.EvidencePack{}, false
 	}
 	var pack schema.EvidencePack
 	if err := json.Unmarshal(data, &pack); err != nil {
-		return nil
+		return schema.EvidencePack{}, false
 	}
-	if pack.UnexplainedChange == nil || !pack.UnexplainedChange.CoverageAvailable {
+	return pack, true
+}
+
+// unexplainedCount reports the number of changed lines that match no
+// requirement. Only a written pack holds that measurement. A missing pack, or
+// a pack that the coverage command never reached, returns nil. A nil count
+// means not known. It never means zero.
+func unexplainedCount(pack schema.EvidencePack, hasPack bool) *int {
+	if !hasPack || pack.UnexplainedChange == nil || !pack.UnexplainedChange.CoverageAvailable {
 		return nil
 	}
 	total := 0

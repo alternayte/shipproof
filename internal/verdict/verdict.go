@@ -12,7 +12,9 @@ import (
 	"strings"
 
 	"github.com/alternayte/shipproof/internal/coverage"
+	"github.com/alternayte/shipproof/internal/grade"
 	"github.com/alternayte/shipproof/internal/phase"
+	"github.com/alternayte/shipproof/internal/schema"
 )
 
 // Verdict names the outcome. Only these three values exist. No score exists.
@@ -64,6 +66,11 @@ type Input struct {
 	// A nil value means that no tool measured the count. A nil value is not a
 	// zero, and it never produces PROVEN.
 	Unexplained *int
+	// Checks holds the recorded checks. Only an observed check and a stated
+	// check carry weight. A claimed check never proves a requirement, and it
+	// never fails one either. An agent claim is not evidence in either
+	// direction.
+	Checks []schema.Check
 }
 
 // Block is the three-line answer.
@@ -86,7 +93,7 @@ func Decide(input Input) Block {
 	next := nextAction(input, counts)
 
 	switch {
-	case input.Phase.Phase == phase.RunFailed || counts.failed > 0:
+	case input.Phase.Phase == phase.RunFailed || counts.failed > 0 || failedChecks(input) > 0:
 		return Block{Verdict: Failed, Reason: failReason(input, counts), Next: next}
 	case input.HasMatrix && counts.total > 0 && counts.settled == counts.total &&
 		input.Unexplained != nil && *input.Unexplained == 0:
@@ -128,7 +135,27 @@ func provenReason(counts tally) string {
 		plural(counts.total, "requirement"))
 }
 
+// failedChecks counts the checks that a tool ran and that failed. A claimed
+// check is excluded, because nothing confirmed it.
+func failedChecks(input Input) int {
+	total := 0
+	for _, check := range input.Checks {
+		if check.Status != "fail" {
+			continue
+		}
+		if !grade.FromProvenance(check.Provenance).Proves() {
+			continue
+		}
+		total++
+	}
+	return total
+}
+
 func failReason(input Input, counts tally) string {
+	if failed := failedChecks(input); counts.failed == 0 && failed > 0 {
+		return fmt.Sprintf("%s failed. %s",
+			capitalize(plural(failed, "check")), lineSentence(input))
+	}
 	if counts.failed > 0 {
 		return fmt.Sprintf("%s failed a proof. %s",
 			capitalize(plural(counts.failed, "requirement")), lineSentence(input))

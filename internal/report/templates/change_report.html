@@ -17,11 +17,11 @@
   th { text-align: left; padding: 0.5rem 0.75rem; background: #f1f5f9; border-bottom: 2px solid #e2e8f0; font-weight: 600; }
   td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f5f9; }
   tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: #e2e8f0; color: #334155; }
   .prov-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
   .prov-observed { background: #dcfce7; color: #166534; }
-  .prov-derived { background: #dbeafe; color: #1e40af; }
-  .prov-inferred { background: #fef9c3; color: #854d0e; }
-  .prov-human { background: #f3e8ff; color: #6b21a8; }
+  .prov-stated { background: #f3e8ff; color: #6b21a8; }
+  .prov-claimed { background: #fef9c3; color: #854d0e; }
   .status-pass { color: #166534; }
   .status-fail { color: #991b1b; font-weight: 600; }
   .status-skip { color: #92400e; }
@@ -137,12 +137,12 @@
   {{else}}
   <p class="nodata">No coverage command is configured. ShipProof cannot see inside a file.</p>
   {{end}}
-  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof names these files (derived)</h3>
+  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof names these files (claimed)</h3>
   <table>
   <thead><tr><th>File</th></tr></thead>
   <tbody>
   {{range .Unexplained.FileFindings}}
-    <tr><td><code>{{.Path}}</code>{{if .IgnorePattern}} <span class="prov-badge prov-derived">ignored: {{.IgnorePattern}}</span>{{end}}</td></tr>
+    <tr><td><code>{{.Path}}</code>{{if .IgnorePattern}} <span class="tag">ignored: {{.IgnorePattern}}</span>{{end}}</td></tr>
   {{end}}
   </tbody>
   </table>
@@ -161,7 +161,7 @@
   </div>
   <table>
   <thead>
-    <tr><th>Check</th><th>Status</th><th>Source</th><th>Provenance</th></tr>
+    <tr><th>Check</th><th>Status</th><th>Source</th><th>Grade</th></tr>
   </thead>
   <tbody>
   {{range .Verify.Checks}}
@@ -174,6 +174,7 @@
   {{end}}
   </tbody>
   </table>
+  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">A tool ran an observed check. A person signed a stated check. Nothing confirmed a claimed check, so a claimed check never proves a requirement.</p>
   {{else}}
   <p class="nodata">No verification checks recorded.</p>
   {{end}}

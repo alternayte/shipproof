@@ -5,26 +5,18 @@ import (
 	"html/template"
 	"strings"
 
+	"github.com/alternayte/shipproof/internal/grade"
 	"github.com/alternayte/shipproof/internal/schema"
 )
 
 func provenanceBadge(kind schema.ProvenanceKind) template.HTML {
-	switch kind {
-	case schema.ProvenanceObserved:
-		return `<span class="prov-badge prov-observed">observed</span>`
-	case schema.ProvenanceDerived:
-		return `<span class="prov-badge prov-derived">derived</span>`
-	case schema.ProvenanceInferred:
-		return `<span class="prov-badge prov-inferred">inferred</span>`
-	case schema.ProvenanceHuman:
-		return `<span class="prov-badge prov-human">human</span>`
-	default:
-		return template.HTML(`<span class="prov-badge">` + htmlEscape(string(kind)) + `</span>`)
-	}
+	value := grade.FromProvenance(kind)
+	return template.HTML(`<span class="prov-badge prov-` + string(value) + `">` +
+		string(value) + `</span>`)
 }
 
 func provenanceLabel(kind schema.ProvenanceKind) string {
-	return "[" + string(kind) + "]"
+	return "[" + string(grade.FromProvenance(kind)) + "]"
 }
 
 func statusClass(status string) string {
