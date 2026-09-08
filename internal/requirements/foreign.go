@@ -3,9 +3,11 @@ package requirements
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -15,12 +17,17 @@ import (
 // person confirmed. ShipProof never records a model extraction as a fact.
 var ErrUnconfirmed = errors.New("a foreign requirement set needs a human confirmation")
 
-// foreignHeading matches a markdown heading of level two or deeper. A level
-// one heading is the document title, not a requirement.
-var foreignHeading = regexp.MustCompile(`^(#{2,6})\s+(.+?)\s*$`)
-
-// foreignObligation matches a list item that states an obligation.
-var foreignObligation = regexp.MustCompile(`^\s*[-*]\s+((?:MUST|SHALL)\b.*)$`)
+// foreignObligation is the one documented pattern of decision D3. It matches a
+// list item that states an obligation with MUST or SHALL.
+//
+// A specification tool often labels the item, as in `- **FR-001**: The system
+// MUST reject the request`. The label is an identifier, not the obligation, so
+// the pattern drops it and keeps the sentence.
+//
+// A heading is not an obligation. `## Why` and `## What Changes` are section
+// titles, and proposing them as requirements would give a reader noise to
+// prune rather than a set to judge.
+var foreignObligation = regexp.MustCompile(`^\s*[-*]\s+(?:\*\*[^*]+\*\*:?\s*)?(.*\b(?:MUST|SHALL)\b.*)$`)
 
 // IsNative reports whether the native adopter can read a document. A caller
 // uses it to choose an adopter before it asks a person for anything.
@@ -67,12 +74,11 @@ func ProposeForeign(changeID, sourcePath string, body []byte) (Set, error) {
 			continue
 		}
 
-		statement := ""
-		if match := foreignHeading.FindStringSubmatch(line); match != nil {
-			statement = strings.TrimSpace(match[2])
-		} else if match := foreignObligation.FindStringSubmatch(line); match != nil {
-			statement = strings.TrimSpace(match[1])
+		match := foreignObligation.FindStringSubmatch(line)
+		if match == nil {
+			continue
 		}
+		statement := strings.TrimSpace(match[1])
 		if statement == "" {
 			continue
 		}
@@ -88,7 +94,7 @@ func ProposeForeign(changeID, sourcePath string, body []byte) (Set, error) {
 		return Set{}, fmt.Errorf("read document: %w", err)
 	}
 	if len(set.Requirements) == 0 {
-		return Set{}, errors.New("the document holds no candidate requirement")
+		return Set{}, errors.New("the document states no obligation with MUST or SHALL")
 	}
 	if err := set.Validate(); err != nil {
 		return Set{}, err
@@ -120,4 +126,57 @@ func (set Set) Confirm(now time.Time) Set {
 		}
 	}
 	return stamped
+}
+
+// ProposalPath returns the location of a standing requirement proposal. A
+// proposal lives beside the sidecar and never replaces it. A reader can open
+// the file and judge what a person is about to confirm.
+func ProposalPath(root, changeID string) string {
+	return filepath.Join(root, ".shipproof", "changes", changeID, "requirements-proposal.json")
+}
+
+// SaveProposal writes a standing proposal. It refuses a set that needs no
+// confirmation, because such a set belongs in the sidecar.
+func SaveProposal(root string, set Set) (string, error) {
+	if err := set.Validate(); err != nil {
+		return "", err
+	}
+	if !set.RequiresConfirmation() {
+		return "", errors.New("this set needs no confirmation; write it to the sidecar")
+	}
+	path := ProposalPath(root, set.ChangeID)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", fmt.Errorf("create change directory: %w", err)
+	}
+	data, err := json.MarshalIndent(set, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+		return "", fmt.Errorf("write the proposal: %w", err)
+	}
+	return path, nil
+}
+
+// LoadProposal reads the standing proposal for one change.
+func LoadProposal(root, changeID string) (Set, error) {
+	data, err := os.ReadFile(ProposalPath(root, changeID))
+	if err != nil {
+		return Set{}, err
+	}
+	var set Set
+	if err := json.Unmarshal(data, &set); err != nil {
+		return Set{}, fmt.Errorf("read the proposal: %w", err)
+	}
+	return set, nil
+}
+
+// ClearProposal removes a standing proposal. A confirmed proposal has become
+// the sidecar, so leaving it would let a reader confirm the same work twice.
+func ClearProposal(root, changeID string) error {
+	err := os.Remove(ProposalPath(root, changeID))
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }

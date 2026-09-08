@@ -13,4 +13,4 @@ The gateway returns a transient error.
 
 ### Record every attempt
 
-Write one row per attempt.
+- **FR-003**: The gateway SHALL write one row per attempt.

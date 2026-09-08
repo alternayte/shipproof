@@ -11,9 +11,11 @@ import (
 	"github.com/alternayte/shipproof/internal/attest"
 	"github.com/alternayte/shipproof/internal/change"
 	"github.com/alternayte/shipproof/internal/evidence/pack"
+	"github.com/alternayte/shipproof/internal/proofs"
 	"github.com/alternayte/shipproof/internal/report"
 	"github.com/alternayte/shipproof/internal/schema"
 	"github.com/alternayte/shipproof/internal/telemetry"
+	"github.com/alternayte/shipproof/internal/verify"
 )
 
 // runPack collects the agent telemetry, assembles the evidence pack, and
@@ -21,6 +23,7 @@ import (
 // `telemetry collect`, and `report change` verbs.
 func runPack(args []string, stdout, stderr io.Writer) int {
 	const usage = "usage: shipproof pack [change-id] [--base <rev>] [--head <rev>] [--adapter <claude|opencode>] [--output <path>]\n" +
+		"       shipproof pack [change-id] [--no-prove]\n" +
 		"       shipproof pack --verify <file>\n" +
 		"       shipproof pack --payload <file>\n" +
 		"       shipproof pack --comment <file>\n" +
@@ -51,6 +54,7 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 	changeID := ""
 	adapter := ""
 	output := ""
+	noProve := false
 	opts := pack.Options{Warn: stderr}
 
 	for index := 0; index < len(args); index++ {
@@ -76,6 +80,8 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 			}
 			index++
 			adapter = args[index]
+		case "--no-prove":
+			noProve = true
 		case "--output":
 			if index+1 >= len(args) {
 				fmt.Fprintln(stderr, "--output requires a path")
@@ -128,6 +134,20 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		fmt.Fprintf(stdout, "Agent record: .shipproof/runs/%s/agent-run.json\n", changeID)
+	}
+
+	// Section 4. `pack` runs `prove` when no fresh result exists, so a user
+	// reaches a full result with `start` and then `pack`. A stale result is
+	// no result: it describes a tree that no longer stands.
+	if !noProve && !freshProofResult(root, changeID) {
+		fmt.Fprintln(stdout, "Proofs: no fresh result exists, so pack runs prove first.")
+		// A failing `prove` is a state that the pack must report, not a
+		// reason to produce nothing. An unplanned requirement and a failing
+		// proof both belong in the verdict. Rule 1 of Section 7 makes a pack
+		// complete or absent, and a pack that says NOT PROVEN is complete.
+		if code := runProve([]string{changeID}, stdout, stderr); code != 0 {
+			fmt.Fprintln(stdout, "Proofs: prove reported a problem. The pack records it below.")
+		}
 	}
 
 	assembled, err := pack.Assemble(root, changeID, opts)
@@ -227,4 +247,22 @@ func runPackVerify(path string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// freshProofResult reports whether a recorded proof result describes the
+// working tree. An absent result and a stale result both read false, because
+// neither judges the code that now stands.
+func freshProofResult(root, changeID string) bool {
+	if !proofs.Exists(root, changeID) {
+		return false
+	}
+	recorded, err := proofs.Load(root, changeID)
+	if err != nil {
+		return false
+	}
+	if strings.TrimSpace(recorded.HeadRev) == "" {
+		return false
+	}
+	current, _ := verify.IsCurrent(root, verify.Result{HeadRev: recorded.HeadRev, TreeClean: recorded.TreeClean})
+	return current
 }

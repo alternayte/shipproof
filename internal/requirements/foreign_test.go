@@ -57,11 +57,11 @@ func TestProposeForeignExtractsCandidates(t *testing.T) {
 		t.Fatalf("Adopter = %q, want %q", set.Adopter, AdopterForeign)
 	}
 
+	// Decision D3 fixes one documented pattern: a list item that states an
+	// obligation. A heading is a section title, not an obligation.
 	want := []string{
-		"Retry a failed charge",
-		"Cap the retry count",
 		"MUST stop after five attempts.",
-		"Record every attempt",
+		"The gateway SHALL write one row per attempt.",
 	}
 	if len(set.Requirements) != len(want) {
 		t.Fatalf("Requirements = %d, want %d: %+v", len(set.Requirements), len(want), set.Requirements)
@@ -84,18 +84,21 @@ func TestProposeForeignExtractsCandidates(t *testing.T) {
 	}
 }
 
-func TestProposeForeignSkipsTheTitleHeading(t *testing.T) {
+// TestProposeForeignSkipsAHeading holds decision D3. A heading names a section,
+// and a reader must never be asked to confirm a section title as a
+// requirement.
+func TestProposeForeignSkipsAHeading(t *testing.T) {
 	t.Parallel()
 
-	body := []byte("# Title\n\n## Only requirement\n")
+	body := []byte("# Title\n\n## Why\n\n## What Changes\n\n- MUST reject a burst.\n")
 	set, err := ProposeForeign("SP-050", "x.md", body)
 	if err != nil {
 		t.Fatalf("ProposeForeign() error = %v", err)
 	}
 	if len(set.Requirements) != 1 {
-		t.Fatalf("Requirements = %d, want 1", len(set.Requirements))
+		t.Fatalf("Requirements = %d, want 1: %+v", len(set.Requirements), set.Requirements)
 	}
-	if set.Requirements[0].Statement != "Only requirement" {
+	if set.Requirements[0].Statement != "MUST reject a burst." {
 		t.Fatalf("Statement = %q", set.Requirements[0].Statement)
 	}
 }
@@ -103,7 +106,7 @@ func TestProposeForeignSkipsTheTitleHeading(t *testing.T) {
 func TestProposeForeignRejectsADocumentWithNoCandidate(t *testing.T) {
 	t.Parallel()
 
-	body := []byte("Plain prose with no heading and no obligation.\n")
+	body := []byte("Plain prose with no obligation.\n")
 	if _, err := ProposeForeign("SP-050", "x.md", body); err == nil {
 		t.Fatal("ProposeForeign() = nil, want an error")
 	}
@@ -112,15 +115,15 @@ func TestProposeForeignRejectsADocumentWithNoCandidate(t *testing.T) {
 func TestProposeForeignIgnoresAFencedBlock(t *testing.T) {
 	t.Parallel()
 
-	body := []byte("```\n## Not a requirement\n```\n\n## A requirement\n")
+	body := []byte("```\n- MUST not be a requirement.\n```\n\n- MUST be a requirement.\n")
 	set, err := ProposeForeign("SP-050", "x.md", body)
 	if err != nil {
 		t.Fatalf("ProposeForeign() error = %v", err)
 	}
 	if len(set.Requirements) != 1 {
-		t.Fatalf("Requirements = %d, want 1", len(set.Requirements))
+		t.Fatalf("Requirements = %d, want 1: %+v", len(set.Requirements), set.Requirements)
 	}
-	if set.Requirements[0].Statement != "A requirement" {
+	if set.Requirements[0].Statement != "MUST be a requirement." {
 		t.Fatalf("Statement = %q", set.Requirements[0].Statement)
 	}
 }

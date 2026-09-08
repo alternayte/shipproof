@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/alternayte/shipproof/internal/change"
 	"github.com/alternayte/shipproof/internal/requirements"
@@ -16,7 +17,8 @@ import (
 // runStart records the intent snapshot and adopts the requirement set. It
 // replaces the old `change start` verb.
 func runStart(args []string, stdout, stderr io.Writer) int {
-	const usage = "usage: shipproof start <change-id> --intent <path> [--ceremony 0|1|2|3] [--force]"
+	const usage = "usage: shipproof start <change-id> --intent <path> [--ceremony 0|1|2|3] [--force]\n" +
+		"       shipproof start <change-id> --confirm-requirements"
 
 	if len(args) < 1 {
 		fmt.Fprintln(stderr, usage)
@@ -24,6 +26,21 @@ func runStart(args []string, stdout, stderr io.Writer) int {
 	}
 
 	changeID := args[0]
+
+	// `--confirm-requirements` adopts a standing proposal. It reads no intent
+	// document, so it runs before every other option.
+	for _, argument := range args[1:] {
+		if argument != "--confirm-requirements" {
+			continue
+		}
+		root, err := findRepositoryRoot(".")
+		if err != nil {
+			fmt.Fprintln(stderr, "ShipProof repository root not found; run shipproof init first")
+			return 1
+		}
+		return confirmRequirements(root, changeID, stdout, stderr)
+	}
+
 	var intent string
 	var ceremony *int
 	force := false
@@ -107,7 +124,7 @@ func adoptRequirements(root, changeID, intent string, stdout io.Writer) {
 	set, err := requirements.AdoptNative(changeID, intent)
 	if err != nil {
 		if errors.Is(err, requirements.ErrNoNativeRequirement) {
-			fmt.Fprintln(stdout, "Requirements: none found. The intent document names no requirement identifier.")
+			proposeRequirements(root, changeID, intent, stdout)
 			return
 		}
 		fmt.Fprintf(stdout, "Requirements: none adopted. %v\n", err)
@@ -123,6 +140,68 @@ func adoptRequirements(root, changeID, intent string, stdout io.Writer) {
 	fmt.Fprintf(stdout, "Requirements: adopted %d into %s\n", len(set.Requirements), filepath.ToSlash(rel))
 }
 
+// proposeRequirements reads a document that a specification tool wrote. One
+// documented pattern applies: a heading opens a requirement, and a list item
+// that starts with MUST or SHALL states the obligation. Decision D3 fixes it.
+//
+// A pattern match is a proposal, never a fact. The proposal waits for a person
+// to confirm it, and nothing adopts it in the meantime.
+func proposeRequirements(root, changeID, intent string, stdout io.Writer) {
+	body, err := os.ReadFile(intent)
+	if err != nil {
+		fmt.Fprintf(stdout, "Requirements: none adopted. %v\n", err)
+		return
+	}
+	set, err := requirements.ProposeForeign(changeID, intent, body)
+	if err != nil {
+		fmt.Fprintln(stdout, "Requirements: none found. The document names no requirement identifier, and it states no obligation with MUST or SHALL.")
+		return
+	}
+	if _, err := requirements.SaveProposal(root, set); err != nil {
+		fmt.Fprintf(stdout, "Requirements: none proposed. %v\n", err)
+		return
+	}
+
+	fmt.Fprintf(stdout, "Requirements: %d proposed, 0 adopted.\n", len(set.Requirements))
+	for _, requirement := range set.Requirements {
+		fmt.Fprintf(stdout, "  %s  %s\n", requirement.ID, requirement.Statement)
+	}
+	fmt.Fprintln(stdout, "Read each line. ShipProof matched a pattern; it judged nothing.")
+	fmt.Fprintf(stdout, "Confirm them with:\n  shipproof start %s --confirm-requirements\n", changeID)
+}
+
+// confirmRequirements adopts the standing proposal. A person runs it, and the
+// stamp records when.
+func confirmRequirements(root, changeID string, stdout, stderr io.Writer) int {
+	if requirements.Exists(root, changeID) {
+		fmt.Fprintln(stderr, "the change already holds a requirement set")
+		return 2
+	}
+	set, err := requirements.LoadProposal(root, changeID)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(stderr, "no requirement proposal exists for %s\n", changeID)
+			return 2
+		}
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	path, err := requirements.Save(root, set.Confirm(time.Now()))
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if err := requirements.ClearProposal(root, changeID); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	rel, _ := filepath.Rel(root, path)
+	fmt.Fprintf(stdout, "Requirements: confirmed %d into %s\n", len(set.Requirements), filepath.ToSlash(rel))
+	fmt.Fprintf(stdout, "Next: run `shipproof status %s`.\n", changeID)
+	return 0
+}
+
 // scaffoldPlan writes an empty verification plan when the change holds none.
 // The plan is the file the agent fills with one proof per requirement. An
 // existing plan stays untouched.
@@ -136,6 +215,7 @@ func scaffoldPlan(root, changeID string, stdout io.Writer) {
 		fmt.Fprintf(stdout, "Plan: none created. %v\n", err)
 		return
 	}
+
 	rel, _ := filepath.Rel(root, path)
 	fmt.Fprintf(stdout, "Plan: created %s. Map one proof to each requirement.\n", filepath.ToSlash(rel))
 }
