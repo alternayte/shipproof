@@ -79,7 +79,7 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 		Matrix:      matrix,
 		HasMatrix:   matrixErr == nil,
 		Unexplained: unexplainedCount(pack, hasPack),
-		Checks:      pack.Verification.Checks,
+		Checks:      pack.Checks,
 	})
 
 	if asJSON {
@@ -171,7 +171,7 @@ func readEvidencePack(root, changeID string) (schema.EvidencePack, bool) {
 // a pack that the coverage command never reached, returns nil. A nil count
 // means not known. It never means zero.
 func unexplainedCount(pack schema.EvidencePack, hasPack bool) *int {
-	if !hasPack || pack.UnexplainedChange == nil || !pack.UnexplainedChange.CoverageAvailable {
+	if !hasPack || !pack.UnexplainedChange.Measured || !pack.UnexplainedChange.CoverageAvailable {
 		return nil
 	}
 	total := 0

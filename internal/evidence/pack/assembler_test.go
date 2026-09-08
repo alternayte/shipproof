@@ -13,6 +13,7 @@ import (
 
 	"github.com/alternayte/shipproof/internal/requirements"
 	"github.com/alternayte/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/version"
 )
 
 func TestAssembleLoadsIntent(t *testing.T) {
@@ -29,14 +30,14 @@ func TestAssembleLoadsIntent(t *testing.T) {
 	if pack.Intent.SnapshotHash != "abc123" {
 		t.Errorf("expected snapshot_hash abc123, got %s", pack.Intent.SnapshotHash)
 	}
-	if len(pack.Intent.Requirements) != 2 {
-		t.Fatalf("expected 2 requirements (1 req + 1 invariant), got %d", len(pack.Intent.Requirements))
+	if len(pack.Requirements) != 2 {
+		t.Fatalf("expected 2 requirements (1 req + 1 invariant), got %d", len(pack.Requirements))
 	}
-	if pack.Intent.Requirements[0].ID != "SP-005-R1" {
-		t.Errorf("expected first requirement ID SP-005-R1, got %s", pack.Intent.Requirements[0].ID)
+	if pack.Requirements[0].ID != "SP-005-R1" {
+		t.Errorf("expected first requirement ID SP-005-R1, got %s", pack.Requirements[0].ID)
 	}
-	if pack.Intent.Requirements[1].ID != "INV-BASIC" {
-		t.Errorf("expected second requirement ID INV-BASIC, got %s", pack.Intent.Requirements[1].ID)
+	if pack.Requirements[1].ID != "INV-BASIC" {
+		t.Errorf("expected second requirement ID INV-BASIC, got %s", pack.Requirements[1].ID)
 	}
 }
 
@@ -53,7 +54,7 @@ func TestAssembleLoadsRunResult(t *testing.T) {
 	}
 
 	found := false
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if check.ID == "verification:run" {
 			found = true
 			if check.Status != "pass" {
@@ -83,7 +84,7 @@ func TestAssembleLoadsRunResultFail(t *testing.T) {
 	}
 
 	found := false
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if check.ID == "verification:run" {
 			found = true
 			if check.Status != "fail" {
@@ -112,7 +113,7 @@ func TestAssembleParsesEvidence(t *testing.T) {
 	}
 
 	found := false
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if check.ID == "pkg.TestOne" {
 			found = true
 			if check.Status != "pass" {
@@ -155,7 +156,7 @@ func TestAssembleLoadsGitEvidence(t *testing.T) {
 	}
 
 	found := false
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if check.ID == "git:collect" {
 			found = true
 			if check.Status != "pass" {
@@ -184,8 +185,8 @@ func TestAssemblePopulatesPack(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if pack.SchemaVersion != "0.1" {
-		t.Errorf("expected schema_version 0.1, got %s", pack.SchemaVersion)
+	if pack.SchemaVersion != schema.CurrentVersion {
+		t.Errorf("expected schema_version 0.2, got %s", pack.SchemaVersion)
 	}
 	if pack.ChangeID != "SP-005" {
 		t.Errorf("expected change_id SP-005, got %s", pack.ChangeID)
@@ -199,7 +200,7 @@ func TestAssemblePopulatesPack(t *testing.T) {
 	if pack.Provenance.ShipProofVersion == "" {
 		t.Error("provenance.shipproof_version is empty")
 	}
-	if len(pack.Verification.Checks) == 0 {
+	if len(pack.Checks) == 0 {
 		t.Error("verification checks are empty")
 	}
 }
@@ -235,7 +236,7 @@ func TestAssembleAssignsProvenance(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		switch check.Provenance {
 		case schema.ProvenanceObserved, schema.ProvenanceDerived, schema.ProvenanceInferred, schema.ProvenanceHuman:
 		default:
@@ -255,8 +256,10 @@ func TestAssembleProvenanceMetadata(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if pack.Provenance.ShipProofVersion != schema.CurrentVersion {
-		t.Errorf("expected shipproof_version %s, got %s", schema.CurrentVersion, pack.Provenance.ShipProofVersion)
+	// The pack records the ShipProof version that produced it, not the schema
+	// version. The schema version has its own field.
+	if pack.Provenance.ShipProofVersion != version.Version {
+		t.Errorf("expected shipproof_version %s, got %s", version.Version, pack.Provenance.ShipProofVersion)
 	}
 	if pack.Provenance.GeneratedAt == "" {
 		t.Error("expected non-empty generated_at")
@@ -295,11 +298,11 @@ func TestAssembleNoEvidenceFiles(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(pack.Verification.Checks) != 1 {
-		t.Fatalf("expected 1 staleness check with no evidence files, got %d", len(pack.Verification.Checks))
+	if len(pack.Checks) != 1 {
+		t.Fatalf("expected 1 staleness check with no evidence files, got %d", len(pack.Checks))
 	}
-	if pack.Verification.Checks[0].ID != "intent:staleness" {
-		t.Errorf("expected intent:staleness check, got %s", pack.Verification.Checks[0].ID)
+	if pack.Checks[0].ID != "intent:staleness" {
+		t.Errorf("expected intent:staleness check, got %s", pack.Checks[0].ID)
 	}
 	if pack.Intent.Stale != true {
 		t.Error("expected stale intent when the source document is missing")
@@ -333,7 +336,7 @@ func TestAssembleIntentStaleness(t *testing.T) {
 	}
 
 	found := false
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if check.ID == "intent:staleness" {
 			found = true
 			if check.Status != "pass" {
@@ -409,7 +412,7 @@ func TestAssembleAddsOneCheckPerRequirement(t *testing.T) {
 	}
 
 	seen := map[string]bool{}
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if id, ok := strings.CutPrefix(check.ID, "coverage:"); ok {
 			seen[id] = true
 			if check.Provenance == schema.ProvenanceInferred {
@@ -443,7 +446,7 @@ func TestAssembleSwallowsMalformedProofResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble must not fail on a malformed proof-results file: %v", err)
 	}
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if strings.HasPrefix(check.ID, "coverage:") {
 			t.Errorf("unexpected coverage check %q with a malformed proof-results file", check.ID)
 		}
@@ -458,7 +461,7 @@ func TestAssembleWithoutASidecarAddsNoCoverageCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		if strings.HasPrefix(check.ID, "coverage:") {
 			t.Errorf("unexpected coverage check %q", check.ID)
 		}
@@ -688,17 +691,17 @@ func TestAssembleLoadsAgentRun(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if pack.AgentRun == nil {
+	if pack.Agent == nil {
 		t.Fatal("agent_run must not be nil when agent-run.json exists")
 	}
-	if pack.AgentRun.Provider != "claude" {
-		t.Errorf("agent_run.provider = %q, want claude", pack.AgentRun.Provider)
+	if pack.Agent.Provider != "claude" {
+		t.Errorf("agent_run.provider = %q, want claude", pack.Agent.Provider)
 	}
-	if pack.AgentRun.SessionID != "test-session-123" {
-		t.Errorf("agent_run.session_id = %q, want test-session-123", pack.AgentRun.SessionID)
+	if pack.Agent.SessionID != "test-session-123" {
+		t.Errorf("agent_run.session_id = %q, want test-session-123", pack.Agent.SessionID)
 	}
-	if pack.AgentRun.Model != "claude-opus-4" {
-		t.Errorf("agent_run.model = %q, want claude-opus-4", pack.AgentRun.Model)
+	if pack.Agent.Model != "claude-opus-4" {
+		t.Errorf("agent_run.model = %q, want claude-opus-4", pack.Agent.Model)
 	}
 }
 
@@ -713,7 +716,7 @@ func TestAssembleWithoutAgentRun(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if pack.AgentRun != nil {
+	if pack.Agent != nil {
 		t.Error("agent_run must be nil when agent-run.json does not exist")
 	}
 }
@@ -748,80 +751,6 @@ func revParseHead(t *testing.T, dir string) string {
 		t.Fatalf("git rev-parse HEAD: %v", err)
 	}
 	return strings.TrimSpace(string(out))
-}
-
-func TestAssembleReadinessWithoutRef(t *testing.T) {
-	root := t.TempDir()
-	setupShipProofRoot(t, root)
-	setupChangeRecord(t, root, "SP-012", "abc123")
-	setupVerificationPlan(t, root, "SP-012")
-
-	pack, err := Assemble(root, "SP-012", Options{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if pack.Readiness != nil {
-		t.Error("readiness must be nil when the change record has no shaping ref")
-	}
-}
-
-func setupShapingSession(t *testing.T, root, sessionID string, blockerCount int) {
-	t.Helper()
-	dir := filepath.Join(root, ".shipproof", "shaping")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("create shaping dir: %v", err)
-	}
-
-	var blockers []map[string]string
-	for i := 0; i < blockerCount; i++ {
-		blockers = append(blockers, map[string]string{
-			"id":      "B-" + sessionID + "-" + string(rune('a'+i)),
-			"summary": "blocker " + string(rune('a'+i)),
-		})
-	}
-
-	session := map[string]interface{}{
-		"schema_version": "0.1",
-		"session_id":     sessionID,
-		"subject":        "test session",
-		"document_kind":  "prd",
-		"state":          "shaping",
-		"decisions":      []interface{}{},
-		"assumptions":    []interface{}{},
-		"risks":          []interface{}{},
-		"unknowns":       []interface{}{},
-		"readiness": map[string]interface{}{
-			"blockers":           blockers,
-			"decisions_required": []interface{}{},
-		},
-	}
-	data, _ := json.MarshalIndent(session, "", "  ")
-	data = append(data, '\n')
-	if err := os.WriteFile(filepath.Join(dir, sessionID+".json"), data, 0o644); err != nil {
-		t.Fatalf("write shaping session: %v", err)
-	}
-}
-
-func TestAssembleWithoutReview(t *testing.T) {
-	root := t.TempDir()
-	setupShipProofRoot(t, root)
-	setupChangeRecord(t, root, "SP-014", "abc123")
-	setupVerificationPlan(t, root, "SP-014")
-
-	pack, err := Assemble(root, "SP-014", Options{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if pack.Review != nil {
-		t.Error("review must be nil when review.json does not exist")
-	}
-	for _, check := range pack.Verification.Checks {
-		if check.ID == "github:review" {
-			t.Error("github:review check must not exist without review.json")
-		}
-	}
 }
 
 func setupReviewFile(t *testing.T, root, changeID string) {

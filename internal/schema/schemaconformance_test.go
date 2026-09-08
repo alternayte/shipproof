@@ -148,9 +148,12 @@ func sortedKeys(object map[string]any) []string {
 	return names
 }
 
-func loadSchema(t *testing.T) map[string]any {
+// loadSchema reads the JSON Schema for one pack version. A recorded pack from
+// an older version answers to the schema of its own version. A history that
+// the current schema rejects is still a true history.
+func loadSchema(t *testing.T, packVersion string) map[string]any {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join("..", "..", "schemas", "v0.1", "evidence.schema.json"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "schemas", "v"+packVersion, "evidence.schema.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,8 +170,14 @@ func checkPack(t *testing.T, name string, data []byte) {
 	if err := json.Unmarshal(data, &value); err != nil {
 		t.Fatalf("%s: %v", name, err)
 	}
+	declared := CurrentVersion
+	if object, ok := value.(map[string]any); ok {
+		if stated, ok := object["schema_version"].(string); ok && stated != "" {
+			declared = stated
+		}
+	}
 	var problems []string
-	validate(loadSchema(t), value, name, &problems)
+	validate(loadSchema(t, declared), value, name, &problems)
 	for _, problem := range problems {
 		t.Errorf("%s", problem)
 	}
@@ -190,9 +199,23 @@ func minimalPack() EvidencePack {
 	return EvidencePack{
 		SchemaVersion: CurrentVersion,
 		ChangeID:      "SP-900",
-		Intent:        IntentEvidence{SnapshotHash: "abc123"},
-		Verification:  VerificationEvidence{Checks: []Check{}},
-		Provenance:    PackProvenance{GeneratedAt: "2026-08-25T10:00:00Z", ShipProofVersion: CurrentVersion},
+		Verdict: VerdictEvidence{
+			Verdict: "NOT PROVEN",
+			Reason:  "The change lists no requirement with a proof yet.",
+			Next:    "run `shipproof prove SP-900`.",
+		},
+		Intent:       IntentEvidence{SnapshotHash: "abc123"},
+		Requirements: []RequirementRow{},
+		Checks:       []Check{},
+		EmptySections: map[string]string{
+			"requirements":       "the change holds no requirement set.",
+			"checks":             "no tool result reached this pack.",
+			"implementation":     "no base revision is known.",
+			"unexplained_change": "ShipProof did not reach the measurement.",
+			"agent":              "no telemetry record exists for this change.",
+			"attestation":        "a local pack is unsigned.",
+		},
+		Provenance: PackProvenance{GeneratedAt: "2026-08-25T10:00:00Z", ShipProofVersion: CurrentVersion},
 	}
 }
 
@@ -207,8 +230,9 @@ func TestMinimalPackValidates(t *testing.T) {
 func TestFullPackValidates(t *testing.T) {
 	pack := minimalPack()
 	pack.Intent = IntentEvidence{
+		SourcePath:        "docs/changes/SP-900.md",
 		SnapshotHash:      "abc123",
-		Requirements:      []Requirement{{ID: "SP-900-R1", VerificationRefs: []string{"go test ./..."}}},
+		CapturedAt:        "2026-08-25T08:00:00Z",
 		Stale:             true,
 		CurrentSourceHash: "def456",
 	}
@@ -219,32 +243,31 @@ func TestFullPackValidates(t *testing.T) {
 		Deletions:    2,
 		DiffStat:     "1 file changed",
 	}
-	pack.Verification.Checks = []Check{
+	pack.Requirements = []RequirementRow{
+		{ID: "SP-900-R1", Statement: "The pack validates.", ProofRefs: []string{"go test ./..."},
+			State: "proven", Grade: "observed", Detail: "1 automated proofs passed at this revision"},
+	}
+	pack.Checks = []Check{
 		{ID: "verification:run", Status: "pass", Source: "shipproof-runner", Provenance: ProvenanceObserved, Detail: "the gate passed"},
 	}
-	pack.AgentRun = &AgentRunMetadata{
+	pack.Agent = &AgentEvidence{
 		Provider: "anthropic", AgentVersion: "1.0", Model: "opus", StartedAt: "2026-08-25T08:00:00Z",
 		EndedAt: "2026-08-25T09:00:00Z", SessionID: "s1", Cost: 1.25,
 		Tokens: &TokenUsageMeta{Input: 100, Output: 200}, ToolCallCount: 12,
 		ExitStatus: "completed", RawLogRef: ".shipproof/runs/SP-900/agent.log",
 	}
-	pack.AgentReview = &AgentReviewEvidence{
-		Runner:   "claude",
-		Findings: []AgentFinding{{Source: "reviewer", Summary: "one finding", Provenance: ProvenanceInferred}},
+	pack.Attestation = &AttestationEvidence{
+		Format: "in-toto", PayloadType: "application/vnd.in-toto+json",
+		Signature: "MEUCIQ", Subject: "1cceb33", Digest: "sha256:abc",
 	}
-	pack.Readiness = &ReadinessEvidence{ShapingRef: "shaping-one", BlockerCount: 2}
-	pack.Review = &ReviewEvidence{
-		Source: "github", PRNumber: 7, PRURL: "https://example.com/pr/7",
-		OpenedAt: "2026-08-25T07:00:00Z", FirstReviewAt: "2026-08-25T07:30:00Z",
-		ReviewCount: 1, CommentCount: 3, DistinctReviewers: 1,
-		ReviewerLogins: []string{"nate"}, State: "open", CollectedAt: "2026-08-25T10:00:00Z",
-	}
-	pack.UnexplainedChange = &UnexplainedEvidence{
+	pack.UnexplainedChange = UnexplainedEvidence{
+		Measured:            true,
 		CoverageAvailable:   true,
 		LineFindings:        []UnexplainedLine{{File: "internal/a.go", Symbol: "func A()", StartLine: 10, EndLine: 12}},
 		FileFindings:        []UnexplainedFile{{Path: "docs/workflow.md", IgnorePattern: "docs/**"}},
 		UninstrumentedLines: 61,
 	}
+	pack.EmptySections = map[string]string{}
 	checkStruct(t, "full", pack)
 }
 
@@ -253,11 +276,13 @@ func TestFullPackValidates(t *testing.T) {
 // answers to the schema.
 func TestEmptyUnexplainedFindingsValidate(t *testing.T) {
 	pack := minimalPack()
-	pack.UnexplainedChange = &UnexplainedEvidence{
+	pack.UnexplainedChange = UnexplainedEvidence{
+		Measured:          true,
 		CoverageAvailable: false,
 		LineFindings:      []UnexplainedLine{},
 		FileFindings:      []UnexplainedFile{},
 	}
+	delete(pack.EmptySections, "unexplained_change")
 	data, err := json.Marshal(pack)
 	if err != nil {
 		t.Fatal(err)
@@ -302,10 +327,10 @@ func TestRecordedPacksValidate(t *testing.T) {
 // pack that breaks four rules at once.
 func TestTheCheckerRejectsAnInvalidPack(t *testing.T) {
 	body := `{
-	  "schema_version": "0.1",
-	  "intent": {"snapshot_hash": "", "requirements": []},
-	  "verification": {"checks": [{"id": "a", "status": "bogus", "source": "s", "provenance": "observed"}]},
-	  "provenance": {"generated_at": "now", "shipproof_version": "0.1"},
+	  "schema_version": "0.2",
+	  "intent": {"snapshot_hash": "", "stale": false},
+	  "checks": [{"id": "a", "status": "bogus", "source": "s", "provenance": "observed"}],
+	  "provenance": {"generated_at": "now", "shipproof_version": "0.2"},
 	  "surprise": true
 	}`
 	var value any
@@ -313,7 +338,7 @@ func TestTheCheckerRejectsAnInvalidPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	var problems []string
-	validate(loadSchema(t), value, "invalid", &problems)
+	validate(loadSchema(t, CurrentVersion), value, "invalid", &problems)
 
 	wanted := []string{
 		`required property "change_id" is missing`,

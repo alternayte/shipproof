@@ -76,7 +76,7 @@ type reportProvenanceData struct {
 func buildIntentData(pack schema.EvidencePack) intentData {
 	return intentData{
 		SnapshotHash:     pack.Intent.SnapshotHash,
-		RequirementCount: len(pack.Intent.Requirements),
+		RequirementCount: len(pack.Requirements),
 		Provenance:       string(schema.ProvenanceObserved),
 	}
 }
@@ -85,7 +85,7 @@ func buildVerifyData(pack schema.EvidencePack) verifyData {
 	data := verifyData{}
 
 	var passCount, failCount, skipCount, unknownCount int
-	for _, check := range pack.Verification.Checks {
+	for _, check := range pack.Checks {
 		data.Checks = append(data.Checks, checkRow{
 			ID:         check.ID,
 			Status:     check.Status,
@@ -108,7 +108,7 @@ func buildVerifyData(pack schema.EvidencePack) verifyData {
 	data.FailCheckCount = failCount
 	data.SkipCheckCount = skipCount
 	data.UnknownCheckCount = unknownCount
-	data.TotalChecks = len(pack.Verification.Checks)
+	data.TotalChecks = len(pack.Checks)
 
 	return data
 }
@@ -126,7 +126,7 @@ func buildImplementData(pack schema.EvidencePack) implementData {
 }
 
 func buildAgentRunData(pack schema.EvidencePack) agentRunData {
-	run := pack.AgentRun
+	run := pack.Agent
 	if run == nil {
 		return agentRunData{Hides: true}
 	}
@@ -161,7 +161,7 @@ func buildReportProvenanceData(pack schema.EvidencePack) reportProvenanceData {
 // buildUnexplainedData reads the pack section. An absent section renders
 // nothing, because ShipProof made no measurement.
 func buildUnexplainedData(pack schema.EvidencePack) unexplainedData {
-	if pack.UnexplainedChange == nil {
+	if !pack.UnexplainedChange.Measured {
 		return unexplainedData{}
 	}
 	return unexplainedData{

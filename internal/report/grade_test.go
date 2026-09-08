@@ -18,15 +18,14 @@ func renderReportWithEveryLabel(t *testing.T) string {
 	root, ev := setupReportTest(t, "SP-T26")
 	defer os.RemoveAll(root)
 
-	ev.Verification = schema.VerificationEvidence{
-		Checks: []schema.Check{
-			{ID: "c1", Status: "pass", Source: "junit", Provenance: schema.ProvenanceObserved},
-			{ID: "c2", Status: "pass", Source: "calc", Provenance: schema.ProvenanceDerived},
-			{ID: "c3", Status: "fail", Source: "agent", Provenance: schema.ProvenanceInferred},
-			{ID: "c4", Status: "skip", Source: "person", Provenance: schema.ProvenanceHuman},
-		},
+	ev.Checks = []schema.Check{
+		{ID: "c1", Status: "pass", Source: "junit", Provenance: schema.ProvenanceObserved},
+		{ID: "c2", Status: "pass", Source: "calc", Provenance: schema.ProvenanceDerived},
+		{ID: "c3", Status: "fail", Source: "agent", Provenance: schema.ProvenanceInferred},
+		{ID: "c4", Status: "skip", Source: "person", Provenance: schema.ProvenanceHuman},
 	}
-	ev.UnexplainedChange = &schema.UnexplainedEvidence{
+	ev.UnexplainedChange = schema.UnexplainedEvidence{
+		Measured:          true,
 		CoverageAvailable: true,
 		LineFindings:      []schema.UnexplainedLine{{File: "a.go", Symbol: "Run", StartLine: 1, EndLine: 4}},
 		FileFindings:      []schema.UnexplainedFile{{Path: "b.go", IgnorePattern: "*_test.go"}},

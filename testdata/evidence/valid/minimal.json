@@ -1,19 +1,51 @@
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "change_id": "SP-1",
-  "intent": {
-    "snapshot_hash": "sha256:abc123",
-    "requirements": [
-      {"id": "SDD-R01", "verification_refs": ["unit-test:init-layout"]}
-    ]
+  "verdict": {
+    "verdict": "PROVEN",
+    "reason": "All 1 requirement carries a proof. No changed line is left over.",
+    "next": "run `shipproof pack SP-1`."
   },
-  "verification": {
-    "checks": [
-      {"id": "unit-tests", "status": "pass", "source": "go-test", "provenance": "observed"}
-    ]
+  "intent": {
+    "source_path": "docs/changes/SP-1.md",
+    "snapshot_hash": "sha256:abc123",
+    "captured_at": "2026-08-13T19:00:00Z",
+    "stale": false
+  },
+  "implementation": {
+    "commits": [],
+    "changed_files": [],
+    "additions": 0,
+    "deletions": 0,
+    "diff_stat": ""
+  },
+  "requirements": [
+    {
+      "id": "SDD-R01",
+      "proof_refs": ["unit-test:init-layout"],
+      "state": "proven",
+      "grade": "observed"
+    }
+  ],
+  "checks": [
+    {"id": "unit-tests", "status": "pass", "source": "go-test", "provenance": "observed"}
+  ],
+  "unexplained_change": {
+    "measured": true,
+    "coverage_available": true,
+    "line_findings": [],
+    "file_findings": [],
+    "uninstrumented_lines": 0
+  },
+  "agent": null,
+  "attestation": null,
+  "empty_sections": {
+    "implementation": "no base revision is known, so git reported no commit.",
+    "agent": "no telemetry record exists for this change.",
+    "attestation": "a local pack is unsigned. Only a build-system pack is audit-grade."
   },
   "provenance": {
     "generated_at": "2026-08-13T20:00:00Z",
-    "shipproof_version": "0.1.0-dev"
+    "shipproof_version": "0.3.0-dev"
   }
 }

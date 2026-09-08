@@ -76,13 +76,11 @@ func TestChangeReportRendersVerification(t *testing.T) {
 	root, ev := setupReportTest(t, "SP-T3")
 	defer os.RemoveAll(root)
 
-	ev.Verification = schema.VerificationEvidence{
-		Checks: []schema.Check{
-			{ID: "check:unit", Status: "pass", Source: "junit", Provenance: schema.ProvenanceObserved},
-			{ID: "check:lint", Status: "fail", Source: "lint", Provenance: schema.ProvenanceObserved},
-			{ID: "check:audit", Status: "skip", Source: "audit", Provenance: schema.ProvenanceInferred},
-			{ID: "check:human", Status: "unknown", Source: "manual", Provenance: schema.ProvenanceHuman},
-		},
+	ev.Checks = []schema.Check{
+		{ID: "check:unit", Status: "pass", Source: "junit", Provenance: schema.ProvenanceObserved},
+		{ID: "check:lint", Status: "fail", Source: "lint", Provenance: schema.ProvenanceObserved},
+		{ID: "check:audit", Status: "skip", Source: "audit", Provenance: schema.ProvenanceInferred},
+		{ID: "check:human", Status: "unknown", Source: "manual", Provenance: schema.ProvenanceHuman},
 	}
 	setupEvidencePack(t, root, ev)
 
@@ -125,7 +123,7 @@ func TestChangeReportRendersAgentRun(t *testing.T) {
 	root, ev := setupReportTest(t, "SP-T4")
 	defer os.RemoveAll(root)
 
-	ev.AgentRun = &schema.AgentRunMetadata{
+	ev.Agent = &schema.AgentEvidence{
 		Provider:      "claude",
 		Model:         "claude-sonnet-4",
 		SessionID:     "sess-123",
@@ -179,7 +177,8 @@ func TestChangeReportRendersUnexplainedChange(t *testing.T) {
 	root, ev := setupReportTest(t, "SP-T7")
 	defer os.RemoveAll(root)
 
-	ev.UnexplainedChange = &schema.UnexplainedEvidence{
+	ev.UnexplainedChange = schema.UnexplainedEvidence{
+		Measured:            true,
 		CoverageAvailable:   true,
 		UninstrumentedLines: 61,
 		LineFindings: []schema.UnexplainedLine{
@@ -256,13 +255,11 @@ func TestProvenanceBadges(t *testing.T) {
 	root, ev := setupReportTest(t, "SP-T12")
 	defer os.RemoveAll(root)
 
-	ev.Verification = schema.VerificationEvidence{
-		Checks: []schema.Check{
-			{ID: "c1", Status: "pass", Source: "junit", Provenance: schema.ProvenanceObserved},
-			{ID: "c2", Status: "pass", Source: "calc", Provenance: schema.ProvenanceDerived},
-			{ID: "c3", Status: "fail", Source: "ai", Provenance: schema.ProvenanceInferred},
-			{ID: "c4", Status: "skip", Source: "human", Provenance: schema.ProvenanceHuman},
-		},
+	ev.Checks = []schema.Check{
+		{ID: "c1", Status: "pass", Source: "junit", Provenance: schema.ProvenanceObserved},
+		{ID: "c2", Status: "pass", Source: "calc", Provenance: schema.ProvenanceDerived},
+		{ID: "c3", Status: "fail", Source: "ai", Provenance: schema.ProvenanceInferred},
+		{ID: "c4", Status: "skip", Source: "human", Provenance: schema.ProvenanceHuman},
 	}
 	setupEvidencePack(t, root, ev)
 
@@ -314,14 +311,21 @@ func setupReportTest(t *testing.T, changeID string) (string, schema.EvidencePack
 	}
 
 	ev := schema.EvidencePack{
-		SchemaVersion: "0.1",
+		SchemaVersion: schema.CurrentVersion,
 		ChangeID:      changeID,
+		Verdict: schema.VerdictEvidence{
+			Verdict: "NOT PROVEN",
+			Reason:  "2 of 2 requirements have no proof. No changed line is left over.",
+			Next:    "run `shipproof prove " + changeID + "`.",
+		},
 		Intent: schema.IntentEvidence{
+			SourcePath:   "docs/changes/test.md",
 			SnapshotHash: "abc123def",
-			Requirements: []schema.Requirement{
-				{ID: "R1", VerificationRefs: []string{"go test -run TestR1"}},
-				{ID: "R2", VerificationRefs: []string{"go test -run TestR2"}},
-			},
+			CapturedAt:   "2026-08-14T20:00:00Z",
+		},
+		Requirements: []schema.RequirementRow{
+			{ID: "R1", ProofRefs: []string{"go test -run TestR1"}, State: "unproven", Grade: "claimed"},
+			{ID: "R2", ProofRefs: []string{"go test -run TestR2"}, State: "unproven", Grade: "claimed"},
 		},
 		Implementation: schema.ImplementationEvidence{
 			Commits: []schema.ImplementationCommit{
@@ -332,12 +336,16 @@ func setupReportTest(t *testing.T, changeID string) (string, schema.EvidencePack
 			Deletions:    0,
 			DiffStat:     "1 file changed, 100 insertions(+)",
 		},
-		Verification: schema.VerificationEvidence{
-			Checks: []schema.Check{},
+		Checks: []schema.Check{},
+		EmptySections: map[string]string{
+			"checks":             "no tool result reached this pack.",
+			"unexplained_change": "no base revision is known.",
+			"agent":              "no telemetry record exists.",
+			"attestation":        "a local pack is unsigned.",
 		},
 		Provenance: schema.PackProvenance{
 			GeneratedAt:      "2026-08-14T20:00:00Z",
-			ShipProofVersion: "0.1",
+			ShipProofVersion: "0.3.0-dev",
 		},
 	}
 

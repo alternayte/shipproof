@@ -61,13 +61,23 @@ func TestBuildUnexplainedMarshalsEmptyFindingsAsArrays(t *testing.T) {
 		t.Fatalf("expected no findings, got %d line and %d file findings", len(section.LineFindings), len(section.FileFindings))
 	}
 
+	measured := *section
+	measured.Measured = true
 	pack := schema.EvidencePack{
-		SchemaVersion:     "0.1",
-		ChangeID:          "SP-901",
-		Intent:            schema.IntentEvidence{SnapshotHash: "abc123"},
-		Verification:      schema.VerificationEvidence{Checks: []schema.Check{}},
-		Provenance:        schema.PackProvenance{GeneratedAt: "2026-08-14T20:00:00Z", ShipProofVersion: "0.1"},
-		UnexplainedChange: section,
+		SchemaVersion: schema.CurrentVersion,
+		ChangeID:      "SP-901",
+		Verdict:       schema.VerdictEvidence{Verdict: "NOT PROVEN", Reason: "no proof ran.", Next: "run `shipproof prove SP-901`."},
+		Intent:        schema.IntentEvidence{SnapshotHash: "abc123"},
+		Checks:        []schema.Check{},
+		EmptySections: map[string]string{
+			"requirements":   "the change holds no requirement set.",
+			"checks":         "no tool result reached this pack.",
+			"implementation": "no base revision is known.",
+			"agent":          "no telemetry record exists.",
+			"attestation":    "a local pack is unsigned.",
+		},
+		Provenance:        schema.PackProvenance{GeneratedAt: "2026-08-14T20:00:00Z", ShipProofVersion: "0.3.0-dev"},
+		UnexplainedChange: measured,
 	}
 	if err := pack.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
@@ -117,8 +127,8 @@ func TestAssembleFallsBackToTheRecordedBaseRevision(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
-	if assembled.UnexplainedChange == nil {
-		t.Fatalf("the section is missing, warnings = %q", warnings.String())
+	if !assembled.UnexplainedChange.Measured {
+		t.Fatalf("the section is not measured, warnings = %q", warnings.String())
 	}
 	if warnings.Len() != 0 {
 		t.Errorf("Assemble warned about a section it produced: %q", warnings.String())
@@ -139,10 +149,15 @@ func TestAssembleReportsAnOmittedUnexplainedSection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
-	if assembled.UnexplainedChange != nil {
-		t.Fatal("the section is present without any base revision")
+	if assembled.UnexplainedChange.Measured {
+		t.Fatal("the section reports a measurement without any base revision")
 	}
 	if !strings.Contains(warnings.String(), "unexplained change") {
-		t.Errorf("Assemble omitted the section in silence: %q", warnings.String())
+		t.Errorf("Assemble emptied the section in silence: %q", warnings.String())
+	}
+	// Rule 2 of Section 7. The pack itself states the reason, not only the
+	// warning writer.
+	if assembled.EmptySections["unexplained_change"] == "" {
+		t.Error("the pack states no reason for the empty section")
 	}
 }

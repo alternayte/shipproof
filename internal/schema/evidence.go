@@ -3,11 +3,7 @@ package schema
 import (
 	"errors"
 	"fmt"
-	"regexp"
-	"time"
 )
-
-var shapingRefPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 type ProvenanceKind string
 
@@ -18,24 +14,63 @@ const (
 	ProvenanceHuman    ProvenanceKind = "human"
 )
 
+// EvidencePack is the single published artifact. Section 7 of the design
+// document names every top-level field. A pack is complete or absent, and it
+// states why a section is empty. It never omits a section in silence.
 type EvidencePack struct {
 	SchemaVersion     string                 `json:"schema_version"`
 	ChangeID          string                 `json:"change_id"`
+	Verdict           VerdictEvidence        `json:"verdict"`
 	Intent            IntentEvidence         `json:"intent"`
 	Implementation    ImplementationEvidence `json:"implementation"`
-	Verification      VerificationEvidence   `json:"verification"`
-	Provenance        PackProvenance         `json:"provenance"`
-	AgentRun          *AgentRunMetadata      `json:"agent_run,omitempty"`
-	Readiness         *ReadinessEvidence     `json:"readiness,omitempty"`
-	Review            *ReviewEvidence        `json:"review,omitempty"`
-	AgentReview       *AgentReviewEvidence   `json:"agent_review,omitempty"`
-	UnexplainedChange *UnexplainedEvidence   `json:"unexplained_change,omitempty"`
+	Requirements      []RequirementRow       `json:"requirements"`
+	Checks            []Check                `json:"checks"`
+	UnexplainedChange UnexplainedEvidence    `json:"unexplained_change"`
+	Agent             *AgentEvidence         `json:"agent"`
+	Attestation       *AttestationEvidence   `json:"attestation"`
+	// EmptySections maps the name of an empty or absent section onto the
+	// reason. Rule 2 of Section 7 requires it. A reader must never mistake an
+	// absent measurement for a measurement of zero.
+	EmptySections map[string]string `json:"empty_sections"`
+	Provenance    PackProvenance    `json:"provenance"`
+}
+
+// VerdictEvidence holds the three-line block of Section 5.
+type VerdictEvidence struct {
+	Verdict string `json:"verdict"`
+	Reason  string `json:"reason"`
+	Next    string `json:"next"`
+}
+
+// RequirementRow states what the artifacts say about one requirement. Grade
+// holds one of the three grades of Section 6.
+type RequirementRow struct {
+	ID        string   `json:"id"`
+	Statement string   `json:"statement,omitempty"`
+	ProofRefs []string `json:"proof_refs,omitempty"`
+	State     string   `json:"state"`
+	Grade     string   `json:"grade"`
+	Detail    string   `json:"detail,omitempty"`
+}
+
+// AttestationEvidence holds the signature block. A local pack carries none,
+// and EmptySections then states that a local pack is unsigned.
+type AttestationEvidence struct {
+	Format      string `json:"format"`
+	PayloadType string `json:"payload_type,omitempty"`
+	Signature   string `json:"signature"`
+	Subject     string `json:"subject,omitempty"`
+	Digest      string `json:"digest,omitempty"`
 }
 
 // UnexplainedEvidence records which changed code no approved proof ran. The
-// line-level findings are observed. The file-level findings are derived. The
+// line-level findings are observed. The file-level findings are claimed. The
 // section never fails a change.
+//
+// Measured reports whether ShipProof reached the measurement at all. A false
+// value means that the counts state nothing. It never means zero.
 type UnexplainedEvidence struct {
+	Measured            bool              `json:"measured"`
 	CoverageAvailable   bool              `json:"coverage_available"`
 	LineFindings        []UnexplainedLine `json:"line_findings"`
 	FileFindings        []UnexplainedFile `json:"file_findings"`
@@ -54,39 +89,9 @@ type UnexplainedFile struct {
 	IgnorePattern string `json:"ignore_pattern,omitempty"`
 }
 
-// AgentReviewEvidence holds adversarial reviewer findings. Every finding is
-// agent-inferred. A reviewer claim is never an observed fact.
-type AgentReviewEvidence struct {
-	Runner   string         `json:"runner,omitempty"`
-	Findings []AgentFinding `json:"findings"`
-}
-
-type AgentFinding struct {
-	Source     string         `json:"source"`
-	Summary    string         `json:"summary"`
-	Provenance ProvenanceKind `json:"provenance"`
-}
-
-type ReadinessEvidence struct {
-	ShapingRef   string `json:"shaping_ref,omitempty"`
-	BlockerCount int    `json:"blocker_count,omitempty"`
-}
-
-type ReviewEvidence struct {
-	Source            string   `json:"source"`
-	PRNumber          int      `json:"pr_number"`
-	PRURL             string   `json:"pr_url"`
-	OpenedAt          string   `json:"opened_at,omitempty"`
-	FirstReviewAt     string   `json:"first_review_at,omitempty"`
-	ReviewCount       int      `json:"review_count,omitempty"`
-	CommentCount      int      `json:"comment_count,omitempty"`
-	DistinctReviewers int      `json:"distinct_reviewers,omitempty"`
-	ReviewerLogins    []string `json:"reviewer_logins,omitempty"`
-	State             string   `json:"state,omitempty"`
-	CollectedAt       string   `json:"collected_at"`
-}
-
-type AgentRunMetadata struct {
+// AgentEvidence names the model that produced the change and the session it
+// ran under. A field that no tool reported stays missing.
+type AgentEvidence struct {
 	Provider      string          `json:"provider,omitempty"`
 	AgentVersion  string          `json:"agent_version,omitempty"`
 	Model         string          `json:"model,omitempty"`
@@ -121,8 +126,11 @@ type ImplementationCommit struct {
 }
 
 type IntentEvidence struct {
-	SnapshotHash string        `json:"snapshot_hash"`
-	Requirements []Requirement `json:"requirements"`
+	// SourcePath names the intent document that `start` snapshotted.
+	SourcePath   string `json:"source_path,omitempty"`
+	SnapshotHash string `json:"snapshot_hash"`
+	// CapturedAt states when `start` took the snapshot.
+	CapturedAt string `json:"captured_at,omitempty"`
 	// Stale is true when the current source document differs from the
 	// snapshot taken when implementation began. Stale evidence needs
 	// re-verification against the current intent.
@@ -130,15 +138,6 @@ type IntentEvidence struct {
 	// CurrentSourceHash is the SHA-256 of the current source document.
 	// It is empty when the source document is missing.
 	CurrentSourceHash string `json:"current_source_hash,omitempty"`
-}
-
-type Requirement struct {
-	ID               string   `json:"id"`
-	VerificationRefs []string `json:"verification_refs,omitempty"`
-}
-
-type VerificationEvidence struct {
-	Checks []Check `json:"checks"`
 }
 
 type Check struct {
@@ -156,12 +155,23 @@ type PackProvenance struct {
 	ShipProofVersion string `json:"shipproof_version"`
 }
 
+// Validate reports the first rule that a pack breaks. A pack that fails this
+// check is never written. Rule 1 of Section 7 makes a partial pack a defect.
 func (pack EvidencePack) Validate() error {
 	if pack.SchemaVersion != CurrentVersion {
 		return fmt.Errorf("schema_version must be %q", CurrentVersion)
 	}
 	if pack.ChangeID == "" {
 		return errors.New("change_id is required")
+	}
+	if pack.Verdict.Verdict == "" {
+		return errors.New("verdict.verdict is required")
+	}
+	if pack.Verdict.Reason == "" {
+		return errors.New("verdict.reason is required")
+	}
+	if pack.Verdict.Next == "" {
+		return errors.New("verdict.next is required")
 	}
 	if pack.Intent.SnapshotHash == "" {
 		return errors.New("intent.snapshot_hash is required")
@@ -172,66 +182,52 @@ func (pack EvidencePack) Validate() error {
 	if pack.Provenance.ShipProofVersion == "" {
 		return errors.New("provenance.shipproof_version is required")
 	}
-
-	if pack.Readiness != nil {
-		if pack.Readiness.ShapingRef == "" {
-			return errors.New("readiness.shaping_ref is required when readiness is present")
-		}
-		if !shapingRefPattern.MatchString(pack.Readiness.ShapingRef) {
-			return errors.New("readiness.shaping_ref must use lowercase letters, digits, and hyphens")
-		}
+	if pack.EmptySections == nil {
+		return errors.New("empty_sections is required")
 	}
 
-	if pack.AgentReview != nil {
-		if len(pack.AgentReview.Findings) == 0 {
-			return errors.New("agent_review.findings must not be empty")
-		}
-		for index, finding := range pack.AgentReview.Findings {
-			if finding.Summary == "" {
-				return fmt.Errorf("agent_review.findings[%d].summary is required", index)
-			}
-			if finding.Provenance != ProvenanceInferred {
-				return fmt.Errorf("agent_review.findings[%d].provenance must be %q", index, ProvenanceInferred)
-			}
-		}
-	}
-	if pack.Review != nil {
-		if pack.Review.Source == "" {
-			return errors.New("review.source is required when review is present")
-		}
-		if pack.Review.PRURL == "" {
-			return errors.New("review.pr_url is required when review is present")
-		}
-		if pack.Review.CollectedAt == "" {
-			return errors.New("review.collected_at is required when review is present")
-		}
-		for _, ts := range []struct{ name, value string }{
-			{"opened_at", pack.Review.OpenedAt},
-			{"first_review_at", pack.Review.FirstReviewAt},
-			{"collected_at", pack.Review.CollectedAt},
-		} {
-			if ts.value == "" {
-				continue
-			}
-			if _, err := time.Parse(time.RFC3339, ts.value); err != nil {
-				return fmt.Errorf("review.%s is not RFC 3339", ts.name)
-			}
-		}
-	}
-
-	for index, check := range pack.Verification.Checks {
+	for index, check := range pack.Checks {
 		if check.ID == "" {
-			return fmt.Errorf("verification.checks[%d].id is required", index)
+			return fmt.Errorf("checks[%d].id is required", index)
 		}
 		switch check.Status {
 		case "pass", "fail", "skip", "unknown":
 		default:
-			return fmt.Errorf("verification.checks[%d].status is invalid", index)
+			return fmt.Errorf("checks[%d].status is invalid", index)
 		}
 		switch check.Provenance {
 		case ProvenanceObserved, ProvenanceDerived, ProvenanceInferred, ProvenanceHuman:
 		default:
-			return fmt.Errorf("verification.checks[%d].provenance is invalid", index)
+			return fmt.Errorf("checks[%d].provenance is invalid", index)
+		}
+	}
+
+	for index, row := range pack.Requirements {
+		if row.ID == "" {
+			return fmt.Errorf("requirements[%d].id is required", index)
+		}
+		if row.State == "" {
+			return fmt.Errorf("requirements[%d].state is required", index)
+		}
+		if row.Grade == "" {
+			return fmt.Errorf("requirements[%d].grade is required", index)
+		}
+	}
+
+	// Rule 2 of Section 7. Every empty section names its reason.
+	for name, empty := range map[string]bool{
+		"requirements":       len(pack.Requirements) == 0,
+		"checks":             len(pack.Checks) == 0,
+		"implementation":     len(pack.Implementation.Commits) == 0 && len(pack.Implementation.ChangedFiles) == 0,
+		"unexplained_change": !pack.UnexplainedChange.Measured,
+		"agent":              pack.Agent == nil,
+		"attestation":        pack.Attestation == nil,
+	} {
+		if !empty {
+			continue
+		}
+		if reason := pack.EmptySections[name]; reason == "" {
+			return fmt.Errorf("the section %q is empty and empty_sections states no reason", name)
 		}
 	}
 
