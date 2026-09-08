@@ -10,7 +10,7 @@ metadata:
 ## Confirm the phase
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
 Act on the phase it reports. When it names a different skill, use that skill
@@ -22,10 +22,10 @@ Map important intent to proof before implementation details bias the tests.
 Create the repository-owned plan first when it does not exist:
 
 ```bash
-shipproof verification init <change-id>
+shipproof status <change-id>
 ```
 
-Maintain `.shipproof/changes/<change-id>/verification.json`. Run `shipproof verification check <change-id>` before implementation starts.
+Maintain `.shipproof/changes/<change-id>/verification.json`. Run `shipproof prove <change-id>` before implementation starts.
 
 For each material requirement or invariant:
 
@@ -48,7 +48,7 @@ A proof carries one of two forms.
 - A human proof carries `human: true` and a `rationale`. The rationale states
   why no machine can perform the check. ShipProof runs nothing for it.
 
-A proof that carries neither form is incomplete. `shipproof verification check`
+A proof that carries neither form is incomplete. `shipproof prove`
 rejects it.
 
 When a person performs a human proof, record the acceptance. Add

@@ -5,6 +5,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/alternayte/shipproof/internal/harness"
 	"github.com/alternayte/shipproof/internal/repository"
 )
 
@@ -35,6 +36,26 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Created %d directories and %d files.\n", len(result.CreatedDirectories), len(result.CreatedFiles))
 	if len(result.ExistingFiles) > 0 {
 		fmt.Fprintf(stdout, "Kept %d existing files unchanged.\n", len(result.ExistingFiles))
+	}
+	return installInstructions(abs, stdout, stderr)
+}
+
+// installInstructions writes the ShipProof instructions into the format that
+// each harness reads. A harness the repository does not use costs one unread
+// directory, and that is cheaper than a missing instruction set.
+func installInstructions(root string, stdout, stderr io.Writer) int {
+	targets := []harness.Target{
+		harness.TargetClaude,
+		harness.TargetOpenCode,
+		harness.TargetAgents,
+	}
+	for _, target := range targets {
+		result, err := harness.Install(root, target, false, false)
+		if err != nil {
+			fmt.Fprintf(stderr, "install instructions for %s: %v\n", target, err)
+			return 1
+		}
+		fmt.Fprintf(stdout, "Instructions for %s: %d files.\n", target, result.HarnessCreated)
 	}
 	return 0
 }

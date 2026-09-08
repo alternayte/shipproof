@@ -25,6 +25,19 @@ var cutReferences = []string{
 	"record-decision",
 	"benchmark-run",
 	"skill-evals",
+
+	// SP-024 folded these verbs into the five commands of Section 4.
+	"shipproof verification",
+	"shipproof verify",
+	"shipproof harness",
+	"shipproof change ",
+	"shipproof next",
+	"shipproof coverage",
+	"shipproof skill",
+	"shipproof evidence",
+	"shipproof review ",
+	"shipproof telemetry",
+	"shipproof report",
 }
 
 // documentedFiles names the user-facing documents. CHANGELOG.md is a

@@ -9,20 +9,20 @@ import (
 	"testing"
 )
 
-func TestEvidencePack(t *testing.T) {
+func TestPack(t *testing.T) {
 	root := t.TempDir()
 	setupTestRepo(t, root)
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"evidence", "pack", "SP-005"}, stdout, stderr)
+	code := Run([]string{"pack", "SP-005"}, stdout, stderr)
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d: %s", code, stderr.String())
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, "Evidence pack written:") {
+	if !strings.Contains(output, "Evidence pack:") {
 		t.Errorf("expected success message, got: %s", output)
 	}
 
@@ -43,17 +43,17 @@ func TestEvidencePack(t *testing.T) {
 	}
 }
 
-func TestEvidencePackMissingChangeID(t *testing.T) {
+func TestPackMissingChangeID(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"evidence", "pack"}, stdout, stderr)
+	code := Run([]string{"pack"}, stdout, stderr)
 	if code != 2 {
 		t.Errorf("expected exit 2, got %d", code)
 	}
 }
 
-func TestEvidencePackMissingChange(t *testing.T) {
+func TestPackMissingChange(t *testing.T) {
 	root := t.TempDir()
 	setupShipProofDir(t, root)
 
@@ -63,13 +63,13 @@ func TestEvidencePackMissingChange(t *testing.T) {
 	RunOverrides["."] = root
 	defer delete(RunOverrides, ".")
 
-	code := Run([]string{"evidence", "pack", "SP-999"}, stdout, stderr)
+	code := Run([]string{"pack", "SP-999"}, stdout, stderr)
 	if code != 1 {
 		t.Errorf("expected exit 1, got %d: %s", code, stderr.String())
 	}
 }
 
-func TestEvidencePackMissingVerificationPlan(t *testing.T) {
+func TestPackMissingVerificationPlan(t *testing.T) {
 	root := t.TempDir()
 	setupShipProofDir(t, root)
 	writeTestChangeRecord(t, root, "SP-099")
@@ -80,7 +80,7 @@ func TestEvidencePackMissingVerificationPlan(t *testing.T) {
 	RunOverrides["."] = root
 	defer delete(RunOverrides, ".")
 
-	code := Run([]string{"evidence", "pack", "SP-099"}, stdout, stderr)
+	code := Run([]string{"pack", "SP-099"}, stdout, stderr)
 	if code != 1 {
 		t.Errorf("expected exit 1, got %d", code)
 	}
@@ -167,40 +167,5 @@ func writeTestChangeRecord(t *testing.T, root, changeID string) {
 	data = append(data, '\n')
 	if err := os.WriteFile(filepath.Join(dir, "change.json"), data, 0o644); err != nil {
 		t.Fatalf("write change record: %v", err)
-	}
-}
-
-func writeTestEvidencePackWithCommits(t *testing.T, root, changeID string, commits []map[string]string) {
-	t.Helper()
-	dir := filepath.Join(root, ".shipproof", "changes", changeID)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("create change dir: %v", err)
-	}
-	pack := map[string]interface{}{
-		"schema_version": "0.1",
-		"change_id":      changeID,
-		"intent": map[string]interface{}{
-			"snapshot_hash": "abc123",
-			"requirements":  []interface{}{},
-		},
-		"implementation": map[string]interface{}{
-			"commits":       commits,
-			"changed_files": []string{"main.go"},
-			"additions":     1,
-			"deletions":     0,
-			"diff_stat":     "main.go | 1 +",
-		},
-		"verification": map[string]interface{}{
-			"checks": []interface{}{},
-		},
-		"provenance": map[string]string{
-			"generated_at":      "2026-08-14T20:00:00Z",
-			"shipproof_version": "0.1",
-		},
-	}
-	data, _ := json.MarshalIndent(pack, "", "  ")
-	data = append(data, '\n')
-	if err := os.WriteFile(filepath.Join(dir, "evidence-pack.json"), data, 0o644); err != nil {
-		t.Fatalf("write evidence pack: %v", err)
 	}
 }

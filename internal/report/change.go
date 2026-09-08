@@ -1,7 +1,6 @@
 package report
 
 import (
-	"github.com/alternayte/shipproof/internal/review"
 	"github.com/alternayte/shipproof/internal/schema"
 )
 
@@ -82,7 +81,7 @@ func buildIntentData(pack schema.EvidencePack) intentData {
 	}
 }
 
-func buildVerifyData(pack schema.EvidencePack, packet *review.ReviewPacket) verifyData {
+func buildVerifyData(pack schema.EvidencePack) verifyData {
 	data := verifyData{}
 
 	var passCount, failCount, skipCount, unknownCount int

@@ -11,22 +11,17 @@ go install ./cmd/shipproof
 shipproof init
 ```
 
-Install skills for the agent harness:
-
-```bash
-shipproof harness install claude
-shipproof harness install opencode
-```
+`init` also installs the ShipProof instructions into every harness path.
 
 ## The one command you need
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
-`next` derives the current phase from the artifacts on disk. It names the
-blocker, the exact next command, and the skill that handles it. Run it. Act on
-what it says. Run it again.
+`status` derives the current phase from the artifacts on disk. It names the
+blocker, the exact next command, the skill that handles it, and the
+requirement coverage. Run it. Act on what it says. Run it again.
 
 This document explains what each phase means. It is reference material. It is
 not a sequence to remember.
@@ -52,8 +47,8 @@ The agent reads the design document (or writes a short change description for ad
 The agent then records the change:
 
 ```bash
-shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --ceremony 1
-shipproof change status <change-id>
+shipproof start <change-id> --intent docs/changes/<change-id>-<slug>.md --ceremony 1
+shipproof status <change-id>
 ```
 
 The `--ceremony` value sets how much proof the change needs. Pass `--ceremony 0`
@@ -63,7 +58,7 @@ one.
 To refresh a stale snapshot, add `--force`:
 
 ```bash
-shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --force
+shipproof start <change-id> --intent docs/changes/<change-id>-<slug>.md --force
 ```
 
 The `--force` option re-snapshots the source document and rewrites the record.
@@ -76,8 +71,7 @@ It keeps the recorded ceremony level, unless you also pass `--ceremony`.
 The agent creates and populates the verification plan.
 
 ```bash
-shipproof verification init <change-id>
-shipproof verification check <change-id>
+shipproof status <change-id>
 ```
 
 At ceremony level 1 and above the verification plan is required. A change with
@@ -90,17 +84,16 @@ no plan stays at `NEEDS_PLAN`. Skip this step only at ceremony level 0.
 The agent reads the intent snapshot and verification plan, then makes the smallest coherent change that satisfies the approved scope. The agent then runs the repository verification contract and confirms the intent snapshot is intact:
 
 ```bash
-shipproof verification run <change-id>
-shipproof verification run <change-id> --gate-only
-shipproof verification run <change-id> --proofs-only
-shipproof change check <change-id>
-shipproof coverage <change-id>
+shipproof prove <change-id>
+shipproof prove <change-id> --gate-only
+shipproof prove <change-id> --proofs-only
+shipproof status <change-id>
 ```
 
 `--gate-only` skips the attribution pass. `--proofs-only` skips the gate. Do
 not use both flags together.
 
-`shipproof coverage <change-id>` reports what each requirement proved at the
+`shipproof status <change-id>` reports what each requirement proved at the
 current revision.
 
 ## Unexplained change
@@ -142,34 +135,12 @@ no total.
 The agent assembles the evidence pack from intent, implementation, and verification data:
 
 ```bash
-shipproof evidence pack <change-id>
+shipproof pack <change-id>
 ```
 
 ShipProof reads the base revision from the recorded agent run. Pass `--base <rev>` when no agent run recorded one. Without a base revision the pack carries no unexplained-change section, and the command says so on stderr.
 
-## Step 5 — Prepare human review
-
-**Skill:** `prepare-human-review`
-
-The agent generates a focused review packet that separates proven areas from areas that need human attention:
-
-```bash
-shipproof review prepare <change-id>
-```
-
-## Step 6 — Generate reports
-
-Generate human-readable reports from the evidence pack and review packet:
-
-```bash
-shipproof report change <change-id>
-shipproof report pr-summary <change-id>
-shipproof report project <name>
-```
-
-Use `--output <path>` to write to a file instead of stdout.
-
-## Step 7 — Code review and commit
+## Step 5 — Code review and commit
 
 **Skill:** `review-change`
 
@@ -179,12 +150,10 @@ The agent reviews the implementation against the approved intent. After review, 
 
 | Step | Skill | CLI commands |
 |---|---|---|
-| Prepare | `prepare-change` | `change start`, `change status` |
-| Plan verification | `plan-verification` | `verification init`, `verification check` |
-| Implement | `implement-change` | `change status`, `verification check`, `verification run`, `change check`, `coverage` |
-| Evidence | `produce-evidence` | `evidence pack` |
-| Human review | `prepare-human-review` | `review prepare` |
-| Reports | none | `report change`, `report pr-summary`, `report project` |
+| Prepare | `prepare-change` | `start`, `status` |
+| Plan verification | `plan-verification` | `status` |
+| Implement | `implement-change` | `prove`, `status` |
+| Evidence | `produce-evidence` | `pack` |
 | Code review | `review-change` | none |
 
 ## Starting a new session

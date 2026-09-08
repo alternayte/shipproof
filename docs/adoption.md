@@ -19,7 +19,11 @@ shipproof init
 ```
 
 `shipproof init` creates the `.shipproof/` directory with templates and a
-default config. It never overwrites existing files.
+default config, and it installs the ShipProof instructions into every harness
+path. It never overwrites existing files.
+
+Keep a small `AGENTS.md` with repository invariants. Skills define task
+workflows; `AGENTS.md` keeps static context small.
 
 Edit `.shipproof/config.yaml`:
 
@@ -32,32 +36,18 @@ evidence:
 
 `just verify` is the recommended convention. Any shell command works.
 
-## Install skills into your harness
-
-```bash
-shipproof harness install claude     # .claude/skills/
-shipproof harness install opencode   # .opencode/skills/
-shipproof harness install cursor     # .agents/skills/
-shipproof harness install codex      # .agents/skills/
-```
-
-Keep a small `AGENTS.md` with repository invariants. Skills define task
-workflows; `AGENTS.md` keeps static context small.
-
 ## The workflow in one pass
 
 ```bash
-shipproof change start WEB-142 --source docs/changes/web-142.md
-shipproof verification init WEB-142
-shipproof verify WEB-142
-shipproof telemetry collect WEB-142 --adapter claude
-shipproof evidence pack WEB-142 --base main
-shipproof review prepare WEB-142
-shipproof report change WEB-142 --output report.html
+shipproof start WEB-142 --intent docs/changes/web-142.md
+shipproof status WEB-142
+shipproof prove WEB-142
+shipproof pack WEB-142 --base main --adapter claude
 ```
 
 The `plan` and `implement` steps run inside your coding agent through the
 installed skills. The CLI handles deterministic state, evidence, and reports.
+`shipproof status` names the next command at every point.
 
 ## What ShipProof does not do
 

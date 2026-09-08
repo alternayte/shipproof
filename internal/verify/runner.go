@@ -58,13 +58,6 @@ func Run(root, changeID, command string) (Result, error) {
 	return result, nil
 }
 
-// RunAdhoc executes the repository verification command without a change record.
-// Logs go to .shipproof/runs/adhoc/. No run.json is written because no change
-// exists to associate the result with.
-func RunAdhoc(root, command string) (Result, error) {
-	return runCommand(root, filepath.Join(root, ".shipproof", "runs", "adhoc"), "", command)
-}
-
 func runCommand(root, runDir, changeID, command string) (Result, error) {
 	if strings.TrimSpace(command) == "" {
 		return Result{}, ErrCommandMissing

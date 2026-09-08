@@ -10,7 +10,7 @@ metadata:
 ## Confirm the phase
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
 Act on the phase it reports. When it names a different skill, use that skill
@@ -35,7 +35,7 @@ Write a scoped change description for one independently verifiable change.
 5. Start the change record:
 
 ```bash
-shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --ceremony <level>
+shipproof start <change-id> --intent docs/changes/<change-id>-<slug>.md --ceremony <level>
 ```
 
 Use the level that `triage-change` recommends. Pass `--ceremony 0` for a
@@ -44,12 +44,12 @@ trivial change. Level 0 needs no verification plan. Level 1 and above need one.
 6. Confirm the record:
 
 ```bash
-shipproof change status <change-id>
+shipproof status <change-id>
 ```
 
 ## Adopt the requirement set
 
-Run `shipproof doc adopt <change-id> --source <path>`.
+`shipproof start` adopts the requirement set from the intent document.
 
 A document in the `docs/changes/` format adopts with no human step. The
 provenance is `observed`.
@@ -60,11 +60,11 @@ the list. Then rerun the command with `--confirm`.
 
 ## Refresh a stale snapshot
 
-`shipproof next` reports `INTENT_STALE` when the source document changed after
+`shipproof status` reports `INTENT_STALE` when the source document changed after
 the snapshot. Read the current source document first. Then re-snapshot it:
 
 ```bash
-shipproof change start <change-id> --source docs/changes/<change-id>-<slug>.md --force
+shipproof start <change-id> --intent docs/changes/<change-id>-<slug>.md --force
 ```
 
 The `--force` option rewrites the record. It keeps the recorded ceremony level,

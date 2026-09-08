@@ -10,7 +10,7 @@ metadata:
 ## Confirm the phase
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
 Act on the phase it reports. When it names a different skill, use that skill
@@ -22,18 +22,13 @@ Reduce review effort without hiding uncertainty.
 Generate the evidence pack first when it does not exist:
 
 ```bash
-shipproof evidence pack <change-id>
+shipproof pack <change-id>
 ```
 
 ShipProof reads the base revision from the recorded agent run. Pass `--base <rev>` when no agent run recorded one. Without a base revision the pack carries no unexplained-change section, and the command says so on stderr.
 
-Generate the review packet:
-
-```bash
-shipproof review prepare <change-id>
-```
-
-The packet separates:
+`shipproof pack` writes the HTML change report beside the pack. Read it, then
+write the review note in the change document. Separate:
 
 1. **Change intent** — what behavior changed and why.
 2. **Already proven** — areas backed by deterministic evidence.

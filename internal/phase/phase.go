@@ -19,15 +19,14 @@ import (
 type Phase string
 
 const (
-	NoChange          Phase = "NO_CHANGE"
-	IntentStale       Phase = "INTENT_STALE"
-	NeedsPlan         Phase = "NEEDS_PLAN"
-	NeedsRun          Phase = "NEEDS_RUN"
-	RunStale          Phase = "RUN_STALE"
-	RunFailed         Phase = "RUN_FAILED"
-	NeedsEvidence     Phase = "NEEDS_EVIDENCE"
-	NeedsReviewPacket Phase = "NEEDS_REVIEW_PACKET"
-	ReadyForHuman     Phase = "READY_FOR_HUMAN"
+	NoChange      Phase = "NO_CHANGE"
+	IntentStale   Phase = "INTENT_STALE"
+	NeedsPlan     Phase = "NEEDS_PLAN"
+	NeedsRun      Phase = "NEEDS_RUN"
+	RunStale      Phase = "RUN_STALE"
+	RunFailed     Phase = "RUN_FAILED"
+	NeedsEvidence Phase = "NEEDS_EVIDENCE"
+	ReadyForHuman Phase = "READY_FOR_HUMAN"
 )
 
 // Result names the phase, the blocker that holds it open, the exact next
@@ -51,7 +50,7 @@ func Resolve(root, changeID string) (Result, error) {
 				ChangeID:    changeID,
 				Phase:       NoChange,
 				Blocker:     "no change record exists",
-				NextCommand: fmt.Sprintf("shipproof change start %s --source <path>", changeID),
+				NextCommand: fmt.Sprintf("shipproof start %s --intent <path>", changeID),
 				NextSkill:   "prepare-change",
 			}, nil
 		}
@@ -72,7 +71,7 @@ func Resolve(root, changeID string) (Result, error) {
 			ChangeID:    changeID,
 			Phase:       IntentStale,
 			Blocker:     fmt.Sprintf("source %s changed after the snapshot", record.SourcePath),
-			NextCommand: fmt.Sprintf("shipproof change start %s --source %s --force", changeID, record.SourcePath),
+			NextCommand: fmt.Sprintf("shipproof start %s --intent %s --force", changeID, record.SourcePath),
 			NextSkill:   "prepare-change",
 		}, nil
 	}
@@ -102,26 +101,15 @@ func Resolve(root, changeID string) (Result, error) {
 			ChangeID:    changeID,
 			Phase:       NeedsEvidence,
 			Blocker:     "no evidence pack exists for the current run",
-			NextCommand: fmt.Sprintf("shipproof evidence pack %s", changeID),
+			NextCommand: fmt.Sprintf("shipproof pack %s", changeID),
 			NextSkill:   "produce-evidence",
 		}, nil
 	}
 
-	if level >= 1 && !fileExists(artifactPath(root, changeID, "review-packet.json")) {
-		return Result{
-			ChangeID:    changeID,
-			Phase:       NeedsReviewPacket,
-			Blocker:     "no review packet exists",
-			NextCommand: fmt.Sprintf("shipproof review prepare %s", changeID),
-			NextSkill:   "prepare-human-review",
-		}, nil
-	}
-
 	return Result{
-		ChangeID:    changeID,
-		Phase:       ReadyForHuman,
-		NextCommand: fmt.Sprintf("shipproof report change %s", changeID),
-		NextSkill:   "review-change",
+		ChangeID:  changeID,
+		Phase:     ReadyForHuman,
+		NextSkill: "review-change",
 	}, nil
 }
 
@@ -137,7 +125,7 @@ func resolveRun(root, changeID string) (Result, bool, error) {
 				ChangeID:    changeID,
 				Phase:       NeedsRun,
 				Blocker:     "no run record exists",
-				NextCommand: fmt.Sprintf("shipproof verification run %s", changeID),
+				NextCommand: fmt.Sprintf("shipproof prove %s", changeID),
 				NextSkill:   "implement-change",
 			}, true, nil
 		}
@@ -154,7 +142,7 @@ func resolveRun(root, changeID string) (Result, bool, error) {
 			ChangeID:    changeID,
 			Phase:       RunStale,
 			Blocker:     reason,
-			NextCommand: fmt.Sprintf("shipproof verification run %s", changeID),
+			NextCommand: fmt.Sprintf("shipproof prove %s", changeID),
 			NextSkill:   "implement-change",
 		}, true, nil
 	}
@@ -164,7 +152,7 @@ func resolveRun(root, changeID string) (Result, bool, error) {
 			ChangeID:    changeID,
 			Phase:       RunFailed,
 			Blocker:     fmt.Sprintf("the newest run exited with code %d", run.ExitCode),
-			NextCommand: fmt.Sprintf("shipproof verification run %s", changeID),
+			NextCommand: fmt.Sprintf("shipproof prove %s", changeID),
 			NextSkill:   "implement-change",
 		}, true, nil
 	}
@@ -195,7 +183,7 @@ func resolvePlan(root, changeID string) (Result, bool, error) {
 	if _, err := os.Stat(planPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return needsPlan(changeID, "no verification plan exists",
-				fmt.Sprintf("shipproof verification init %s", changeID)), true, nil
+				fmt.Sprintf("shipproof start %s --intent <path> --force", changeID)), true, nil
 		}
 		return Result{}, false, fmt.Errorf("inspect verification plan: %w", err)
 	}
@@ -206,7 +194,7 @@ func resolvePlan(root, changeID string) (Result, bool, error) {
 	}
 	if len(plan.Requirements)+len(plan.Invariants) == 0 {
 		return needsPlan(changeID, "verification.json carries no requirement",
-			fmt.Sprintf("shipproof verification check %s", changeID)), true, nil
+			fmt.Sprintf("shipproof prove %s", changeID)), true, nil
 	}
 	return Result{}, false, nil
 }

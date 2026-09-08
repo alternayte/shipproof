@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/alternayte/shipproof/internal/review"
 	"github.com/alternayte/shipproof/internal/schema"
 )
 
@@ -17,18 +16,13 @@ func GenerateChangeReport(w io.Writer, root, changeID string) error {
 		return err
 	}
 
-	var packet *review.ReviewPacket
-	if rp, err := review.Prepare(root, changeID); err == nil {
-		packet = &rp
-	}
-
 	generatedAt := pack.Provenance.GeneratedAt
 
 	data := changeReportData{
 		ChangeID:    pack.ChangeID,
 		GeneratedAt: generatedAt,
 		Intent:      buildIntentData(pack),
-		Verify:      buildVerifyData(pack, packet),
+		Verify:      buildVerifyData(pack),
 		Implement:   buildImplementData(pack),
 		AgentRun:    buildAgentRunData(pack),
 		Provenance:  buildReportProvenanceData(pack),
@@ -36,20 +30,6 @@ func GenerateChangeReport(w io.Writer, root, changeID string) error {
 	}
 
 	return executeTemplate(w, "change_report.html", data)
-}
-
-func GeneratePRSummary(w io.Writer, root, changeID string) error {
-	pack, err := loadEvidencePack(root, changeID)
-	if err != nil {
-		return err
-	}
-
-	packet, err := review.Prepare(root, changeID)
-	if err != nil {
-		return fmt.Errorf("prepare review packet: %w", err)
-	}
-
-	return writePRSummary(w, pack, packet)
 }
 
 func loadEvidencePack(root, changeID string) (schema.EvidencePack, error) {

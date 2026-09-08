@@ -10,7 +10,7 @@ metadata:
 ## Confirm the phase
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
 Act on the phase it reports. When it names a different skill, use that skill
@@ -28,7 +28,7 @@ Build narrative from recorded evidence, never the reverse.
 7. Generate the evidence pack:
 
 ```bash
-shipproof evidence pack <change-id> [--base <rev>] [--head <rev>]
+shipproof pack <change-id> [--base <rev>] [--head <rev>]
 ```
 
 8. Generate a concise summary that cites the underlying evidence identifiers.

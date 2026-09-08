@@ -56,7 +56,7 @@ func TestResolveNeedsPlanWhenPlanIsAbsent(t *testing.T) {
 	if result.Phase != NeedsPlan {
 		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsPlan)
 	}
-	if result.NextCommand != "shipproof verification init SP-301" {
+	if result.NextCommand != "shipproof start SP-301 --intent <path> --force" {
 		t.Fatalf("NextCommand = %q", result.NextCommand)
 	}
 }
@@ -147,7 +147,7 @@ func TestResolveNeedsRun(t *testing.T) {
 	if result.Phase != NeedsRun {
 		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsRun)
 	}
-	if result.NextCommand != "shipproof verification run SP-310" {
+	if result.NextCommand != "shipproof prove SP-310" {
 		t.Fatalf("NextCommand = %q", result.NextCommand)
 	}
 }
@@ -256,23 +256,6 @@ func TestResolveRunWithNoRevisionIsNeverStale(t *testing.T) {
 	}
 	if result.Phase != NeedsEvidence {
 		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsEvidence)
-	}
-}
-
-func TestResolveNeedsReviewPacket(t *testing.T) {
-	t.Parallel()
-
-	root, _ := newChange(t, "SP-315", 1)
-	writePlan(t, root, "SP-315", `{"schema_version":"0.1","change_id":"SP-315","requirements":[{"id":"SP-315-R1","proof":[{"type":"unit","target":"x_test.go","command":"go test ."}]}],"invariants":[]}`)
-	writeRun(t, root, "SP-315", `{"schema_version":"0.1","change_id":"SP-315","exit_code":0,"duration_ms":10,"stdout_path":"a","stderr_path":"b","timestamp":"2026-08-25T10:00:00Z"}`)
-	writeArtifact(t, root, "SP-315", "evidence-pack.json", "{}")
-
-	result, err := Resolve(root, "SP-315")
-	if err != nil {
-		t.Fatalf("Resolve() error = %v", err)
-	}
-	if result.Phase != NeedsReviewPacket {
-		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsReviewPacket)
 	}
 }
 
@@ -491,8 +474,8 @@ func TestResolveNeedsPlanOnEmptyPlanNamesVerificationCheck(t *testing.T) {
 	if result.Phase != NeedsPlan {
 		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsPlan)
 	}
-	if result.NextCommand != "shipproof verification check SP-321" {
-		t.Fatalf("NextCommand = %q, want %q", result.NextCommand, "shipproof verification check SP-321")
+	if result.NextCommand != "shipproof prove SP-321" {
+		t.Fatalf("NextCommand = %q, want %q", result.NextCommand, "shipproof prove SP-321")
 	}
 }
 
@@ -513,7 +496,7 @@ func TestResolveNeedsEvidence(t *testing.T) {
 	if result.NextSkill != "produce-evidence" {
 		t.Fatalf("NextSkill = %q, want produce-evidence", result.NextSkill)
 	}
-	if result.NextCommand != "shipproof evidence pack SP-318" {
+	if result.NextCommand != "shipproof pack SP-318" {
 		t.Fatalf("NextCommand = %q", result.NextCommand)
 	}
 }

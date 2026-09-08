@@ -2,7 +2,7 @@
 
 Evidence for AI-assisted software delivery.
 
-ShipProof is a CLI tool that helps teams produce verifiable evidence of what was built, why, and whether it works. It provides portable Agent Skills and a versioned evidence contract that keeps AI-assisted work auditable.
+ShipProof is a CLI tool that helps teams produce verifiable evidence of what was built, why, and whether it works. It provides five commands, portable Agent Skills, and a versioned evidence contract that keeps AI-assisted work auditable.
 
 ## Quick start
 
@@ -11,7 +11,7 @@ go install github.com/alternayte/shipproof/cmd/shipproof@latest
 shipproof init .
 ```
 
-`shipproof init` creates a `.shipproof/` directory with templates and a repository verification command. It never overwrites existing files.
+`shipproof init` creates a `.shipproof/` directory with templates and a repository verification command, and it installs the ShipProof instructions into every harness path. It never overwrites existing files.
 
 ## Concepts
 
@@ -40,89 +40,87 @@ Every piece of evidence carries a provenance label: `observed`, `derived`, `infe
 
 ## Commands
 
-### Delivery phase
+The whole product is five commands and two support commands.
 
 ```bash
-shipproof next
-shipproof next SP-002
-shipproof next SP-002 --json
+shipproof init [directory]
+shipproof start <change-id> --intent <path>
+shipproof prove [change-id]
+shipproof pack [change-id]
+shipproof status [change-id]
+
+shipproof runner <list|doctor>
+shipproof config <get|set> <key> [value]
 ```
 
-`next` derives the current delivery phase from the artifacts on disk. It reports
-the phase, the blocker, the exact next command, and the skill that handles it.
-ShipProof stores no cursor, so the answer stays correct when an agent acts out
-of band.
+### `init`
 
-With no change identifier, `next` resolves the single change that is not
-`READY_FOR_HUMAN`.
+`init` prepares the repository and installs the ShipProof instructions for
+Claude Code (`.claude/skills/`), OpenCode (`.opencode/skills/`), and the
+portable `.agents/skills/` path that Cursor and Codex read. It never
+overwrites a modified file.
 
-### Change management
+### `start`
 
 ```bash
-shipproof change start SP-002 --source docs/prd/retries.md --ceremony 1
-shipproof change status SP-002
-shipproof change check SP-002
+shipproof start SP-002 --intent docs/changes/SP-002-retries.md
+shipproof start SP-002 --intent docs/changes/SP-002-retries.md --force
 ```
 
-Each change captures an immutable intent snapshot with SHA-256 provenance. Change records live under `.shipproof/changes/<change-id>/`.
+`start` records an immutable intent snapshot with its SHA-256 hash. It adopts
+the requirement set when the document names requirement identifiers, and it
+creates the verification plan for the agent to fill. `--force` re-snapshots a
+stale source document.
 
-`change status` and `change check` also report intent staleness. When the source document changes after the snapshot, the intent is stale and the change needs re-verification. Evidence packs carry an `intent:staleness` check.
-
-### Verification plans
+### `prove`
 
 ```bash
-shipproof verify
-shipproof verify SP-002
-shipproof verification init SP-002
-shipproof verification check SP-002
-shipproof verification run SP-002 --gate-only
-shipproof verification run SP-002 --proofs-only
-shipproof coverage SP-002
-shipproof coverage SP-002 --json
+shipproof prove SP-002
+shipproof prove SP-002 --gate-only
+shipproof prove SP-002 --proofs-only
 ```
 
-`shipproof verify` runs the configured repository verification command. With a change ID it behaves like `verification run` and writes a structured run result. Without one, logs go to `.shipproof/runs/adhoc/` and the command's exit code is returned.
+`prove` validates the verification plan, runs the repository gate, and runs
+each proof on its own. The gate decides whether the repository passes. The
+attribution pass records one result per proof. A green attribution never masks
+a red gate. With no change identifier, `prove` resolves the single open change.
 
-Verification plans map requirements and invariants to proof before implementation. Each plan item requires at least one proof with a type and target. A proof carries either a non-empty `command`, or `human: true` with a `rationale`. `verification check` rejects a proof that carries neither.
-
-`verification check` also compares the requirement set against the plan when a requirement sidecar exists. A requirement with no plan entry blocks. A plan entry with no requirement blocks. Invariants take no part in the tie check.
-
-`verification run` performs two jobs. The gate runs the repository verification command. It decides whether the repository passes. The attribution pass runs each proof on its own. It records one result per proof in `.shipproof/runs/<change-id>/proofs.json`. A green attribution never masks a red gate. Use `--gate-only` to skip the attribution pass. Use `--proofs-only` to skip the gate. Do not use both flags together.
-
-`shipproof coverage <change-id>` reports what each requirement proved at the current revision. It derives the matrix on demand. It writes nothing.
-
-### Reports
+### `pack`
 
 ```bash
-shipproof report change SP-002
-shipproof report change SP-002 --output report.html
-shipproof report pr-summary SP-002
-shipproof report project my-project
+shipproof pack SP-002
+shipproof pack SP-002 --base main
+shipproof pack SP-002 --adapter claude
 ```
 
-Each report includes provenance badges on every metric. HTML change reports show intent, verification, implementation, and agent-run metadata. Markdown PR summaries answer the five SDD review questions. Project aggregate reports derive pass rates, agent usage, and cost across all changes.
+`pack` collects the agent telemetry when you name an adapter, assembles the
+evidence pack, and writes the HTML change report beside it. Every metric
+carries a provenance label.
+
+### `status`
+
+```bash
+shipproof status SP-002
+shipproof status SP-002 --json
+```
+
+`status` derives the current phase from the artifacts on disk. It reports the
+phase, the blocker, the exact next command, the skill that handles it, and the
+requirement coverage. ShipProof stores no cursor, so the answer stays correct
+when an agent acts out of band.
 
 ### Skills
 
-```bash
-shipproof harness install claude
-shipproof harness install cursor
-shipproof harness install codex
-shipproof skill check
-```
-
-ShipProof ships with 6 portable Agent Skills. Install them into the harness discovery path for Claude Code (`.claude/skills/`), Cursor or Codex (`.agents/skills/`). Modified skill files are not overwritten unless `--force` is explicit.
-
-Built-in skills cover the delivery cycle:
+ShipProof ships with 6 portable Agent Skills. `init` installs them.
 
 | Skill | Purpose |
 |---|---|
+| `prepare-change` | Prepare the next ShipProof change from approved intent. |
 | `plan-verification` | Plan how to prove a change before implementation. |
 | `implement-change` | Implement one approved change against its verification plan, then verify it. |
 | `review-change` | Review an implemented change for correctness and agent failure patterns. |
 | `prepare-human-review` | Prepare a focused human-review packet. |
 | `produce-evidence` | Produce a versioned evidence pack from recorded facts. |
-| `prepare-change` | Prepare the next ShipProof change from approved intent. |
 
 ### Agent execution
 

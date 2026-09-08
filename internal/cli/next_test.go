@@ -13,7 +13,7 @@ func TestNextReportsNoChange(t *testing.T) {
 	newCLITestRoot(t)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next", "SP-999"}, &stdout, &stderr)
+	code := Run([]string{"status", "SP-999"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 	}
@@ -29,7 +29,7 @@ func TestNextJSONOutput(t *testing.T) {
 	newCLITestRoot(t)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next", "SP-999", "--json"}, &stdout, &stderr)
+	code := Run([]string{"status", "SP-999", "--json"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 	}
@@ -55,7 +55,7 @@ func TestNextRejectsUnrecognizedOption(t *testing.T) {
 	newCLITestRoot(t)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next", "--Json"}, &stdout, &stderr)
+	code := Run([]string{"status", "--Json"}, &stdout, &stderr)
 	if code != 2 {
 		t.Fatalf("exit code = %d, want 2; stdout = %s stderr = %s", code, stdout.String(), stderr.String())
 	}
@@ -73,13 +73,13 @@ func TestNextWithSeveralOpenChangesListsThem(t *testing.T) {
 			t.Fatal(err)
 		}
 		var out, errOut bytes.Buffer
-		if code := Run([]string{"change", "start", id, "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+		if code := Run([]string{"start", id, "--intent", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
 			t.Fatalf("change start %s failed: %s", id, errOut.String())
 		}
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next"}, &stdout, &stderr)
+	code := Run([]string{"status"}, &stdout, &stderr)
 	if code == 0 {
 		t.Fatal("expected a non-zero exit code for several open changes")
 	}
@@ -97,12 +97,12 @@ func TestNextWithNoArgumentResolvesTheSoleOpenChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"change", "start", "SP-402", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+	if code := Run([]string{"start", "SP-402", "--intent", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
 		t.Fatalf("change start failed: %s", errOut.String())
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next"}, &stdout, &stderr)
+	code := Run([]string{"status"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 	}
@@ -139,7 +139,7 @@ func TestNextIgnoresADirectoryWithoutAChangeRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"change", "start", "SP-410", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+	if code := Run([]string{"start", "SP-410", "--intent", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
 		t.Fatalf("change start failed: %s", errOut.String())
 	}
 
@@ -151,7 +151,7 @@ func TestNextIgnoresADirectoryWithoutAChangeRecord(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next"}, &stdout, &stderr)
+	code := Run([]string{"status"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 	}
@@ -171,7 +171,7 @@ func TestNextSurfacesACorruptChangeRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"change", "start", "SP-420", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+	if code := Run([]string{"start", "SP-420", "--intent", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
 		t.Fatalf("change start failed: %s", errOut.String())
 	}
 
@@ -184,7 +184,7 @@ func TestNextSurfacesACorruptChangeRecord(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next"}, &stdout, &stderr)
+	code := Run([]string{"status"}, &stdout, &stderr)
 	if code == 0 {
 		t.Fatalf("expected a non-zero exit code for a corrupt change record:\n%s", stdout.String())
 	}
@@ -205,7 +205,7 @@ func TestNextSurfacesAnUnreadableChangeDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"change", "start", "SP-412", "--source", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
+	if code := Run([]string{"start", "SP-412", "--intent", source, "--ceremony", "0"}, &out, &errOut); code != 0 {
 		t.Fatalf("change start failed: %s", errOut.String())
 	}
 
@@ -225,7 +225,7 @@ func TestNextSurfacesAnUnreadableChangeDirectory(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(blocked, 0o755) })
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"next"}, &stdout, &stderr)
+	code := Run([]string{"status"}, &stdout, &stderr)
 	if code == 0 {
 		t.Fatalf("exit code = 0; an unreadable change must not be dropped silently:\n%s", stdout.String())
 	}

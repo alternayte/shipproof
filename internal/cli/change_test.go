@@ -24,7 +24,7 @@ func TestChangeStart(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"change", "start", "SP-030", "--source", src}, stdout, stderr)
+	code := Run([]string{"start", "SP-030", "--intent", src}, stdout, stderr)
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d: %s", code, stderr.String())
 	}
@@ -53,7 +53,7 @@ func TestChangeStartRejectsShapingFlag(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"change", "start", "SP-032", "--source", "x.md", "--shaping", "my-session"}, stdout, stderr)
+	code := Run([]string{"start", "SP-032", "--intent", "x.md", "--shaping", "my-session"}, stdout, stderr)
 	if code != 2 {
 		t.Errorf("expected exit 2, got %d", code)
 	}
@@ -73,7 +73,7 @@ func TestChangeStartForceResnapshotsAndKeepsCeremony(t *testing.T) {
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	if code := Run([]string{"change", "start", "SP-040", "--source", src, "--ceremony", "2"}, stdout, stderr); code != 0 {
+	if code := Run([]string{"start", "SP-040", "--intent", src, "--ceremony", "2"}, stdout, stderr); code != 0 {
 		t.Fatalf("expected exit 0, got stderr %s", stderr.String())
 	}
 
@@ -83,7 +83,7 @@ func TestChangeStartForceResnapshotsAndKeepsCeremony(t *testing.T) {
 
 	stdout.Reset()
 	stderr.Reset()
-	if code := Run([]string{"change", "start", "SP-040", "--source", src, "--force"}, stdout, stderr); code != 0 {
+	if code := Run([]string{"start", "SP-040", "--intent", src, "--force"}, stdout, stderr); code != 0 {
 		t.Fatalf("expected exit 0 with --force, got stderr %s", stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "Ceremony: 2") {
@@ -113,13 +113,13 @@ func TestChangeStartWithoutForceRefusesAnExistingChange(t *testing.T) {
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	if code := Run([]string{"change", "start", "SP-041", "--source", src}, stdout, stderr); code != 0 {
+	if code := Run([]string{"start", "SP-041", "--intent", src}, stdout, stderr); code != 0 {
 		t.Fatalf("expected exit 0, got stderr %s", stderr.String())
 	}
 
 	stdout.Reset()
 	stderr.Reset()
-	if code := Run([]string{"change", "start", "SP-041", "--source", src}, stdout, stderr); code != 1 {
+	if code := Run([]string{"start", "SP-041", "--intent", src}, stdout, stderr); code != 1 {
 		t.Fatalf("expected exit 1 for an existing change, got %d", code)
 	}
 	if !strings.Contains(stderr.String(), "already exists") {
@@ -141,7 +141,7 @@ func TestChangeStartRejectsCeremonyOutOfRangeWithExitTwo(t *testing.T) {
 
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	code := Run([]string{"change", "start", "SP-042", "--source", src, "--ceremony", "4"}, stdout, stderr)
+	code := Run([]string{"start", "SP-042", "--intent", src, "--ceremony", "4"}, stdout, stderr)
 	if code != 2 {
 		t.Fatalf("exit code = %d, want 2; stderr = %s", code, stderr.String())
 	}

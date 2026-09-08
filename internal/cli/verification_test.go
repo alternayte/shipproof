@@ -45,7 +45,7 @@ func TestVerificationCheckPassesWithNoSidecar(t *testing.T) {
 	root := tieRepo(t, tiePlanJSON, "")
 
 	var stdout, stderr bytes.Buffer
-	code := runVerificationIn(t, root, []string{"check", "SP-028"}, &stdout, &stderr)
+	code := checkPlanIn(t, root, "SP-028", &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit = %d, want 0\nstderr: %s", code, stderr.String())
 	}
@@ -55,7 +55,7 @@ func TestVerificationCheckPassesWhenTheSetsMatch(t *testing.T) {
 	root := tieRepo(t, tiePlanJSON, tieSidecarMatching)
 
 	var stdout, stderr bytes.Buffer
-	code := runVerificationIn(t, root, []string{"check", "SP-028"}, &stdout, &stderr)
+	code := checkPlanIn(t, root, "SP-028", &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit = %d, want 0\nstderr: %s", code, stderr.String())
 	}
@@ -68,7 +68,7 @@ func TestVerificationCheckBlocksAnUnplannedRequirement(t *testing.T) {
 	root := tieRepo(t, tiePlanJSON, tieSidecarExtra)
 
 	var stdout, stderr bytes.Buffer
-	code := runVerificationIn(t, root, []string{"check", "SP-028"}, &stdout, &stderr)
+	code := checkPlanIn(t, root, "SP-028", &stdout, &stderr)
 	if code == 0 {
 		t.Fatalf("exit = 0, want non-zero\nstdout: %s", stdout.String())
 	}
@@ -85,7 +85,7 @@ func TestVerificationCheckBlocksAnUntiedPlanEntry(t *testing.T) {
 	root := tieRepo(t, tiePlanJSON, tieSidecarMissing)
 
 	var stdout, stderr bytes.Buffer
-	code := runVerificationIn(t, root, []string{"check", "SP-028"}, &stdout, &stderr)
+	code := checkPlanIn(t, root, "SP-028", &stdout, &stderr)
 	if code == 0 {
 		t.Fatalf("exit = 0, want non-zero\nstdout: %s", stdout.String())
 	}
@@ -98,41 +98,21 @@ func TestVerificationCheckBlocksAnUntiedPlanEntry(t *testing.T) {
 	}
 }
 
-// runVerificationIn runs the verification command with the repository root
-// resolved to root. The check resolves the root from ".", so the test installs
-// the RunOverrides seam that the rest of the package uses.
-func runVerificationIn(t *testing.T, root string, args []string, stdout, stderr *bytes.Buffer) int {
+// checkPlanIn validates the plan of one change with the repository root
+// resolved to root. `prove` runs the same check before the gate.
+func checkPlanIn(t *testing.T, root, changeID string, stdout, stderr *bytes.Buffer) int {
 	t.Helper()
 
 	RunOverrides["."] = root
 	t.Cleanup(func() { delete(RunOverrides, ".") })
-	return runVerification(args, stdout, stderr)
-}
-
-// TestVerificationCheckTiesAPlanFileByPath proves that an existing plan file
-// locates its own repository. No override is installed, so
-// a resolution from "." finds the ShipProof repository that holds this test
-// and never finds the temporary sidecar.
-func TestVerificationCheckTiesAPlanFileByPath(t *testing.T) {
-	root := tieRepo(t, tiePlanJSON, tieSidecarExtra)
-	plan := filepath.Join(root, ".shipproof", "changes", "SP-028", "verification.json")
-
-	var stdout, stderr bytes.Buffer
-	code := runVerification([]string{"check", plan}, &stdout, &stderr)
-	if code == 0 {
-		t.Fatalf("exit = 0, want non-zero\nstdout: %s", stdout.String())
-	}
-	combined := stdout.String() + stderr.String()
-	if !strings.Contains(combined, "SP-028-R2") {
-		t.Fatalf("output does not report the tie blocker:\n%s", combined)
-	}
+	return checkPlan(root, changeID, stdout, stderr)
 }
 
 func TestVerificationRunWritesProofResults(t *testing.T) {
 	root := newVerificationRunWorkspace(t, "SP-700")
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-700"}, &stdout, &stderr); code != 0 {
+	if code := runProve([]string{"SP-700"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
 	}
 
@@ -155,7 +135,7 @@ func TestVerificationRunGateOnlyWritesNoProofResults(t *testing.T) {
 	root := newVerificationRunWorkspace(t, "SP-701")
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-701", "--gate-only"}, &stdout, &stderr); code != 0 {
+	if code := runProve([]string{"SP-701", "--gate-only"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
 	}
 	if proofs.Exists(root, "SP-701") {
@@ -170,7 +150,7 @@ func TestVerificationRunProofsOnlyWritesNoRunRecord(t *testing.T) {
 	root := newVerificationRunWorkspace(t, "SP-702")
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-702", "--proofs-only"}, &stdout, &stderr); code != 0 {
+	if code := runProve([]string{"SP-702", "--proofs-only"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
 	}
 	if !proofs.Exists(root, "SP-702") {
@@ -185,7 +165,7 @@ func TestVerificationRunRejectsBothScopeFlags(t *testing.T) {
 	newVerificationRunWorkspace(t, "SP-703")
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-703", "--gate-only", "--proofs-only"}, &stdout, &stderr); code != 2 {
+	if code := runProve([]string{"SP-703", "--gate-only", "--proofs-only"}, &stdout, &stderr); code != 2 {
 		t.Fatalf("exit = %d, want 2", code)
 	}
 }
@@ -197,7 +177,7 @@ func TestVerificationRunWithNoPlanStatesWhyItRanNoProof(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-704"}, &stdout, &stderr); code != 0 {
+	if code := runProve([]string{"SP-704"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "no verification plan") {
@@ -269,7 +249,7 @@ func TestVerificationRunWritesAMergedProfile(t *testing.T) {
 	writeConfigWithCoverage(t, root)
 
 	var stdout, stderr bytes.Buffer
-	code := runVerification([]string{"run", "SP-200", "--proofs-only"}, &stdout, &stderr)
+	code := runProve([]string{"SP-200", "--proofs-only"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit = %d, stderr = %s", code, stderr.String())
 	}
@@ -309,7 +289,7 @@ func TestVerificationRunSurvivesAFailedCoverageCleanup(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
 
 	var stdout, stderr bytes.Buffer
-	code := runVerification([]string{"run", "SP-201", "--proofs-only"}, &stdout, &stderr)
+	code := runProve([]string{"SP-201", "--proofs-only"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("a failed coverage cleanup changed the exit code: %d, stderr = %s", code, stderr.String())
 	}
@@ -350,7 +330,7 @@ func TestVerificationRunSurvivesAFailedCoverageDirectoryCreation(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(runDir, 0o755) })
 
 	var stdout, stderr bytes.Buffer
-	code := runVerification([]string{"run", "SP-202", "--proofs-only"}, &stdout, &stderr)
+	code := runProve([]string{"SP-202", "--proofs-only"}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("a failed coverage directory creation changed the exit code: %d, stderr = %s", code, stderr.String())
 	}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -20,26 +19,13 @@ func TestTelemetryCollect(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"telemetry", "collect", "SP-008", "--adapter", "claude", "--dir", root}, stdout, stderr)
+	code := Run([]string{"pack", "SP-008", "--adapter", "claude", "--dir", root}, stdout, stderr)
 
 	if code != 0 {
 		t.Logf("collect stderr: %s", stderr.String())
 	}
 
 	t.Logf("stdout: %s", stdout.String())
-}
-
-func TestTelemetryCollectMissingAdapter(t *testing.T) {
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	code := Run([]string{"telemetry", "collect", "SP-008"}, stdout, stderr)
-	if code != 2 {
-		t.Errorf("expected exit 2, got %d", code)
-	}
-	if !strings.Contains(stderr.String(), "--adapter") {
-		t.Errorf("expected --adapter error, got: %s", stderr.String())
-	}
 }
 
 func TestTelemetryCollectNoArgs(t *testing.T) {
@@ -88,7 +74,7 @@ func TestTelemetryCollectWritesAgentRun(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"telemetry", "collect", changeID, "--adapter", "claude", "--dir", root}, stdout, stderr)
+	code := Run([]string{"pack", changeID, "--adapter", "claude", "--dir", root}, stdout, stderr)
 	t.Logf("code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 
 	if code == 0 {

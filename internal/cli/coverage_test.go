@@ -93,18 +93,18 @@ func TestCoverageReportsProvenAndAwaitingHuman(t *testing.T) {
 	newCoverageWorkspace(t, "SP-800")
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-800", "--proofs-only"}, &stdout, &stderr); code != 0 {
+	if code := runProve([]string{"SP-800", "--proofs-only"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("verification run exit = %d, stderr = %s", code, stderr.String())
 	}
 
 	stdout.Reset()
 	stderr.Reset()
-	if code := runCoverage([]string{"SP-800", "--json"}, &stdout, &stderr); code != 0 {
+	if code := runStatus([]string{"SP-800", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("coverage exit = %d, stderr = %s", code, stderr.String())
 	}
 
-	var matrix coverage.Matrix
-	if err := json.Unmarshal(stdout.Bytes(), &matrix); err != nil {
+	matrix, err := decodeStatusCoverage(stdout.Bytes())
+	if err != nil {
 		t.Fatalf("parse coverage output: %v; output = %s", err, stdout.String())
 	}
 	if len(matrix.Rows) != 2 {
@@ -122,11 +122,11 @@ func TestCoverageNeverReportsInferredProvenance(t *testing.T) {
 	newCoverageWorkspace(t, "SP-801")
 
 	var stdout, stderr bytes.Buffer
-	if code := runVerification([]string{"run", "SP-801", "--proofs-only"}, &stdout, &stderr); code != 0 {
+	if code := runProve([]string{"SP-801", "--proofs-only"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("verification run exit = %d", code)
 	}
 	stdout.Reset()
-	if code := runCoverage([]string{"SP-801", "--json"}, &stdout, &stderr); code != 0 {
+	if code := runStatus([]string{"SP-801", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("coverage exit = %d, stderr = %s", code, stderr.String())
 	}
 	if strings.Contains(stdout.String(), "inferred") {
@@ -138,11 +138,11 @@ func TestCoverageWithNoProofResultsReportsUnproven(t *testing.T) {
 	newCoverageWorkspace(t, "SP-802")
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage([]string{"SP-802", "--json"}, &stdout, &stderr); code != 0 {
+	if code := runStatus([]string{"SP-802", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("coverage exit = %d, stderr = %s", code, stderr.String())
 	}
-	var matrix coverage.Matrix
-	if err := json.Unmarshal(stdout.Bytes(), &matrix); err != nil {
+	matrix, err := decodeStatusCoverage(stdout.Bytes())
+	if err != nil {
 		t.Fatal(err)
 	}
 	if matrix.Rows[0].State != coverage.Unproven {
@@ -157,7 +157,7 @@ func TestCoverageTextFormNamesEveryRequirement(t *testing.T) {
 	newCoverageWorkspace(t, "SP-803")
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage([]string{"SP-803"}, &stdout, &stderr); code != 0 {
+	if code := runStatus([]string{"SP-803"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("coverage exit = %d, stderr = %s", code, stderr.String())
 	}
 	for _, want := range []string{"SP-803-R1", "SP-803-R2", "unproven"} {
@@ -167,18 +167,21 @@ func TestCoverageTextFormNamesEveryRequirement(t *testing.T) {
 	}
 }
 
-func TestCoverageWithNoRequirementSidecarFails(t *testing.T) {
+// TestCoverageWithNoRequirementSidecarStatesTheAbsence covers a change that
+// holds no requirement set. An absent artifact is a state, not a fault, so
+// status reports it and still prints the phase.
+func TestCoverageWithNoRequirementSidecarStatesTheAbsence(t *testing.T) {
 	root := newCoverageWorkspace(t, "SP-804")
 	if err := os.Remove(filepath.Join(root, ".shipproof", "changes", "SP-804", "requirements.json")); err != nil {
 		t.Fatal(err)
 	}
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage([]string{"SP-804"}, &stdout, &stderr); code != 1 {
-		t.Fatalf("exit = %d, want 1", code)
+	if code := runStatus([]string{"SP-804"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit = %d, want 0, stderr = %s", code, stderr.String())
 	}
-	if !strings.Contains(stderr.String(), "doc adopt") {
-		t.Fatalf("stderr = %q, want the repair command", stderr.String())
+	if !strings.Contains(stdout.String(), "no requirement set") {
+		t.Fatalf("stdout = %q, want it to state the absence", stdout.String())
 	}
 }
 
@@ -186,7 +189,7 @@ func TestCoverageWithNoArgumentIsAUsageError(t *testing.T) {
 	newCoverageWorkspace(t, "SP-805")
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage(nil, &stdout, &stderr); code != 2 {
+	if code := runStatus([]string{"--bad"}, &stdout, &stderr); code != 2 {
 		t.Fatalf("exit = %d, want 2", code)
 	}
 }
@@ -207,11 +210,11 @@ func TestCoverageWithNoRecordedRevisionReportsUnproven(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage([]string{"SP-806", "--json"}, &stdout, &stderr); code != 0 {
+	if code := runStatus([]string{"SP-806", "--json"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("coverage exit = %d, stderr = %s", code, stderr.String())
 	}
-	var matrix coverage.Matrix
-	if err := json.Unmarshal(stdout.Bytes(), &matrix); err != nil {
+	matrix, err := decodeStatusCoverage(stdout.Bytes())
+	if err != nil {
 		t.Fatal(err)
 	}
 	if matrix.RunCurrent {
@@ -232,7 +235,7 @@ func TestCoverageWithMalformedRequirementSidecarReportsThatCause(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage([]string{"SP-807"}, &stdout, &stderr); code != 1 {
+	if code := runStatus([]string{"SP-807"}, &stdout, &stderr); code != 1 {
 		t.Fatalf("exit = %d, want 1, stderr = %s", code, stderr.String())
 	}
 	if !strings.Contains(stderr.String(), "invalid requirement set") {
@@ -256,7 +259,7 @@ func TestCoverageWithMalformedProofResultsReportsThatCause(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	if code := runCoverage([]string{"SP-808"}, &stdout, &stderr); code != 1 {
+	if code := runStatus([]string{"SP-808"}, &stdout, &stderr); code != 1 {
 		t.Fatalf("exit = %d, want 1, stderr = %s", code, stderr.String())
 	}
 	if !strings.Contains(stderr.String(), "invalid proof results") {
@@ -265,4 +268,16 @@ func TestCoverageWithMalformedProofResultsReportsThatCause(t *testing.T) {
 	if strings.Contains(stderr.String(), "invalid requirement set") {
 		t.Fatalf("stderr = %q, must not name the requirement set", stderr.String())
 	}
+}
+
+// decodeStatusCoverage reads the coverage matrix out of the `status --json`
+// payload. The matrix sits under one key, beside the phase result.
+func decodeStatusCoverage(data []byte) (coverage.Matrix, error) {
+	var payload struct {
+		Coverage coverage.Matrix `json:"coverage"`
+	}
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return coverage.Matrix{}, err
+	}
+	return payload.Coverage, nil
 }

@@ -10,7 +10,7 @@ metadata:
 ## Confirm the phase
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
 Act on the phase it reports. When it names a different skill, use that skill

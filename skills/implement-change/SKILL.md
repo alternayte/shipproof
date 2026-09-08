@@ -12,7 +12,7 @@ metadata:
 Confirm the phase:
 
 ```bash
-shipproof next <change-id>
+shipproof status <change-id>
 ```
 
 Act on the phase it reports. When the phase is `NO_CHANGE` or `INTENT_STALE`,
@@ -33,7 +33,7 @@ use the `prepare-change` skill first. When the phase is `NEEDS_PLAN`, use the
 Execute the repository-owned verification contract:
 
 ```bash
-shipproof verification run <change-id>
+shipproof prove <change-id>
 ```
 
 `verification run` performs two jobs. The gate runs the repository verification
@@ -46,13 +46,13 @@ A green attribution never masks a red gate. Read both.
 Use `--gate-only` to skip the attribution pass. Use `--proofs-only` to skip
 the gate. Do not use both flags together.
 
-After the run, read `shipproof coverage <change-id>`. It states what each
+After the run, read `shipproof status <change-id>`. It states what each
 requirement proved.
 
 Confirm the intent snapshot is intact:
 
 ```bash
-shipproof change check <change-id>
+shipproof status <change-id>
 ```
 
 Then map results to intent:
@@ -61,13 +61,13 @@ Then map results to intent:
 2. Read `.shipproof/runs/<change-id>/proofs.json`, which holds one result per
    proof. Read `.shipproof/runs/<change-id>/run.json`, which holds the gate
    result.
-3. Read `shipproof coverage <change-id>`. It derives the state of each
+3. Read `shipproof status <change-id>`. It derives the state of each
    requirement from those two artifacts.
 4. Copy the state the coverage matrix reports. Write no status the matrix does
    not report.
 5. Preserve raw evidence references.
 
-Run `shipproof next <change-id>` again. The phase advances only when the run
+Run `shipproof status <change-id>` again. The phase advances only when the run
 passes against the current revision with a clean tree.
 
 ## Hard rules
