@@ -1,15 +1,18 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/alternayte/shipproof/internal/attest"
 	"github.com/alternayte/shipproof/internal/change"
 	"github.com/alternayte/shipproof/internal/evidence/pack"
 	"github.com/alternayte/shipproof/internal/report"
+	"github.com/alternayte/shipproof/internal/schema"
 	"github.com/alternayte/shipproof/internal/telemetry"
 )
 
@@ -17,7 +20,20 @@ import (
 // writes the HTML change report. It replaces the old `evidence pack`,
 // `telemetry collect`, and `report change` verbs.
 func runPack(args []string, stdout, stderr io.Writer) int {
-	const usage = "usage: shipproof pack [change-id] [--base <rev>] [--head <rev>] [--adapter <claude|opencode>] [--output <path>]"
+	const usage = "usage: shipproof pack [change-id] [--base <rev>] [--head <rev>] [--adapter <claude|opencode>] [--output <path>]\n       shipproof pack --verify <file>"
+
+	// `--verify` reads one written pack and checks its signature. It touches
+	// no repository state, so it runs before every other option.
+	for index := 0; index < len(args); index++ {
+		if args[index] != "--verify" {
+			continue
+		}
+		if index+1 >= len(args) {
+			fmt.Fprintln(stderr, "--verify requires a path")
+			return 2
+		}
+		return runPackVerify(args[index+1], stdout, stderr)
+	}
 
 	changeID := ""
 	adapter := ""
@@ -115,6 +131,12 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 	rel, _ := filepath.Rel(root, packPath)
 	fmt.Fprintf(stdout, "Evidence pack: %s\n", filepath.ToSlash(rel))
 
+	// Decision D2. A local pack stays unsigned, and the reader must learn that
+	// from the run, not from the documentation.
+	if assembled.Attestation == nil {
+		fmt.Fprintln(stdout, attest.UnsignedNotice)
+	}
+
 	if output == "" {
 		output = filepath.Join(root, ".shipproof", "changes", changeID, "report.html")
 	}
@@ -145,6 +167,51 @@ func writeChangeReport(root, changeID, output string, stdout, stderr io.Writer) 
 		fmt.Fprintf(stdout, "Change report: %s\n", filepath.ToSlash(rel))
 	} else {
 		fmt.Fprintf(stdout, "Change report: %s\n", output)
+	}
+	return 0
+}
+
+// runPackVerify checks the signature on one written pack. It prints the checks
+// it ran and the checks it did not run. Section 10 rule 3 needs a plain
+// result, and a plain result never hides its own limit.
+func runPackVerify(path string, stdout, stderr io.Writer) int {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(stderr, "read the pack: %v\n", err)
+		return 1
+	}
+	var loaded schema.EvidencePack
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		fmt.Fprintf(stderr, "the file is not an evidence pack: %v\n", err)
+		return 1
+	}
+
+	result, err := attest.Verify(loaded)
+	if result.SignatureValid {
+		fmt.Fprintln(stdout, "SIGNATURE: VALID")
+	} else {
+		fmt.Fprintln(stdout, "SIGNATURE: NOT VALID")
+	}
+	if err != nil {
+		fmt.Fprintf(stdout, "reason    %v\n", err)
+	}
+	if result.Subject != "" {
+		fmt.Fprintf(stdout, "subject   %s\n", result.Subject)
+	}
+	if result.Digest != "" {
+		fmt.Fprintf(stdout, "digest    sha256:%s\n", result.Digest)
+	}
+	if result.CertificateSubject != "" {
+		fmt.Fprintf(stdout, "signer    %s\n", result.CertificateSubject)
+	}
+	for _, item := range result.Checked {
+		fmt.Fprintf(stdout, "checked   %s\n", item)
+	}
+	for _, item := range result.NotChecked {
+		fmt.Fprintf(stdout, "unchecked %s\n", item)
+	}
+	if err != nil || !result.SignatureValid {
+		return 1
 	}
 	return 0
 }

@@ -58,9 +58,16 @@ type RequirementRow struct {
 type AttestationEvidence struct {
 	Format      string `json:"format"`
 	PayloadType string `json:"payload_type,omitempty"`
-	Signature   string `json:"signature"`
-	Subject     string `json:"subject,omitempty"`
-	Digest      string `json:"digest,omitempty"`
+	// Signature is the base64 signature over the SHA-256 of the canonical
+	// payload. The canonical payload excludes this block.
+	Signature string `json:"signature"`
+	// Certificate is the PEM signing certificate that the build system used.
+	// The verifier reads the public key from it.
+	Certificate string `json:"certificate,omitempty"`
+	// Subject names the head revision that the attestation covers.
+	Subject string `json:"subject,omitempty"`
+	// Digest is the SHA-256 of the canonical payload, in hexadecimal.
+	Digest string `json:"digest,omitempty"`
 }
 
 // UnexplainedEvidence records which changed code no approved proof ran. The

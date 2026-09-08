@@ -65,6 +65,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  shipproof start <change-id> --intent <path> [--ceremony 0|1|2|3] [--force]")
 	fmt.Fprintln(w, "  shipproof prove [change-id] [--gate-only|--proofs-only]")
 	fmt.Fprintln(w, "  shipproof pack [change-id] [--base <rev>] [--head <rev>] [--adapter <name>] [--output <path>]")
+	fmt.Fprintln(w, "  shipproof pack --verify <file>")
 	fmt.Fprintln(w, "  shipproof status [change-id] [--json]")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Support:")
