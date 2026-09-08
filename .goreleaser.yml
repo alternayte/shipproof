@@ -19,10 +19,12 @@ builds:
       - arm64
 
 archives:
+  # The name carries no version. A version in the name breaks the documented
+  # one-line install, because `releases/latest/download/<name>` needs a name
+  # that does not change between releases.
   - formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_
-      {{- .Version }}_
       {{- .Os }}_
       {{- .Arch }}
 

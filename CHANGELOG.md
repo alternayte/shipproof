@@ -1,7 +1,99 @@
 # Changelog
 
-ShipProof follows semantic versioning. Schema versions inside evidence files
-stay at 0.1 during the v0 line.
+ShipProof follows semantic versioning. The schema version inside an evidence
+file moves on its own, and each artifact names the version it answers to.
+
+## v0.4.0 — 2026-09-09
+
+The evidence layer. This release replaces the specification tooling with a
+verdict, an evidence pack, and a signature. It carries breaking changes.
+
+**A verdict, not a report.** Every command that ends a flow prints the same
+three lines: the verdict word, the count that drives it, and one next action
+with a runnable command. Three verdicts exist, and no score exists.
+
+```
+VERDICT: NOT PROVEN
+2 of 7 requirements have no proof. 14 changed lines match no requirement.
+NEXT: run `shipproof prove SP-030` after you add a proof for R3 and R5.
+```
+
+**Three grades replace four labels.** A check now reads `observed`, `stated`,
+or `claimed`. The old `derived` and `inferred` both collapse into `claimed`,
+and a claimed check never proves a requirement. The report says so on the
+page. `checks[].provenance` keeps the finer machine label.
+
+**A reshaped evidence pack.** `evidence-pack.json` holds ten named sections,
+including the verdict, one row per requirement with its proof result, and the
+attestation. A pack is complete or absent, and `empty_sections` states why any
+section is empty. An absent measurement never reads as zero.
+
+**Signing and verification.** The pack carries a detached signature over a
+canonical payload. `shipproof pack --verify <file>` returns 0 for a true
+signature and 1 for an altered pack. Continuous integration signs with keyless
+Sigstore; a local pack stays unsigned and says so. The verifier does not check
+the Fulcio chain or the Rekor inclusion proof, and it names both as unchecked
+on every run.
+
+**Continuous integration.** `action/action.yml` builds the pack on a pull
+request, signs it, uploads it, and posts one comment with the verdict block.
+`.github/workflows/evidence.yml` wires it up.
+
+**Any specification tool.** `shipproof start` reads an OpenSpec proposal, a
+Spec Kit specification, or a plain Markdown list. One documented pattern finds
+an obligation stated with MUST or SHALL. A pattern match is a proposal, never
+a fact, and `shipproof start <id> --confirm-requirements` adopts it.
+
+**Two commands reach a result.** `pack` runs `prove` when no fresh result
+exists. `--no-prove` skips it.
+
+**Three instruction files replace the skill catalog.** `init` installs
+`capture-intent.md`, `plan-proof.md`, and `read-evidence.md` for Claude Code,
+Cursor, Codex, OpenCode, and a plain `AGENTS.md`. Each one carries the rule
+that matters most: an agent must never write a result that a tool did not
+produce.
+
+**A control mapping.** `docs/controls.md` maps each pack field onto the audit
+question it answers and onto SOC 2 change management, EU AI Act record
+keeping, and SOX change control. It states every row as a claim about
+evidence. ShipProof issues no certification.
+
+**A hook contract.** `docs/hooks.md` holds one example per harness. The
+command is the contract, and a test runs every command the document names.
+
+**An install that needs no clone.** The README leads with a one-line download.
+`init` now detects a test command from a justfile, a Makefile, a
+`package.json`, a `go.mod`, a `Cargo.toml`, or a `pyproject.toml`, and it
+reports the one it chose.
+
+### Breaking changes
+
+- `schema_version` moves from `0.1` to `0.3`. A pack written by v0.3.0 no
+  longer answers to the current schema. `schemas/v0.1/` and `schemas/v0.2/`
+  stay on disk, and the conformance checker reads the schema a pack declares,
+  so a recorded pack stays valid against its own version.
+- The evidence pack renames `agent_run` to `agent`, moves `verification.checks`
+  to a top-level `checks`, and removes `readiness`, `review`, and
+  `agent_review`. An agent review finding is now a claimed check.
+- The six skill packages are gone. `init` removes them from a repository that
+  holds them.
+- `phase.Result.next_skill` becomes `next_instruction` and names one of the
+  three instruction files.
+- The release archives drop the version from their names, so
+  `releases/latest/download/shipproof_<os>_<arch>.tar.gz` resolves. A script
+  that pinned `shipproof_0.3.0_<os>_<arch>.tar.gz` must change.
+- The commands removed in the reduction exit 2 and print one line naming the
+  replacement.
+
+### Known limits
+
+- The comprehension review of three readers has not run. See
+  `docs/changes/SP-036-comprehension-review.md`.
+- No workflow run on a sample repository has produced a pack artifact yet.
+- `shipproof init` writes instruction files to `.claude/skills/`,
+  `.opencode/skills/`, and `.agents/skills/`. Confirm the path your harness
+  version reads.
+- The portfolio report is unchanged and stays outside the definition of done.
 
 ## v0.3.0 — 2026-08-24
 

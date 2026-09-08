@@ -106,3 +106,43 @@ func TestInitKeepsAGateTheRepositoryCanRun(t *testing.T) {
 		t.Fatalf("init ignored the justfile the repository holds:\n%s", data)
 	}
 }
+
+// TestTheDownloadURLMatchesTheReleaseAssets binds the README to the release
+// configuration. A documented install command that returns 404 is worse than
+// no command, and the two files drift silently without this test.
+func TestTheDownloadURLMatchesTheReleaseAssets(t *testing.T) {
+	config, err := os.ReadFile(filepath.Join("..", "..", ".goreleaser.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// `releases/latest/download/<name>` resolves only when the asset name is
+	// the same in every release. A version in the template breaks it.
+	template := string(config)
+	start := strings.Index(template, "name_template:")
+	if start < 0 {
+		t.Fatal(".goreleaser.yml holds no archive name template")
+	}
+	end := strings.Index(template[start:], "checksum:")
+	if end < 0 {
+		end = len(template) - start
+	}
+	archive := template[start : start+end]
+	if strings.Contains(archive, ".Version") {
+		t.Fatal("the archive name holds the version, so the README download URL cannot resolve")
+	}
+
+	readme := readREADME(t)
+	for _, want := range []string{
+		"releases/latest/download/shipproof_darwin_arm64.tar.gz",
+	} {
+		if !strings.Contains(readme, want) {
+			t.Errorf("README.md does not name the asset %q", want)
+		}
+	}
+	// Every platform the README names must be one the release builds.
+	for _, platform := range []string{"darwin_arm64", "darwin_amd64", "linux_arm64", "linux_amd64"} {
+		if !strings.Contains(readme, platform) {
+			t.Errorf("README.md never names the platform %q", platform)
+		}
+	}
+}
