@@ -43,15 +43,9 @@ func TestPack(t *testing.T) {
 	}
 }
 
-func TestPackMissingChangeID(t *testing.T) {
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	code := Run([]string{"pack"}, stdout, stderr)
-	if code != 2 {
-		t.Errorf("expected exit 2, got %d", code)
-	}
-}
+// TestPackMissingChangeID lives in exitcodes_test.go as
+// TestPackWithNoChangeExitsTwo. The version here set no repository root, so it
+// read the runner's own directory and turned the build red.
 
 func TestPackMissingChange(t *testing.T) {
 	root := t.TempDir()
