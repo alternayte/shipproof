@@ -58,6 +58,8 @@ var documentedFiles = []string{
 	"benchmarks/README.md",
 	"skills/README.md",
 	"AGENTS.md",
+	"docs/hooks.md",
+	"docs/controls.md",
 }
 
 func TestDocumentationNamesNoCutFeature(t *testing.T) {
