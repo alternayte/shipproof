@@ -22,8 +22,8 @@ func TestResolveNoChange(t *testing.T) {
 	if result.Phase != NoChange {
 		t.Fatalf("Phase = %q, want %q", result.Phase, NoChange)
 	}
-	if result.NextSkill != "prepare-change" {
-		t.Fatalf("NextSkill = %q, want %q", result.NextSkill, "prepare-change")
+	if result.NextInstruction != "capture-intent" {
+		t.Fatalf("NextInstruction = %q, want %q", result.NextInstruction, "capture-intent")
 	}
 }
 
@@ -493,8 +493,8 @@ func TestResolveNeedsEvidence(t *testing.T) {
 	if result.Phase != NeedsEvidence {
 		t.Fatalf("Phase = %q, want %q", result.Phase, NeedsEvidence)
 	}
-	if result.NextSkill != "produce-evidence" {
-		t.Fatalf("NextSkill = %q, want produce-evidence", result.NextSkill)
+	if result.NextInstruction != "read-evidence" {
+		t.Fatalf("NextInstruction = %q, want read-evidence", result.NextInstruction)
 	}
 	if result.NextCommand != "shipproof pack SP-318" {
 		t.Fatalf("NextCommand = %q", result.NextCommand)

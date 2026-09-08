@@ -18,8 +18,8 @@ func TestInstallClaudeCreatesCanonicalAndHarnessSkills(t *testing.T) {
 		t.Fatalf("unexpected result: %+v", result)
 	}
 	for _, path := range []string{
-		filepath.Join(root, ".shipproof", "skills", "prepare-change", "SKILL.md"),
-		filepath.Join(root, ".claude", "skills", "prepare-change", "SKILL.md"),
+		filepath.Join(root, ".shipproof", "skills", "capture-intent.md"),
+		filepath.Join(root, ".claude", "skills", "capture-intent.md"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
@@ -34,7 +34,7 @@ func TestInstallCursorUsesPortableAgentsDirectory(t *testing.T) {
 	if _, err := Install(root, TargetCursor, false, false); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	path := filepath.Join(root, ".agents", "skills", "review-change", "SKILL.md")
+	path := filepath.Join(root, ".agents", "skills", "read-evidence.md")
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("expected %s: %v", path, err)
 	}
@@ -47,7 +47,7 @@ func TestInstallDoesNotOverwriteModifiedSkill(t *testing.T) {
 	if _, err := Install(root, TargetClaude, false, false); err != nil {
 		t.Fatalf("first Install: %v", err)
 	}
-	path := filepath.Join(root, ".claude", "skills", "prepare-change", "SKILL.md")
+	path := filepath.Join(root, ".claude", "skills", "capture-intent.md")
 	if err := os.WriteFile(path, []byte("custom\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

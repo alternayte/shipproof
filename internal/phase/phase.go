@@ -36,7 +36,9 @@ type Result struct {
 	Phase       Phase  `json:"phase"`
 	Blocker     string `json:"blocker,omitempty"`
 	NextCommand string `json:"next_command,omitempty"`
-	NextSkill   string `json:"next_skill,omitempty"`
+	// NextInstruction names the instruction file of Section 8.2 that covers
+	// the next step. Three files exist, and this field names one of them.
+	NextInstruction string `json:"next_instruction,omitempty"`
 }
 
 // Resolve returns the first phase whose condition holds. A malformed artifact
@@ -47,11 +49,11 @@ func Resolve(root, changeID string) (Result, error) {
 	if _, err := os.Stat(recordPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return Result{
-				ChangeID:    changeID,
-				Phase:       NoChange,
-				Blocker:     "no change record exists",
-				NextCommand: fmt.Sprintf("shipproof start %s --intent <path>", changeID),
-				NextSkill:   "prepare-change",
+				ChangeID:        changeID,
+				Phase:           NoChange,
+				Blocker:         "no change record exists",
+				NextCommand:     fmt.Sprintf("shipproof start %s --intent <path>", changeID),
+				NextInstruction: "capture-intent",
 			}, nil
 		}
 		return Result{}, fmt.Errorf("inspect change record: %w", err)
@@ -68,11 +70,11 @@ func Resolve(root, changeID string) (Result, error) {
 	}
 	if staleness.Stale {
 		return Result{
-			ChangeID:    changeID,
-			Phase:       IntentStale,
-			Blocker:     fmt.Sprintf("source %s changed after the snapshot", record.SourcePath),
-			NextCommand: fmt.Sprintf("shipproof start %s --intent %s --force", changeID, record.SourcePath),
-			NextSkill:   "prepare-change",
+			ChangeID:        changeID,
+			Phase:           IntentStale,
+			Blocker:         fmt.Sprintf("source %s changed after the snapshot", record.SourcePath),
+			NextCommand:     fmt.Sprintf("shipproof start %s --intent %s --force", changeID, record.SourcePath),
+			NextInstruction: "capture-intent",
 		}, nil
 	}
 
@@ -98,18 +100,18 @@ func Resolve(root, changeID string) (Result, error) {
 
 	if !fileExists(artifactPath(root, changeID, "evidence-pack.json")) {
 		return Result{
-			ChangeID:    changeID,
-			Phase:       NeedsEvidence,
-			Blocker:     "no evidence pack exists for the current run",
-			NextCommand: fmt.Sprintf("shipproof pack %s", changeID),
-			NextSkill:   "produce-evidence",
+			ChangeID:        changeID,
+			Phase:           NeedsEvidence,
+			Blocker:         "no evidence pack exists for the current run",
+			NextCommand:     fmt.Sprintf("shipproof pack %s", changeID),
+			NextInstruction: "read-evidence",
 		}, nil
 	}
 
 	return Result{
-		ChangeID:  changeID,
-		Phase:     ReadyForHuman,
-		NextSkill: "review-change",
+		ChangeID:        changeID,
+		Phase:           ReadyForHuman,
+		NextInstruction: "read-evidence",
 	}, nil
 }
 
@@ -122,11 +124,11 @@ func resolveRun(root, changeID string) (Result, bool, error) {
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return Result{
-				ChangeID:    changeID,
-				Phase:       NeedsRun,
-				Blocker:     "no run record exists",
-				NextCommand: fmt.Sprintf("shipproof prove %s", changeID),
-				NextSkill:   "implement-change",
+				ChangeID:        changeID,
+				Phase:           NeedsRun,
+				Blocker:         "no run record exists",
+				NextCommand:     fmt.Sprintf("shipproof prove %s", changeID),
+				NextInstruction: "plan-proof",
 			}, true, nil
 		}
 		return Result{}, false, fmt.Errorf("read run result: %w", err)
@@ -139,21 +141,21 @@ func resolveRun(root, changeID string) (Result, bool, error) {
 
 	if stale, reason := runIsStale(root, run); stale {
 		return Result{
-			ChangeID:    changeID,
-			Phase:       RunStale,
-			Blocker:     reason,
-			NextCommand: fmt.Sprintf("shipproof prove %s", changeID),
-			NextSkill:   "implement-change",
+			ChangeID:        changeID,
+			Phase:           RunStale,
+			Blocker:         reason,
+			NextCommand:     fmt.Sprintf("shipproof prove %s", changeID),
+			NextInstruction: "plan-proof",
 		}, true, nil
 	}
 
 	if run.ExitCode != 0 {
 		return Result{
-			ChangeID:    changeID,
-			Phase:       RunFailed,
-			Blocker:     fmt.Sprintf("the newest run exited with code %d", run.ExitCode),
-			NextCommand: fmt.Sprintf("shipproof prove %s", changeID),
-			NextSkill:   "implement-change",
+			ChangeID:        changeID,
+			Phase:           RunFailed,
+			Blocker:         fmt.Sprintf("the newest run exited with code %d", run.ExitCode),
+			NextCommand:     fmt.Sprintf("shipproof prove %s", changeID),
+			NextInstruction: "plan-proof",
 		}, true, nil
 	}
 
@@ -204,10 +206,23 @@ func resolvePlan(root, changeID string) (Result, bool, error) {
 // command names verification check, which reports what the plan lacks.
 func needsPlan(changeID, blocker, nextCommand string) Result {
 	return Result{
-		ChangeID:    changeID,
-		Phase:       NeedsPlan,
-		Blocker:     blocker,
-		NextCommand: nextCommand,
-		NextSkill:   "plan-verification",
+		ChangeID:        changeID,
+		Phase:           NeedsPlan,
+		Blocker:         blocker,
+		NextCommand:     nextCommand,
+		NextInstruction: "plan-proof",
+	}
+}
+
+// instructionFor names the instruction file of Section 8.2 that covers one
+// phase. Every phase maps onto one of the three files.
+func instructionFor(name Phase) string {
+	switch name {
+	case NoChange, IntentStale:
+		return "capture-intent"
+	case NeedsPlan, NeedsRun, RunStale:
+		return "plan-proof"
+	default:
+		return "read-evidence"
 	}
 }

@@ -38,6 +38,15 @@ var cutReferences = []string{
 	"shipproof review ",
 	"shipproof telemetry",
 	"shipproof report",
+
+	// SP-033 replaced the six skill packages with the three instruction files
+	// of Section 8.2.
+	"prepare-change",
+	"plan-verification",
+	"implement-change",
+	"produce-evidence",
+	"review-change",
+	"prepare-human-review",
 }
 
 // documentedFiles names the user-facing documents. CHANGELOG.md is a
@@ -47,6 +56,8 @@ var documentedFiles = []string{
 	"docs/workflow.md",
 	"docs/adoption.md",
 	"benchmarks/README.md",
+	"skills/README.md",
+	"AGENTS.md",
 }
 
 func TestDocumentationNamesNoCutFeature(t *testing.T) {

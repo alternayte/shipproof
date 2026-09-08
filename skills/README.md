@@ -1,23 +1,19 @@
-# ShipProof Agent Skills
+# ShipProof agent instructions
 
-These skills follow the open Agent Skills `SKILL.md` format.
+Section 8.2 of the design document names three instruction files. They replace
+the old skill catalog. Three files are small enough that an agent reads all of
+them. A catalog was not.
 
-The files in this directory are the source packages distributed by ShipProof. Harness-specific installation paths are generated later; the workflow content does not depend on Claude Code, Cursor, Codex, or another compatible client.
+| File | What it covers |
+|---|---|
+| `capture-intent.md` | How to record the intent document and its requirements. |
+| `plan-proof.md` | How to map each requirement to a runnable proof, and how to mark a proof as human. |
+| `read-evidence.md` | How to read a pack, and how to report the verdict without inflating it. |
 
-## Initial catalog
+One rule sits in all three files.
 
-- `shape-prd`
-- `review-prd`
-- `shape-sdd`
-- `review-sdd`
-- `record-decision`
-- `decompose-plan`
-- `triage-change`
-- `plan-verification`
-- `prepare-change`
-- `implement-change`
-- `review-change`
-- `prepare-human-review`
-- `produce-evidence`
+> An agent must never write a result that a tool did not produce.
 
-The specification skills include eval cases under `evals/` because a longer prompt is not automatically a better skill.
+`shipproof init` installs these files for five harness targets: Claude Code,
+Cursor, Codex, OpenCode, and a plain `AGENTS.md`. The files hold no
+harness-specific content.

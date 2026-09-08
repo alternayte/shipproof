@@ -1,6 +1,7 @@
 # ShipProof repository instructions
 
-Use the smallest ShipProof skill that matches the task.
+Read the ShipProof instruction file that matches the task. Three exist:
+`capture-intent.md`, `plan-proof.md`, and `read-evidence.md`.
 
 Follow these invariants:
 

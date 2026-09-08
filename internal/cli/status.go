@@ -110,8 +110,8 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 	if result.NextCommand != "" {
 		fmt.Fprintf(stdout, "next      %s\n", result.NextCommand)
 	}
-	if result.NextSkill != "" {
-		fmt.Fprintf(stdout, "skill     %s\n", result.NextSkill)
+	if result.NextInstruction != "" {
+		fmt.Fprintf(stdout, "read      %s\n", result.NextInstruction)
 	}
 	if matrixErr != nil {
 		// An absent artifact is a state. A malformed artifact is a fault, and

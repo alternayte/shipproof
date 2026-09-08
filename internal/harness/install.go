@@ -33,6 +33,14 @@ type InstallResult struct {
 // answers to an agent, which is worse than the loss of a local edit to a skill
 // that no longer exists.
 var retiredSkills = []string{
+	// SP-033 replaced these six with the three instruction files of Section
+	// 8.2.
+	"prepare-change",
+	"plan-verification",
+	"implement-change",
+	"produce-evidence",
+	"review-change",
+	"prepare-human-review",
 	"verify-change",
 	"shape-prd",
 	"shape-sdd",

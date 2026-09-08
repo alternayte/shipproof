@@ -109,18 +109,19 @@ phase, the blocker, the exact next command, the skill that handles it, and the
 requirement coverage. ShipProof stores no cursor, so the answer stays correct
 when an agent acts out of band.
 
-### Skills
+### Agent instructions
 
-ShipProof ships with 6 portable Agent Skills. `init` installs them.
+ShipProof ships three instruction files. `init` installs them for five harness
+targets: Claude Code, Cursor, Codex, OpenCode, and a plain `AGENTS.md`.
 
-| Skill | Purpose |
+| File | What it covers |
 |---|---|
-| `prepare-change` | Prepare the next ShipProof change from approved intent. |
-| `plan-verification` | Plan how to prove a change before implementation. |
-| `implement-change` | Implement one approved change against its verification plan, then verify it. |
-| `review-change` | Review an implemented change for correctness and agent failure patterns. |
-| `prepare-human-review` | Prepare a focused human-review packet. |
-| `produce-evidence` | Produce a versioned evidence pack from recorded facts. |
+| `capture-intent.md` | How to record the intent document and its requirements. |
+| `plan-proof.md` | How to map each requirement to a runnable proof, and how to mark a proof as human. |
+| `read-evidence.md` | How to read a pack, and how to report the verdict without inflating it. |
+
+One rule sits in all three files. An agent must never write a result that a
+tool did not produce.
 
 ### Agent execution
 

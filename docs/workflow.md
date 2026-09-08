@@ -28,19 +28,19 @@ not a sequence to remember.
 
 | Phase | Meaning | Skill |
 |---|---|---|
-| `NO_CHANGE` | No change record exists | `prepare-change` |
-| `INTENT_STALE` | The source document changed after the snapshot | `prepare-change` |
-| `NEEDS_PLAN` | The verification plan is absent or empty | `plan-verification` |
-| `NEEDS_RUN` | No run record exists | `implement-change` |
-| `RUN_STALE` | The run does not describe the current tree | `implement-change` |
-| `RUN_FAILED` | The newest run exited non-zero | `implement-change` |
-| `NEEDS_EVIDENCE` | The run passed and no pack exists | `produce-evidence` |
-| `NEEDS_REVIEW_PACKET` | The pack exists and no packet exists | `prepare-human-review` |
-| `READY_FOR_HUMAN` | Every artifact is present and current | `review-change` |
+| `NO_CHANGE` | No change record exists | `capture-intent` |
+| `INTENT_STALE` | The source document changed after the snapshot | `capture-intent` |
+| `NEEDS_PLAN` | The verification plan is absent or empty | `plan-proof` |
+| `NEEDS_RUN` | No run record exists | `plan-proof` |
+| `RUN_STALE` | The run does not describe the current tree | `plan-proof` |
+| `RUN_FAILED` | The newest run exited non-zero | `plan-proof` |
+| `NEEDS_EVIDENCE` | The run passed and no pack exists | `read-evidence` |
+| `NEEDS_REVIEW_PACKET` | The pack exists and no packet exists | `read-evidence` |
+| `READY_FOR_HUMAN` | Every artifact is present and current | `read-evidence` |
 
 ## Step 1 — Prepare the change
 
-**Skill:** `prepare-change`
+**Instructions:** `capture-intent`
 
 The agent reads the design document (or writes a short change description for ad-hoc work), extracts the requirements for this specific change, and writes `docs/changes/<change-id>-<slug>.md`.
 
@@ -66,7 +66,7 @@ It keeps the recorded ceremony level, unless you also pass `--ceremony`.
 
 ## Step 2 — Plan verification
 
-**Skill:** `plan-verification`
+**Instructions:** `plan-proof`
 
 The agent creates and populates the verification plan.
 
@@ -79,7 +79,7 @@ no plan stays at `NEEDS_PLAN`. Skip this step only at ceremony level 0.
 
 ## Step 3 — Implement and verify
 
-**Skill:** `implement-change`
+**Instructions:** `plan-proof`
 
 The agent reads the intent snapshot and verification plan, then makes the smallest coherent change that satisfies the approved scope. The agent then runs the repository verification contract and confirms the intent snapshot is intact:
 
@@ -130,7 +130,7 @@ no total.
 
 ## Step 4 — Produce evidence
 
-**Skill:** `produce-evidence`
+**Instructions:** `read-evidence`
 
 The agent assembles the evidence pack from intent, implementation, and verification data:
 
@@ -142,7 +142,7 @@ ShipProof reads the base revision from the recorded agent run. Pass `--base <rev
 
 ## Step 5 — Code review and commit
 
-**Skill:** `review-change`
+**Instructions:** `read-evidence`
 
 The agent reviews the implementation against the approved intent. After review, commit the implementation, change record, and evidence artifacts.
 
@@ -150,11 +150,11 @@ The agent reviews the implementation against the approved intent. After review, 
 
 | Step | Skill | CLI commands |
 |---|---|---|
-| Prepare | `prepare-change` | `start`, `status` |
-| Plan verification | `plan-verification` | `status` |
-| Implement | `implement-change` | `prove`, `status` |
-| Evidence | `produce-evidence` | `pack` |
-| Code review | `review-change` | none |
+| Prepare | `capture-intent` | `start`, `status` |
+| Plan verification | `plan-proof` | `status` |
+| Implement | `plan-proof` | `prove`, `status` |
+| Evidence | `read-evidence` | `pack` |
+| Code review | `read-evidence` | none |
 
 ## Starting a new session
 

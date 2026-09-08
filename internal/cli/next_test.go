@@ -20,7 +20,7 @@ func TestNextReportsNoChange(t *testing.T) {
 	if !strings.Contains(stdout.String(), "NO_CHANGE") {
 		t.Fatalf("stdout does not name the phase:\n%s", stdout.String())
 	}
-	if !strings.Contains(stdout.String(), "prepare-change") {
+	if !strings.Contains(stdout.String(), "capture-intent") {
 		t.Fatalf("stdout does not name the skill:\n%s", stdout.String())
 	}
 }
@@ -35,10 +35,10 @@ func TestNextJSONOutput(t *testing.T) {
 	}
 
 	var payload struct {
-		ChangeID    string `json:"change_id"`
-		Phase       string `json:"phase"`
-		NextCommand string `json:"next_command"`
-		NextSkill   string `json:"next_skill"`
+		ChangeID        string `json:"change_id"`
+		Phase           string `json:"phase"`
+		NextCommand     string `json:"next_command"`
+		NextInstruction string `json:"next_instruction"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, stdout.String())
