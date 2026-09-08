@@ -1,0 +1,9 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-1",
+  "source_path": "intent.md",
+  "snapshot_path": ".shipproof/changes/SP-1/snapshot.md",
+  "sha256": "c191e4739d48f78c795c7f2cca48eb6ea53a2b7a26593a5eeaba7b4b22ced029",
+  "ceremony": 0,
+  "captured_at": "2026-09-08T22:10:29Z"
+}

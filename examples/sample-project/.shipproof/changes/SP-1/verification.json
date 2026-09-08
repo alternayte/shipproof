@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1",
+  "change_id": "SP-1",
+  "requirements": [
+    {
+      "id": "SP-1-R1",
+      "statement": "Reject a request over the configured limit",
+      "proof": [
+        {
+          "type": "command",
+          "target": "go test ./src/",
+          "command": "go test -run TestRejectsOverTheLimit ./src/"
+        }
+      ]
+    }
+  ],
+  "invariants": []
+}

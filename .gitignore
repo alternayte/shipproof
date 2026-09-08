@@ -16,3 +16,12 @@ decisions.md
 dist/
 .superpowers/
 docs/build/
+
+# The sample project is a fixture. Its change record must reach a checkout, or
+# the evidence workflow has nothing to pack. Its generated output must not,
+# because a committed pack goes stale the moment the code moves.
+!examples/sample-project/.shipproof
+!examples/sample-project/.shipproof/**
+examples/sample-project/.shipproof/changes/*/evidence-pack.json
+examples/sample-project/.shipproof/changes/*/report.html
+examples/sample-project/.shipproof/runs/

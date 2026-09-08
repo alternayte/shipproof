@@ -242,6 +242,12 @@ func (pack EvidencePack) Validate() error {
 		"attestation":        pack.Attestation == nil,
 	} {
 		if !empty {
+			// empty_sections describes what is empty. A reason that survives
+			// after a section is filled tells a reader the opposite of the
+			// truth, so it is a defect and not a leftover.
+			if _, stated := pack.EmptySections[name]; stated {
+				return fmt.Errorf("the section %q holds content and empty_sections still calls it empty", name)
+			}
 			continue
 		}
 		if reason := pack.EmptySections[name]; reason == "" {
