@@ -42,16 +42,18 @@ func checkStatus(state coverage.State) string {
 }
 
 // checkProvenance maps a matrix provenance onto the pack vocabulary. The pack
-// has no unknown provenance. A row that nothing observed is derived, because
-// ShipProof computed it from the artifacts on disk.
+// has no unknown provenance.
+//
+// A row that nothing proved is observed. ShipProof read the recorded results
+// and found none, and that absence is a measurement. Reading it as derived
+// would grade it claimed, and a claimed grade tells a reader that an agent
+// asserted the state. No agent did.
 func checkProvenance(provenance coverage.Provenance) schema.ProvenanceKind {
 	switch provenance {
-	case coverage.Observed:
-		return schema.ProvenanceObserved
 	case coverage.Human:
 		return schema.ProvenanceHuman
 	default:
-		return schema.ProvenanceDerived
+		return schema.ProvenanceObserved
 	}
 }
 

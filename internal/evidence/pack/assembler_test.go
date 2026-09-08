@@ -342,8 +342,9 @@ func TestAssembleIntentStaleness(t *testing.T) {
 			if check.Status != "pass" {
 				t.Errorf("expected staleness check pass, got %s", check.Status)
 			}
-			if check.Provenance != schema.ProvenanceDerived {
-				t.Errorf("expected derived provenance, got %s", check.Provenance)
+			// SP-031. A SHA-256 comparison is a measurement, not a claim.
+			if check.Provenance != schema.ProvenanceObserved {
+				t.Errorf("expected observed provenance, got %s", check.Provenance)
 			}
 		}
 	}

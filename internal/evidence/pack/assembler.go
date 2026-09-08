@@ -62,21 +62,19 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 		pack.Intent.Stale = stale.Stale
 		pack.Intent.CurrentSourceHash = stale.CurrentHash
 	}
+	// ShipProof reads two files, computes a SHA-256 for each, and compares
+	// them. That is a measurement that a machine made and can repeat, so the
+	// check is observed. No agent asserted it.
+	stalenessStatus := "pass"
 	if pack.Intent.Stale {
-		pack.Checks = append(pack.Checks, schema.Check{
-			ID:         "intent:staleness",
-			Status:     "fail",
-			Source:     "shipproof",
-			Provenance: schema.ProvenanceDerived,
-		})
-	} else {
-		pack.Checks = append(pack.Checks, schema.Check{
-			ID:         "intent:staleness",
-			Status:     "pass",
-			Source:     "shipproof",
-			Provenance: schema.ProvenanceDerived,
-		})
+		stalenessStatus = "fail"
 	}
+	pack.Checks = append(pack.Checks, schema.Check{
+		ID:         "intent:staleness",
+		Status:     stalenessStatus,
+		Source:     "shipproof",
+		Provenance: schema.ProvenanceObserved,
+	})
 
 	runChecks, err := loadRunChecks(root, changeID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

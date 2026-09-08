@@ -211,19 +211,62 @@ func TestAClaimedCheckNeverProvesARequirement(t *testing.T) {
 	}
 }
 
-func TestAFailedObservedCheckFails(t *testing.T) {
+// TestAFailedProofCheckFails holds requirement R6 of SP-031. Section 5 says
+// that a proof which ran and failed produces FAILED. A parsed test report is
+// such a proof.
+func TestAFailedProofCheckFails(t *testing.T) {
+	for _, id := range []string{"junit:TestRetry", "sarif:rule-7", "verification:run"} {
+		block := Decide(Input{
+			ChangeID:  "SP-030",
+			Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.ReadyForHuman},
+			Matrix:    provenMatrix(),
+			HasMatrix: true,
+			Checks: []schema.Check{
+				{ID: id, Status: "fail", Source: "junit", Provenance: schema.ProvenanceObserved},
+			},
+			Unexplained: zero(),
+		})
+		if block.Verdict != Failed {
+			t.Fatalf("a failed %s check produced %q, want %q", id, block.Verdict, Failed)
+		}
+	}
+}
+
+// TestAFailedInformationalCheckDoesNotFail holds requirement R4 of SP-031.
+// Section 5 reserves FAILED for a failed proof and a failed gate. A check that
+// reports the state of the pack is neither.
+func TestAFailedInformationalCheckDoesNotFail(t *testing.T) {
+	for _, id := range []string{"intent:staleness", "coverage:R2", "agent:review:claude"} {
+		block := Decide(Input{
+			ChangeID:  "SP-030",
+			Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.ReadyForHuman},
+			Matrix:    provenMatrix(),
+			HasMatrix: true,
+			Checks: []schema.Check{
+				{ID: id, Status: "fail", Source: "shipproof", Provenance: schema.ProvenanceObserved},
+			},
+			Unexplained: zero(),
+		})
+		if block.Verdict == Failed {
+			t.Fatalf("a failed %s check produced %q, and Section 5 reserves that word", id, Failed)
+		}
+	}
+}
+
+// TestAStaleIntentIsNotProven holds requirement R5 of SP-031.
+func TestAStaleIntentIsNotProven(t *testing.T) {
 	block := Decide(Input{
 		ChangeID:  "SP-030",
-		Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.ReadyForHuman},
+		Phase:     phase.Result{ChangeID: "SP-030", Phase: phase.IntentStale, NextCommand: "shipproof start SP-030"},
 		Matrix:    provenMatrix(),
 		HasMatrix: true,
 		Checks: []schema.Check{
-			{ID: "gofmt", Status: "fail", Source: "junit", Provenance: schema.ProvenanceObserved},
+			{ID: "intent:staleness", Status: "fail", Source: "shipproof", Provenance: schema.ProvenanceObserved},
 		},
 		Unexplained: zero(),
 	})
-	if block.Verdict != Failed {
-		t.Fatalf("verdict = %q, want %q", block.Verdict, Failed)
+	if block.Verdict != NotProven {
+		t.Fatalf("a stale intent produced %q, want %q", block.Verdict, NotProven)
 	}
 }
 

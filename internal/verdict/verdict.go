@@ -93,8 +93,10 @@ func Decide(input Input) Block {
 	next := nextAction(input, counts)
 
 	switch {
-	case input.Phase.Phase == phase.RunFailed || counts.failed > 0 || failedChecks(input) > 0:
+	case input.Phase.Phase == phase.RunFailed || counts.failed > 0 || failedProofChecks(input) > 0:
 		return Block{Verdict: Failed, Reason: failReason(input, counts), Next: next}
+	case staleIntent(input):
+		return Block{Verdict: NotProven, Reason: staleReason(input, counts), Next: next}
 	case input.HasMatrix && counts.total > 0 && counts.settled == counts.total &&
 		input.Unexplained != nil && *input.Unexplained == 0:
 		return Block{Verdict: Proven, Reason: provenReason(counts), Next: next}
@@ -130,14 +132,49 @@ func count(input Input) tally {
 	return result
 }
 
+// staleIntent reports whether the requirement document changed after ShipProof
+// read it. A proof that ran against an older document proves nothing about the
+// document that now stands, so the work is not proven.
+func staleIntent(input Input) bool {
+	if input.Phase.Phase == phase.IntentStale {
+		return true
+	}
+	for _, check := range input.Checks {
+		if check.ID == "intent:staleness" && check.Status == "fail" {
+			return true
+		}
+	}
+	return false
+}
+
+func staleReason(input Input, counts tally) string {
+	return fmt.Sprintf("The requirement document changed after ShipProof read it, so no proof describes the document that now stands. %s",
+		lineSentence(input))
+}
+
 func provenReason(counts tally) string {
 	return fmt.Sprintf("All %s carry a proof. No changed line is left over.",
 		plural(counts.total, "requirement"))
 }
 
-// failedChecks counts the checks that a tool ran and that failed. A claimed
-// check is excluded, because nothing confirmed it.
-func failedChecks(input Input) int {
+// informationalPrefixes names the check identifiers that ShipProof produces to
+// report the state of the pack. ShipProof owns this namespace, so the list
+// cannot drift with a third-party tool name.
+//
+// A check under one of these prefixes is not a proof and it is not the gate.
+// Section 5 reserves FAILED for a failed proof and a failed gate, so a failed
+// check under one of these prefixes never produces that word. A stale intent
+// makes the work NOT PROVEN, and the reason line says why.
+var informationalPrefixes = []string{
+	"intent:",
+	"coverage:",
+	"agent:",
+}
+
+// failedProofChecks counts the proof results and the gate results that failed.
+// A claimed check is excluded, because nothing confirmed it. An informational
+// check is excluded, because it reports a state rather than a proof.
+func failedProofChecks(input Input) int {
 	total := 0
 	for _, check := range input.Checks {
 		if check.Status != "fail" {
@@ -146,13 +183,25 @@ func failedChecks(input Input) int {
 		if !grade.FromProvenance(check.Provenance).Proves() {
 			continue
 		}
+		if isInformational(check.ID) {
+			continue
+		}
 		total++
 	}
 	return total
 }
 
+func isInformational(id string) bool {
+	for _, prefix := range informationalPrefixes {
+		if strings.HasPrefix(id, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func failReason(input Input, counts tally) string {
-	if failed := failedChecks(input); counts.failed == 0 && failed > 0 {
+	if failed := failedProofChecks(input); counts.failed == 0 && failed > 0 {
 		return fmt.Sprintf("%s failed. %s",
 			capitalize(plural(failed, "check")), lineSentence(input))
 	}
