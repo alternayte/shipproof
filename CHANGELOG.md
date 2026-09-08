@@ -3,6 +3,47 @@
 ShipProof follows semantic versioning. The schema version inside an evidence
 file moves on its own, and each artifact names the version it answers to.
 
+## v0.4.1 — 2026-09-09
+
+A patch release. v0.4.0 could not verify a real signature, so every pack that
+continuous integration signed failed its own check. Upgrade from v0.4.0.
+
+### Fixed
+
+- **The verifier rejected a real cosign signature.** `cosign sign-blob`
+  base64-encodes its output by default, so the certificate arrives as base64
+  around the PEM rather than as the PEM itself. `shipproof pack --verify` read
+  only raw PEM and refused a true signature. It now reads raw PEM, base64 of a
+  PEM, and base64 of the raw DER, and it strips the newlines a signer wraps
+  around base64. The signature is read the same way.
+- **A signed pack still called its attestation section empty.** `Validate` now
+  rejects a section that holds content and still carries a reason in
+  `empty_sections`, in both directions. The canonical payload drops that entry
+  too, so signing never changes the bytes the signature covers.
+- **The action failed on a repository with no open change.** It now stops with
+  a notice. Several open changes produce a warning that names the missing
+  input. A change that exists and cannot be packed still fails.
+- **A test read the developer's own repository.** It ran `pack` with no root,
+  so it passed on a laptop that holds an untracked `.shipproof` and failed in
+  continuous integration, which does not. The v0.4.0 release shipped with a red
+  build for this reason. A guard test now fails when any test runs a command
+  without setting a root.
+
+### Added
+
+- `examples/sample-project`, a small repository with one open change and one
+  passing proof. The evidence workflow runs the action against it on every
+  pull request.
+- A `working-directory` input on the action, so it can run against a directory
+  inside a repository.
+
+### Proof
+
+Rows P1, P2, and P3 of the definition of done are met against a live run, not
+a test. Run 34284905727 uploaded a signed pack, and the local binary verifies
+the keyless Sigstore signature the workflow produced. See
+`docs/changes/SP-038-sample-project.md`.
+
 ## v0.4.0 — 2026-09-09
 
 The evidence layer. This release replaces the specification tooling with a
