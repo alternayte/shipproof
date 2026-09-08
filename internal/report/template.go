@@ -11,6 +11,7 @@ var templateFS embed.FS
 
 var templates = template.Must(template.New("").Funcs(template.FuncMap{
 	"badge":           provenanceBadge,
+	"gradeBadge":      gradeBadge,
 	"statusClass":     statusClass,
 	"statusIcon":      statusIcon,
 	"statusLabel":     statusLabel,

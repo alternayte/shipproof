@@ -19,14 +19,18 @@ func GenerateChangeReport(w io.Writer, root, changeID string) error {
 	generatedAt := pack.Provenance.GeneratedAt
 
 	data := changeReportData{
-		ChangeID:    pack.ChangeID,
-		GeneratedAt: generatedAt,
-		Intent:      buildIntentData(pack),
-		Verify:      buildVerifyData(pack),
-		Implement:   buildImplementData(pack),
-		AgentRun:    buildAgentRunData(pack),
-		Provenance:  buildReportProvenanceData(pack),
-		Unexplained: buildUnexplainedData(pack),
+		ChangeID:     pack.ChangeID,
+		GeneratedAt:  generatedAt,
+		Verdict:      buildVerdictData(pack),
+		Intent:       buildIntentData(pack),
+		Requirements: buildRequirementsData(pack),
+		Grades:       buildGradeGroups(pack),
+		Verify:       buildVerifyData(pack),
+		Implement:    buildImplementData(pack),
+		AgentRun:     buildAgentRunData(pack),
+		Provenance:   buildReportProvenanceData(pack),
+		Unexplained:  buildUnexplainedData(pack),
+		Attestation:  buildAttestationData(pack),
 	}
 
 	return executeTemplate(w, "change_report.html", data)

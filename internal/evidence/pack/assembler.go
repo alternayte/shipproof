@@ -172,7 +172,7 @@ func Assemble(root, changeID string, opts Options) (schema.EvidencePack, error) 
 
 	// Decision D2 of Section 15. A local pack stays unsigned. Step 5 of the
 	// sequence fills this section in continuous integration.
-	pack.EmptySections["attestation"] = "a local pack is unsigned. Only a build-system pack is audit-grade."
+	pack.EmptySections["attestation"] = "no build system signed this run. Decision D2 makes the build system the only signer."
 
 	pack.Verdict = buildVerdict(root, pack)
 
@@ -362,7 +362,7 @@ func statePackReasons(pack *schema.EvidencePack) {
 		setReason(pack, "agent", "no telemetry record exists for this change.")
 	}
 	if pack.Attestation == nil {
-		setReason(pack, "attestation", "a local pack is unsigned. Only a build-system pack is audit-grade.")
+		setReason(pack, "attestation", "no build system signed this run.")
 	}
 }
 

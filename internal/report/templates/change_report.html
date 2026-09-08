@@ -25,7 +25,7 @@
   .status-pass { color: #166534; }
   .status-fail { color: #991b1b; font-weight: 600; }
   .status-skip { color: #92400e; }
-  .status-unknown { color: #64748b; font-style: italic; }
+  .status-unknown { color: #92400e; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
   .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; }
   .stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
@@ -41,15 +41,32 @@
   .summary-pill { padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; }
   .pill-pass { background: #dcfce7; color: #166534; }
   .pill-fail { background: #fee2e2; color: #991b1b; }
-  .pill-skip { background: #fef3c7; color: #92400e; }
-  .pill-unknown { background: #f1f5f9; color: #475569; }
+  /* Section 12 assigns three colours and no more. A skipped check and an
+     unknown check are both unproven, so both read amber. */
+  .pill-open { background: #fef3c7; color: #92400e; }
+  /* The verdict palette. Red is a failure. Amber is unproven. Green is
+     proven. No other element on the page uses these three. */
+  .verdict { border-radius: 8px 8px 0 0; padding: 1.5rem; }
+  .verdict-proven { background: #dcfce7; color: #14532d; border-left: 8px solid #16a34a; }
+  .verdict-not-proven { background: #fef3c7; color: #713f12; border-left: 8px solid #d97706; }
+  .verdict-failed { background: #fee2e2; color: #7f1d1d; border-left: 8px solid #dc2626; }
+  .verdict-word { font-size: 1.75rem; font-weight: 700; letter-spacing: 0.02em; }
+  .verdict-reason { font-size: 1rem; margin-top: 0.5rem; }
+  .verdict-next { font-size: 0.95rem; margin-top: 0.75rem; font-weight: 600; }
+  .grade-note { font-size: 0.85rem; color: #475569; margin-bottom: 0.75rem; }
 </style>
 </head>
 <body>
 <div class="container">
 
-<header>
-  <h1>Change Report — {{.ChangeID}}</h1>
+<section class="verdict {{.Verdict.Class}}">
+  <div class="verdict-word">VERDICT: {{.Verdict.Verdict}}</div>
+  <div class="verdict-reason">{{.Verdict.Reason}}</div>
+  <div class="verdict-next">NEXT: {{.Verdict.Next}}</div>
+</section>
+
+<header style="border-radius:0;">
+  <h1>Change {{.ChangeID}}</h1>
   <div class="meta">Generated {{.GeneratedAt}} &middot; ShipProof {{.Provenance.ShipProofVersion}}</div>
 </header>
 
@@ -61,12 +78,150 @@
       <div class="stat-value commit-hash">{{.Intent.SnapshotHash}}</div>
       <div class="stat-provenance">{{badge "observed"}}</div>
     </div>
+  </div>
+</section>
+
+<section>
+  <h2>Requirements</h2>
+  {{if .Requirements.Rows}}
+  <table>
+  <thead>
+    <tr><th>Requirement</th><th>Proof</th><th>State</th><th>Grade</th></tr>
+  </thead>
+  <tbody>
+  {{range .Requirements.Rows}}
+    <tr>
+      <td><code>{{.ID}}</code>{{if .Statement}}<div style="font-size:0.8rem;color:#64748b;">{{.Statement}}</div>{{end}}</td>
+      <td>{{if .ProofRefs}}{{range .ProofRefs}}<div><code>{{.}}</code></div>{{end}}{{else}}<span class="nodata">no proof</span>{{end}}</td>
+      <td>{{.State}}{{if .Detail}}<div style="font-size:0.8rem;color:#64748b;">{{.Detail}}</div>{{end}}</td>
+      <td>{{gradeBadge .Grade}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{else}}
+  <p class="nodata">{{.Requirements.Reason}}</p>
+  {{end}}
+</section>
+
+<section>
+  <h2>Unexplained change</h2>
+  {{if .Unexplained.Measured}}
+  <p>No proof ran this code. The signal fails no change. It is review material.</p>
+  <p style="margin-top:0.5rem;font-weight:600;">{{.Unexplained.TotalLines}} changed lines match no requirement.</p>
+  {{if .Unexplained.CoverageAvailable}}
+  <table style="margin-top:0.75rem;">
+  <thead><tr><th>File</th><th>Symbol</th><th>Lines</th></tr></thead>
+  <tbody>
+  {{range .Unexplained.LineFindings}}
+    <tr><td><code>{{.File}}</code></td><td>{{.Symbol}}</td><td>{{.StartLine}}-{{.EndLine}}</td></tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{else}}
+  <p class="nodata">No coverage command is configured. ShipProof cannot see inside a file.</p>
+  {{end}}
+  {{if .Unexplained.FileFindings}}
+  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof names these files</h3>
+  <table>
+  <thead><tr><th>File</th></tr></thead>
+  <tbody>
+  {{range .Unexplained.FileFindings}}
+    <tr><td><code>{{.Path}}</code>{{if .IgnorePattern}} <span class="tag">ignored: {{.IgnorePattern}}</span>{{end}}</td></tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{end}}
+  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">Not instrumented: {{.Unexplained.UninstrumentedLines}} changed lines. No claim made.</p>
+  {{else}}
+  <p>The number of changed lines that match no requirement is not known.</p>
+  <p class="nodata">{{.Unexplained.Reason}}</p>
+  {{end}}
+</section>
+
+<section>
+  <h2>Checks</h2>
+  {{if .Grades}}
+  <div class="summary-bar">
+    <span class="summary-pill pill-pass">{{.Verify.ProvenCheckCount}} passed</span>
+    <span class="summary-pill pill-fail">{{.Verify.FailCheckCount}} failed</span>
+    <span class="summary-pill pill-open">{{.Verify.OpenCheckCount}} unproven</span>
+  </div>
+  {{range .Grades}}
+  <h3 style="margin-top:1.25rem;font-size:0.95rem;">{{gradeBadge .Grade}}</h3>
+  <p class="grade-note">{{.Note}}</p>
+  <table>
+  <thead>
+    <tr><th>Check</th><th>Status</th><th>Source</th></tr>
+  </thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td><code>{{.ID}}</code>{{if .Detail}}<div style="font-size:0.8rem;color:#64748b;">{{.Detail}}</div>{{end}}</td>
+      <td class="{{statusClass .Status}}">{{statusIcon .Status}} {{statusLabel .Status}}</td>
+      <td>{{.Source}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+  </table>
+  {{end}}
+  {{else}}
+  <p class="nodata">{{.Verify.Reason}}</p>
+  {{end}}
+</section>
+
+<section>
+  <h2>Agent record</h2>
+  {{if .AgentRun.Hides}}
+  <p>No agent record exists for this change.</p>
+  <p class="nodata">{{.AgentRun.Reason}}</p>
+  {{else}}
+  <div class="stat-grid">
     <div class="stat-card">
-      <div class="stat-label">Requirements</div>
-      <div class="stat-value">{{.Intent.RequirementCount}}</div>
+      <div class="stat-label">Provider</div>
+      <div class="stat-value">{{.AgentRun.Provider}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Model</div>
+      <div class="stat-value">{{.AgentRun.Model}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Session</div>
+      <div class="stat-value commit-hash">{{.AgentRun.SessionID}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cost</div>
+      <div class="stat-value">{{formatDollars .AgentRun.Cost}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Input Tokens</div>
+      <div class="stat-value">{{formatTokens .AgentRun.InputTokens}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Output Tokens</div>
+      <div class="stat-value">{{formatTokens .AgentRun.OutputTokens}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tool Calls</div>
+      <div class="stat-value">{{.AgentRun.ToolCallCount}}</div>
+      <div class="stat-provenance">{{badge "observed"}}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Exit Status</div>
+      <div class="stat-value">{{.AgentRun.ExitStatus}}</div>
       <div class="stat-provenance">{{badge "observed"}}</div>
     </div>
   </div>
+  {{if .AgentRun.StartedAt}}
+  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">{{formatDuration .AgentRun.StartedAt .AgentRun.EndedAt}}</p>
+  {{end}}
+  {{end}}
 </section>
 
 <section>
@@ -120,116 +275,22 @@
   {{end}}
 </section>
 
-{{if .Unexplained.Present}}
 <section>
-  <h2>Unexplained change</h2>
-  <p>No proof ran this code. The signal fails no change. It is review material.</p>
-  {{if .Unexplained.CoverageAvailable}}
-  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof ran these (observed)</h3>
-  <table>
-  <thead><tr><th>File</th><th>Symbol</th><th>Lines</th></tr></thead>
+  <h2>Signature</h2>
+  {{if .Attestation.Signed}}
+  <p>The build system signed this pack.</p>
+  <table style="margin-top:0.75rem;">
   <tbody>
-  {{range .Unexplained.LineFindings}}
-    <tr><td><code>{{.File}}</code></td><td>{{.Symbol}}</td><td>{{.StartLine}}-{{.EndLine}}</td></tr>
-  {{end}}
+    <tr><th>Subject</th><td><code>{{.Attestation.Subject}}</code></td></tr>
+    <tr><th>Digest</th><td><code>sha256:{{.Attestation.Digest}}</code></td></tr>
   </tbody>
   </table>
+  <p style="margin-top:0.75rem;font-size:0.85rem;color:#64748b;">Run <code>shipproof pack --verify</code> to check it. That command does not check the Fulcio certificate chain, and it does not check the Rekor inclusion proof.</p>
   {{else}}
-  <p class="nodata">No coverage command is configured. ShipProof cannot see inside a file.</p>
-  {{end}}
-  <h3 style="margin-top:1rem;font-size:0.95rem;">No proof names these files (claimed)</h3>
-  <table>
-  <thead><tr><th>File</th></tr></thead>
-  <tbody>
-  {{range .Unexplained.FileFindings}}
-    <tr><td><code>{{.Path}}</code>{{if .IgnorePattern}} <span class="tag">ignored: {{.IgnorePattern}}</span>{{end}}</td></tr>
-  {{end}}
-  </tbody>
-  </table>
-  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">Not instrumented: {{.Unexplained.UninstrumentedLines}} changed lines. No claim made.</p>
-</section>
-{{end}}
-
-<section>
-  <h2>Verification</h2>
-  {{if .Verify.TotalChecks}}
-  <div class="summary-bar">
-    <span class="summary-pill pill-pass">{{.Verify.ProvenCheckCount}} passed</span>
-    <span class="summary-pill pill-fail">{{.Verify.FailCheckCount}} failed</span>
-    <span class="summary-pill pill-skip">{{.Verify.SkipCheckCount}} skipped</span>
-    <span class="summary-pill pill-unknown">{{.Verify.UnknownCheckCount}} unknown</span>
-  </div>
-  <table>
-  <thead>
-    <tr><th>Check</th><th>Status</th><th>Source</th><th>Grade</th></tr>
-  </thead>
-  <tbody>
-  {{range .Verify.Checks}}
-    <tr>
-      <td><code>{{.ID}}</code></td>
-      <td class="{{statusClass .Status}}">{{statusIcon .Status}} {{statusLabel .Status}}</td>
-      <td>{{.Source}}</td>
-      <td>{{badge .Provenance}}</td>
-    </tr>
-  {{end}}
-  </tbody>
-  </table>
-  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">A tool ran an observed check. A person signed a stated check. Nothing confirmed a claimed check, so a claimed check never proves a requirement.</p>
-  {{else}}
-  <p class="nodata">No verification checks recorded.</p>
+  <p>This pack is unsigned. Only a build-system pack is audit-grade.</p>
+  <p class="nodata">{{.Attestation.Reason}}</p>
   {{end}}
 </section>
-
-{{if not .AgentRun.Hides}}
-<section>
-  <h2>Agent Run</h2>
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-label">Provider</div>
-      <div class="stat-value">{{.AgentRun.Provider}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Model</div>
-      <div class="stat-value">{{.AgentRun.Model}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Session</div>
-      <div class="stat-value commit-hash">{{.AgentRun.SessionID}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Cost</div>
-      <div class="stat-value">{{formatDollars .AgentRun.Cost}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Input Tokens</div>
-      <div class="stat-value">{{formatTokens .AgentRun.InputTokens}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Output Tokens</div>
-      <div class="stat-value">{{formatTokens .AgentRun.OutputTokens}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Tool Calls</div>
-      <div class="stat-value">{{.AgentRun.ToolCallCount}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Exit Status</div>
-      <div class="stat-value">{{.AgentRun.ExitStatus}}</div>
-      <div class="stat-provenance">{{badge "observed"}}</div>
-    </div>
-  </div>
-  {{if .AgentRun.StartedAt}}
-  <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;">{{formatDuration .AgentRun.StartedAt .AgentRun.EndedAt}}</p>
-  {{end}}
-</section>
-{{end}}
 
 </div>
 </body>

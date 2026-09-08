@@ -15,6 +15,18 @@ func provenanceBadge(kind schema.ProvenanceKind) template.HTML {
 		string(value) + `</span>`)
 }
 
+// gradeBadge renders a grade that a pack already recorded. Section 6 fixes the
+// three values, and an unrecognised value renders as claimed, because an
+// unknown label is not evidence.
+func gradeBadge(value string) template.HTML {
+	switch grade.Grade(value) {
+	case grade.Observed, grade.Stated:
+	default:
+		value = string(grade.Claimed)
+	}
+	return template.HTML(`<span class="prov-badge prov-` + value + `">` + value + `</span>`)
+}
+
 func provenanceLabel(kind schema.ProvenanceKind) string {
 	return "[" + string(grade.FromProvenance(kind)) + "]"
 }
