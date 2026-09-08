@@ -109,7 +109,14 @@ func Canonical(pack schema.EvidencePack) ([]byte, error) {
 	if err := json.Unmarshal(data, &value); err != nil {
 		return nil, fmt.Errorf("decode the canonical payload: %w", err)
 	}
+	// Drop the attestation key, so the payload never names the block that
+	// signs it. Drop its empty_sections entry for the same reason: signing
+	// fills the section and removes that reason, and a payload that changed
+	// between signing and attaching could never verify.
 	delete(value, "attestation")
+	if sections, ok := value["empty_sections"].(map[string]any); ok {
+		delete(sections, "attestation")
+	}
 	canonical, err := json.Marshal(value)
 	if err != nil {
 		return nil, fmt.Errorf("re-encode the canonical payload: %w", err)

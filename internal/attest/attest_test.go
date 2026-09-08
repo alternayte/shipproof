@@ -266,3 +266,30 @@ func TestVerifyAcceptsAWrappedSignature(t *testing.T) {
 		t.Fatal("a wrapped signature did not verify")
 	}
 }
+
+// TestTheCanonicalPayloadDoesNotChangeWhenSigned holds the ordering rule.
+// Signing fills the attestation section and removes its reason. If either
+// changed the payload, a true signature could never verify.
+func TestTheCanonicalPayloadDoesNotChangeWhenSigned(t *testing.T) {
+	unsigned := samplePack()
+	unsigned.EmptySections = map[string]string{
+		"agent":       "no telemetry record exists.",
+		"attestation": "no build system signed this run.",
+	}
+	before, err := Canonical(unsigned)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signed := samplePack()
+	signed.EmptySections = map[string]string{"agent": "no telemetry record exists."}
+	signed.Attestation = &schema.AttestationEvidence{Format: "in-toto", Signature: "MEUCIQ"}
+	after, err := Canonical(signed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(before) != string(after) {
+		t.Fatalf("signing changed the payload:\nbefore %s\nafter  %s", before, after)
+	}
+}

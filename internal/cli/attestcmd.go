@@ -88,6 +88,11 @@ func runPackAttach(path string, args []string, stdout, stderr io.Writer) int {
 		Digest:      digest,
 	}
 
+	// The section is no longer empty, so its reason must go. A signed pack
+	// that still calls its attestation empty tells a reader the opposite of
+	// the truth.
+	delete(loaded.EmptySections, "attestation")
+
 	// Check before write. A pack must never carry a block that fails.
 	if _, err := attest.Verify(loaded); err != nil {
 		fmt.Fprintf(stderr, "the signature does not match this pack, so nothing was written: %v\n", err)
