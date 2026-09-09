@@ -1,6 +1,6 @@
 # SP-040 — Make adding and tracking a requirement easy
 
-Status: proposed. Not started.
+Status: implemented.
 Source: the second reader review of 2026-09-09, recorded in
 `docs/changes/SP-036-comprehension-review.md`.
 
@@ -41,17 +41,42 @@ work belongs in the commands.
 Section 4 also fixes the surface at five commands plus two support commands. A
 fix must live inside those, as an option or a subcommand of an existing verb.
 
-## Open questions to settle before building
+## The four questions, settled
 
-1. Does a person confirm requirements one at a time, or is the whole set the
-   unit? The whole set is simpler and it forces an all-or-nothing decision on
-   a long document.
-2. What happens when the document gains a requirement after `start`? A merge
-   is the useful answer and the harder one. `--force` is what exists.
-3. Should ShipProof check a proof command before it records it, so a typo
-   reports a mistake rather than a failure?
-4. Where does the list of requirements without a proof belong? `status` is the
-   natural home, and its output is currently short.
+**1. Is the whole set the unit of confirmation?** Yes. A proposal is a readable
+JSON file, and a person who wants a subset edits it before they confirm. That
+needs no new surface, and SP-034 narrowed the pattern to obligations, so a
+proposal now carries little to prune. `--confirm-requirements` prints what it
+adopted, so the person sees the result of their edit.
+
+**2. What happens when the document gains a requirement?** `start --force`
+merges. It adds what the document gained and keeps every requirement that
+stands, with its confirmation. It never deletes. A requirement that the
+document no longer states is reported and left in place, because principle 6
+of Section 2 says nothing is deleted to make a change pass. A person removes
+it deliberately or not at all.
+
+This was the important one. It was not an ergonomic gap, it was a correctness
+bug: `--force` re-snapshotted the document and left the requirement set stale,
+so a pack reported a fresh intent against requirements the document no longer
+matched.
+
+**3. Does ShipProof check a proof command?** It reports one it cannot find.
+A command whose program is not on the PATH is a broken proof, not a failed
+requirement, and the two must never read the same. `status` names it before
+`prove` runs and records a failure that means something else.
+
+**4. Where does the list of unproven requirements live?** `status`. It is the
+fast loop, its output is short, and the report already carries the full table.
+
+## What was built
+
+- `start --force` merges the requirement set with the document. It reports
+  what it added and what the document no longer states.
+- `status` names every requirement with no proof, and every planned proof
+  whose program it cannot find.
+- The `capture-intent` instruction file states that a proposal is editable
+  before it is confirmed.
 
 ## Not a defect in the report
 

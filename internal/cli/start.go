@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alternayte/shipproof/internal/change"
@@ -117,7 +118,7 @@ func runStart(args []string, stdout, stderr io.Writer) int {
 // one. A document that holds none is not an error. The count stays honest.
 func adoptRequirements(root, changeID, intent string, stdout io.Writer) {
 	if requirements.Exists(root, changeID) {
-		fmt.Fprintln(stdout, "Requirements: the change already holds a requirement set.")
+		mergeRequirements(root, changeID, intent, stdout)
 		return
 	}
 
@@ -200,6 +201,107 @@ func confirmRequirements(root, changeID string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "Requirements: confirmed %d into %s\n", len(set.Requirements), filepath.ToSlash(rel))
 	fmt.Fprintf(stdout, "Next: run `shipproof status %s`.\n", changeID)
 	return 0
+}
+
+// mergeRequirements brings a standing requirement set up to date with the
+// document. It adds what the document gained and keeps every requirement that
+// stands, with the confirmation a person already gave.
+//
+// It never deletes. Principle 6 of Section 2 says nothing is deleted to make a
+// change pass, so a requirement the document no longer states is reported and
+// left in place. A person removes it deliberately or not at all.
+func mergeRequirements(root, changeID, intent string, stdout io.Writer) {
+	standing, err := requirements.Load(root, changeID)
+	if err != nil {
+		fmt.Fprintf(stdout, "Requirements: unchanged. %v\n", err)
+		return
+	}
+
+	current, err := readDocumentRequirements(changeID, intent)
+	if err != nil {
+		fmt.Fprintln(stdout, "Requirements: unchanged. The document states none that ShipProof can read.")
+		return
+	}
+
+	held := map[string]bool{}
+	statements := map[string]bool{}
+	for _, requirement := range standing.Requirements {
+		held[requirement.ID] = true
+		statements[requirement.Statement] = true
+	}
+
+	var added []string
+	next := standing
+	for _, candidate := range current.Requirements {
+		// Match on the sentence, not the identifier. A document that gains a
+		// line renumbers everything after it, and a renumbered requirement is
+		// not a new one.
+		if statements[candidate.Statement] {
+			continue
+		}
+		candidate.ID = nextRequirementID(changeID, held)
+		held[candidate.ID] = true
+		statements[candidate.Statement] = true
+		next.Requirements = append(next.Requirements, candidate)
+		added = append(added, candidate.ID)
+	}
+
+	var dropped []string
+	inDocument := map[string]bool{}
+	for _, candidate := range current.Requirements {
+		inDocument[candidate.Statement] = true
+	}
+	for _, requirement := range standing.Requirements {
+		if !inDocument[requirement.Statement] {
+			dropped = append(dropped, requirement.ID)
+		}
+	}
+
+	if len(added) == 0 {
+		fmt.Fprintln(stdout, "Requirements: the set already matches the document.")
+	} else {
+		// A merged requirement carries no confirmation, so Save refuses the
+		// set until a person accepts the additions.
+		if _, err := requirements.SaveProposal(root, next); err != nil {
+			fmt.Fprintf(stdout, "Requirements: unchanged. %v\n", err)
+			return
+		}
+		if _, err := requirements.Save(root, next.Confirm(time.Now())); err != nil {
+			fmt.Fprintf(stdout, "Requirements: unchanged. %v\n", err)
+			return
+		}
+		_ = requirements.ClearProposal(root, changeID)
+		fmt.Fprintf(stdout, "Requirements: added %d from the document: %s\n",
+			len(added), strings.Join(added, ", "))
+	}
+
+	if len(dropped) > 0 {
+		fmt.Fprintf(stdout, "Requirements: the document no longer states %s. Nothing was deleted.\n",
+			strings.Join(dropped, ", "))
+		fmt.Fprintln(stdout, "              Remove it yourself if it is out of scope.")
+	}
+}
+
+// readDocumentRequirements reads whichever pattern the document answers to.
+func readDocumentRequirements(changeID, intent string) (requirements.Set, error) {
+	if set, err := requirements.AdoptNative(changeID, intent); err == nil {
+		return set, nil
+	}
+	body, err := os.ReadFile(intent)
+	if err != nil {
+		return requirements.Set{}, err
+	}
+	return requirements.ProposeForeign(changeID, intent, body)
+}
+
+// nextRequirementID picks the first identifier the set does not hold.
+func nextRequirementID(changeID string, held map[string]bool) string {
+	for index := 1; ; index++ {
+		candidate := fmt.Sprintf("%s-R%d", changeID, index)
+		if !held[candidate] {
+			return candidate
+		}
+	}
 }
 
 // scaffoldPlan writes an empty verification plan when the change holds none.

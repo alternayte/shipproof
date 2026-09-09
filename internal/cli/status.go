@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/alternayte/shipproof/internal/coverage"
@@ -134,7 +136,62 @@ func runStatus(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintln(stdout)
 	printMatrix(stdout, matrix)
+	printPlanGaps(stdout, root, changeID, matrix)
 	return 0
+}
+
+// printPlanGaps names what stands between this change and a verdict. A reader
+// asked how a person adds and tracks a requirement, and the fast loop is the
+// place to answer it.
+func printPlanGaps(stdout io.Writer, root, changeID string, matrix coverage.Matrix) {
+	plan, err := verification.Load(verification.Path(root, changeID))
+	if err != nil {
+		return
+	}
+
+	planned := map[string][]verification.Proof{}
+	for _, group := range [][]verification.Item{plan.Requirements, plan.Invariants} {
+		for _, item := range group {
+			planned[item.ID] = item.Proof
+		}
+	}
+
+	var needProof []string
+	for _, row := range matrix.Rows {
+		if len(planned[row.RequirementID]) == 0 {
+			needProof = append(needProof, row.RequirementID)
+		}
+	}
+
+	// A command whose program is missing is a broken proof, not a failed
+	// requirement. Name it before `prove` records a failure that means
+	// something else.
+	var unrunnable []string
+	for id, proofs := range planned {
+		for _, proof := range proofs {
+			if proof.IsHuman() || strings.TrimSpace(proof.Command) == "" {
+				continue
+			}
+			program := strings.Fields(proof.Command)[0]
+			if _, err := exec.LookPath(program); err != nil {
+				unrunnable = append(unrunnable, fmt.Sprintf("%s runs %q, and that program is not installed", id, program))
+			}
+		}
+	}
+	sort.Strings(unrunnable)
+
+	if len(needProof) == 0 && len(unrunnable) == 0 {
+		return
+	}
+	fmt.Fprintln(stdout)
+	if len(needProof) > 0 {
+		sort.Strings(needProof)
+		fmt.Fprintf(stdout, "needs a proof   %s\n", strings.Join(needProof, ", "))
+		fmt.Fprintf(stdout, "                add a command that exits 0 to .shipproof/changes/%s/verification.json\n", changeID)
+	}
+	for _, line := range unrunnable {
+		fmt.Fprintf(stdout, "broken proof    %s\n", line)
+	}
 }
 
 // readCoverage builds the requirement coverage matrix. It reports the reason

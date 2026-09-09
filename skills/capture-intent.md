@@ -36,11 +36,30 @@ sentence the document holds, and raise the ambiguity with the person who owns
 the document. Do not resolve it on your own and record the resolution as the
 intent.
 
+## When ShipProof proposes requirements
+
+A document that a specification tool wrote gets a proposal, not an adoption.
+ShipProof writes it to `.shipproof/changes/<id>/requirements-proposal.json`.
+
+Read the file. Delete any line that is not a requirement, then run:
+
+```
+shipproof start <change-id> --confirm-requirements
+```
+
+The whole set is the unit. Editing the file before you confirm is how you
+accept a subset.
+
 ## When the document changes
 
 `start` records the hash of the document as it stood. A later edit makes the
 record stale, and `shipproof status` reports that. Re-run `start` with
 `--force` after you agree the new document is the intent.
+
+`--force` merges the requirement set with the document. It adds what the
+document gained and keeps every requirement that stands. It never deletes. A
+requirement the document no longer states is reported and left in place, and
+you remove it yourself or not at all.
 
 A proof that ran against the older document proves nothing about the document
 that now stands. Never report such a proof as current.
