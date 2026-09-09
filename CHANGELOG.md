@@ -3,6 +3,48 @@
 ShipProof follows semantic versioning. The schema version inside an evidence
 file moves on its own, and each artifact names the version it answers to.
 
+## v0.6.0 — 2026-09-09
+
+The instruction files now reach the agent. A user asked whether ShipProof
+helps someone using a coding agent fill in `verification.json`. The honest
+answer was no, for two reasons, and either one alone made the layer useless.
+
+### Fixed
+
+- **The instructions never reached the agent.** `init` wrote a loose
+  `plan-proof.md` into `.claude/skills/`. A harness loads a skill from
+  `<name>/SKILL.md` with frontmatter and ignores a loose Markdown file beside
+  it, so the file was installed and never read. Each instruction is now a
+  package with frontmatter that names it and says when it applies.
+
+- **The instructions never named the file to write.** `plan-proof` explained
+  what a proof is and what a grade means, and it mentioned `verification.json`
+  nowhere. It now shows the file, its shape, and a worked example with a
+  command proof and a human proof. A test parses that example out of the file
+  and validates it against the plan schema, so an example a reader copies is
+  always one that works.
+
+- **`AGENTS.md` cited a document that no longer exists.** It paused the
+  self-hosted workflow until v0 closed and pointed at Section 26 of the dead
+  v0 design document. v0 closed. Self-hosting is on, and a test now catches a
+  stale citation.
+
+### Changed
+
+- `init` removes a loose instruction file that an earlier version wrote. A
+  file no harness reads is worse than no file, because it looks installed.
+- The README documents the ongoing loop, not only the first run: editing a
+  proposal before confirming it, merging when the document changes, and asking
+  `status` what still needs a proof.
+- Decision D3 is recorded as decided in the design document. It was settled on
+  2026-09-08 and the record still called it open.
+
+### Upgrading
+
+Run `shipproof init .` again. It replaces the loose instruction files with
+packages and removes the old ones. Nothing else in a repository changes, and
+the evidence pack schema stays at `0.4`.
+
 ## v0.5.1 — 2026-09-09
 
 A second reader review read the rebuilt report. None of the seven questions
