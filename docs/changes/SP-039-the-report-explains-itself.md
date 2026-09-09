@@ -1,6 +1,6 @@
 # SP-039 — The report explains itself
 
-Status: implemented.
+Status: implemented and proven. The second review of 2026-09-09 raised none of the seven questions.
 Source: `docs/changes/SP-036-comprehension-review.md`, the reader review of
 2026-09-09. Section 12 and Section 2 principle 4.
 

@@ -177,3 +177,51 @@ func head(html string) string {
 	}
 	return html
 }
+
+// TestThePageReadsOnAPhone holds the practical half of Section 2 principle 4.
+// A reader often meets this page on a phone, and a page with no viewport tag
+// renders at desktop width and forces them to pinch and zoom.
+func TestThePageReadsOnAPhone(t *testing.T) {
+	html := renderFor(t, nil)
+	if !strings.Contains(html, `name="viewport"`) {
+		t.Error("the page carries no viewport tag, so a phone renders it at desktop width")
+	}
+	if !strings.Contains(html, "max-width: 640px") {
+		t.Error("the page carries no narrow-screen rules")
+	}
+	// A wide table must scroll on its own, never push the page sideways.
+	if !strings.Contains(flatten(html), "table { display: block; overflow-x: auto; }") {
+		t.Error("a wide table can push the whole page sideways on a phone")
+	}
+}
+
+// TestTheSourceDocumentSaysWhatItIs holds a finding from the second reader
+// review of 2026-09-09. A reader met "read from checkout.md" and asked what
+// that file was. A bare filename names a thing without saying what kind of
+// thing it is.
+func TestTheSourceDocumentSaysWhatItIs(t *testing.T) {
+	html := flatten(renderFor(t, func(pack *schema.EvidencePack) {
+		pack.Intent.SourcePath = "docs/checkout-retry.md"
+	}))
+	if !strings.Contains(html, "requirements document <code>docs/checkout-retry.md</code>") {
+		t.Errorf("the page names the file without saying what it is:\n%s", section(t, html, "Intent"))
+	}
+}
+
+// TestThePageStaysShort holds what the second review praised. The readers
+// liked that the page is not wordy, so an explanation must stay one sentence.
+// A fix for one confusion must never bloat the page.
+func TestThePageStaysShort(t *testing.T) {
+	html := renderFor(t, nil)
+	pattern := regexp.MustCompile(`(?s)<p class="explain">(.*?)</p>`)
+	matches := pattern.FindAllStringSubmatch(html, -1)
+	if len(matches) == 0 {
+		t.Fatal("the page holds no explanation")
+	}
+	for _, match := range matches {
+		prose := strings.TrimSpace(flatten(regexp.MustCompile(`<[^>]*>`).ReplaceAllString(match[1], "")))
+		if words := len(strings.Fields(prose)); words > 65 {
+			t.Errorf("an explanation runs to %d words, which is no longer one short answer:\n%s", words, prose)
+		}
+	}
+}

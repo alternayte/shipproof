@@ -30,7 +30,8 @@ scenario() {
   git config user.email "review@example.com"
   git config user.name "Review"
 
-  cat > checkout.md <<'INTENT'
+  mkdir -p docs
+  cat > docs/checkout-retry.md <<'INTENT'
 # Checkout retry
 
 ### SP-1-R1 — Retry a failed charge
@@ -47,7 +48,7 @@ INTENT
   # review is about the verdict, not about a missing build tool.
   "$BIN" config set verification.command true --local >/dev/null 2>&1 || \
     sed -i.bak 's|^  command: .*|  command: "true"|' .shipproof/config.yaml
-  "$BIN" start SP-1 --intent checkout.md --ceremony 0 >/dev/null
+  "$BIN" start SP-1 --intent docs/checkout-retry.md --ceremony 0 >/dev/null
 
   cat > .shipproof/changes/SP-1/verification.json <<PLAN
 {

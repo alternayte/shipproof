@@ -1,6 +1,7 @@
 # SP-036 — The comprehension review
 
-Status: run on 2026-09-09. Row U1 is met. The findings below are open.
+Status: run twice on 2026-09-09. Row U1 is met. The seven findings are closed.
+Two new findings came from the second review: one fixed, one recorded as SP-040.
 Source: `docs/design/shipproof-sdd.md`, Section 14.6, row U1.
 Sequence step: Section 16, step 9.
 
@@ -153,6 +154,31 @@ ShipProof does. Every question above is a reader asking the page to explain
 its own vocabulary, and the page not answering.
 
 `docs/changes/SP-039-the-report-explains-itself.md` carries the fixes.
+
+## The second review, 2026-09-09
+
+The report was rebuilt to answer the seven questions, and the review ran again.
+
+**None of the seven came up.** The requirement of `SP-039` that a second review
+answers them without asking is met.
+
+Two questions did come up.
+
+1. **What is `checkout.md`?** The page named the intent document by a bare
+   filename and never said what kind of document it was. That is a wording
+   defect and it is fixed: the page now reads "the requirements document
+   `docs/checkout-retry.md`". The review fixture also used a bare filename at
+   the root, which read like an internal artifact rather than a document in a
+   repository.
+
+2. **How does a person add and track a requirement in practice?** This is not a
+   wording defect. The readers understood the page and asked about the workflow
+   behind it, which is clumsy today.
+   `docs/changes/SP-040-requirement-workflow.md` records it.
+
+The readers also said the page is not too wordy. That is a constraint on every
+later change, and `SP-040` records it as one: a fix for the workflow question
+must not answer it by adding prose to the page.
 
 ### The unused tables
 
