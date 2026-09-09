@@ -3,6 +3,50 @@
 ShipProof follows semantic versioning. The schema version inside an evidence
 file moves on its own, and each artifact names the version it answers to.
 
+## v0.5.1 — 2026-09-09
+
+A second reader review read the rebuilt report. None of the seven questions
+from the first review came up, so the wording of v0.5.0 is proven rather than
+plausible. Two new questions came up, and this release answers both.
+
+### Fixed
+
+- **`start --force` left the requirement set stale.** It re-snapshotted the
+  document and touched nothing else, so a change whose document gained a
+  requirement carried a fresh intent hash against a set the document no longer
+  matched. The pack then reported on the wrong requirements and said nothing.
+  `--force` now merges: it adds what the document gained and keeps every
+  requirement that stands, with the confirmation a person already gave. It
+  matches on the sentence rather than the identifier, because a document that
+  gains a line renumbers everything after it.
+
+  It never deletes. A requirement the document no longer states is reported
+  and left in place, and a person removes it deliberately or not at all.
+
+- **A broken proof read as a failed requirement.** A proof whose program is not
+  installed recorded a failure, which is a different fact. `shipproof status`
+  now names it before `prove` runs.
+
+- **The report named the intent document without saying what it was.** A reader
+  met "read from `checkout.md`" and asked what that file was. It now reads "the
+  requirements document `docs/checkout-retry.md`".
+
+- **The report did not fit a phone.** It carried no viewport tag, so a phone
+  rendered it at desktop width. A reader met the page on a phone during the
+  review. Narrow screens now get their own rules, and a wide table scrolls on
+  its own rather than pushing the page sideways.
+
+### Added
+
+- `shipproof status` names every requirement with no proof, and the file to put
+  one in.
+
+### Unchanged on purpose
+
+The readers said the page is not too wordy. Every change above lives in the
+commands, and nothing was added to the report. A test now fails when any
+explanation on the page grows past one short answer.
+
 ## v0.5.0 — 2026-09-09
 
 The report explains itself. Three readers who had never used ShipProof read a
