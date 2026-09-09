@@ -3,7 +3,14 @@
 ShipProof follows semantic versioning. The schema version inside an evidence
 file moves on its own, and each artifact names the version it answers to.
 
-## Unreleased
+## v0.5.0 — 2026-09-09
+
+The report explains itself. Three readers who had never used ShipProof read a
+change report, and every one stated the verdict correctly. Row U1 of the
+definition of done is met, and Section 14 is complete.
+
+Every one of those readers then asked what the rest of the page meant. This
+release answers their seven questions.
 
 ### Changed
 
@@ -18,9 +25,22 @@ file moves on its own, and each artifact names the version it answers to.
   system, and which revision it judged.
 - The unexplained-change section says what would measure a count it does not
   know, rather than only reporting that it is unknown.
-- `schema_version` moves to `0.4`. `requirements[].source_anchor` is new and
-  optional. `schemas/v0.4/` is published, and a pack from an older version
-  still answers to the schema of its own version.
+### Breaking
+
+- `schema_version` moves from `0.3` to `0.4`. `requirements[].source_anchor`
+  is new and optional, and it holds the line of the intent document that
+  states the requirement. `schemas/v0.4/` is published. A pack written by an
+  older version still answers to the schema of its own version, so a recorded
+  pack stays valid.
+
+### Known limits
+
+- The seven answers are written and not yet proven. `SP-039` asks for a second
+  review with three new readers who answer the seven questions without asking.
+  Until that runs, the wording is plausible, not verified.
+- The comprehension review of 2026-09-09 was recorded as a summary rather than
+  a per-page tally. `SP-036` says so, because it changes what the record
+  proves.
 
 ## v0.4.1 — 2026-09-09
 
