@@ -1,7 +1,8 @@
 # ShipProof repository instructions
 
 Read the ShipProof instruction file that matches the task. Three exist:
-`capture-intent.md`, `plan-proof.md`, and `read-evidence.md`.
+`capture-intent.md`, `plan-proof.md`, and `read-evidence.md`. They live in
+`.shipproof/skills/`.
 
 Follow these invariants:
 
@@ -15,24 +16,39 @@ Follow these invariants:
 - Run `just verify` before declaring implementation complete.
 - Treat suggestions and nits as non-blocking.
 
-## Self-hosted workflow: paused
+## Self-hosted workflow: on
 
-ShipProof does not currently run its own workflow on itself. Do not create a
-shaping session, an intent snapshot, a verification plan, or an evidence pack
-for work in this repository.
+ShipProof runs its own workflow on itself. v0 closed, and the condition that
+paused this is met.
 
-Write a change document under `docs/changes/` in the SP-011 format instead.
-Keep one independently verifiable change per implementation session.
+Start every change with the tool:
 
-The existing `.shipproof/` state is a historical record of SP-001 to SP-020.
-Read it. Do not extend it.
+```
+shipproof start SP-0NN --intent docs/changes/SP-0NN-<slug>.md
+shipproof start SP-0NN --confirm-requirements
+shipproof status SP-0NN
+shipproof pack SP-0NN
+```
 
-Self-hosted work resumes after v0 closes. See Section 26 of the SDD.
+Write the change document first, in the SP-039 format, with a `### SP-0NN-RN —`
+heading per requirement so the native pattern reads it. Keep one independently
+verifiable change per session.
 
-`docs/design/shipproof-v0-sdd.md` is the canonical v0 contract. Section 24 holds the complete definition of done. Section 25 holds the closure rules.
+`.shipproof/changes/SP-001` to `SP-020` are a historical record of the v0 line.
+Read them. Do not edit them.
 
-- A criterion is met when its proof command succeeds. Nothing else changes its state.
+Report what the tool reported. A verdict that the tool did not print is a
+claim, and this repository holds itself to the rule it ships:
+
+> An agent must never write a result that a tool did not produce.
+
+`docs/design/shipproof-sdd.md` is the canonical contract. Section 14 holds the
+complete definition of done. Section 15 holds the open decisions.
+
+- A criterion is met when its proof command succeeds. Nothing else changes its
+  state.
 - A suggestion or a nit must never reopen a met criterion.
-- A useful idea that no criterion covers becomes a new document under `docs/changes/`. It is not v0 work.
+- A useful idea that no criterion covers becomes a new document under
+  `docs/changes/`.
 
 Read `docs/changes/` for the change backlog.

@@ -1,3 +1,8 @@
+---
+name: capture-intent
+description: Record the intent document for a ShipProof change and adopt its requirements. Use when starting a ShipProof change, recording what a change is meant to do, adopting or confirming requirements from a specification document, or when a requirement document has changed.
+---
+
 # Capture the intent
 
 Record the document that states what the change must do. ShipProof compares
@@ -12,8 +17,10 @@ evidence pack.
 shipproof start <change-id> --intent <path>
 ```
 
-`start` reads the document, computes its SHA-256, and stores the hash with the
-capture time. It writes no requirement that the document does not hold.
+`start` reads the document, computes its SHA-256, and writes
+`.shipproof/changes/<change-id>/change.json` with the hash and the capture
+time. The confirmed requirements land in
+`.shipproof/changes/<change-id>/requirements.json`. It writes no requirement that the document does not hold.
 
 ## What counts as an intent document
 

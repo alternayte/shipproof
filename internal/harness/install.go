@@ -52,6 +52,15 @@ var retiredSkills = []string{
 	"benchmark-run",
 }
 
+// retiredLooseFiles name the instruction files that SP-033 wrote directly into
+// a skills directory. SP-041 replaced each with a package, and a harness never
+// read the loose form.
+var retiredLooseFiles = []string{
+	"capture-intent.md",
+	"plan-proof.md",
+	"read-evidence.md",
+}
+
 func ParseTarget(value string) (Target, error) {
 	switch Target(value) {
 	case TargetClaude, TargetCursor, TargetCodex, TargetOpenCode, TargetAgents:
@@ -88,7 +97,22 @@ func Install(root string, target Target, force bool, keepRetired bool) (InstallR
 		return result, fmt.Errorf("create harness skills directory: %w", err)
 	}
 
+	// SP-041 moved each instruction into its own package. A loose Markdown
+	// file from an earlier version is worse than no file: no harness reads it
+	// and it looks installed.
 	if !keepRetired {
+		for _, name := range retiredLooseFiles {
+			for _, base := range []string{canonicalRoot, harnessRoot} {
+				path := filepath.Join(base, name)
+				if _, err := os.Stat(path); err != nil {
+					continue
+				}
+				if err := os.Remove(path); err != nil {
+					return result, fmt.Errorf("remove the loose instruction %s: %w", name, err)
+				}
+				result.Retired = append(result.Retired, path)
+			}
+		}
 		for _, name := range retiredSkills {
 			for _, base := range []string{canonicalRoot, harnessRoot} {
 				directory := filepath.Join(base, name)

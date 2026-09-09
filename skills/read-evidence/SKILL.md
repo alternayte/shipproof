@@ -1,3 +1,8 @@
+---
+name: read-evidence
+description: Read a ShipProof evidence pack and report the verdict without inflating it. Use when reading a ShipProof verdict, an evidence pack, or a change report, when reporting whether work is proven, or when checking a signature.
+---
+
 # Read the evidence and report the verdict
 
 The evidence pack states what happened. Your job is to report it without
@@ -13,8 +18,12 @@ shipproof pack <change-id>
 shipproof pack --verify <file>
 ```
 
-`status` prints the verdict. `pack` writes the evidence pack and the report.
-`pack --verify` checks a signature.
+`status` prints the verdict. `pack` writes
+`.shipproof/changes/<change-id>/evidence-pack.json` and the report beside it at
+`report.html`. `pack --verify` checks a signature.
+
+Read the pack, never the report, when you need a fact. The pack is the stable
+contract and the report is for a person.
 
 ## The verdict
 

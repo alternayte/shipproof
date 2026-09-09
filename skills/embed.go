@@ -6,5 +6,5 @@ import "embed"
 // old skill catalog. Three files are small enough that an agent reads all of
 // them, and a catalog was not.
 //
-//go:embed capture-intent.md plan-proof.md read-evidence.md
+//go:embed */SKILL.md
 var Catalog embed.FS

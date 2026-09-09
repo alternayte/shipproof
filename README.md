@@ -271,11 +271,15 @@ of band.
 ShipProof ships three instruction files. `init` installs them for five harness
 targets: Claude Code, Cursor, Codex, OpenCode, and a plain `AGENTS.md`.
 
-| File | What it covers |
+| Skill | What it covers |
 |---|---|
-| `capture-intent.md` | How to record the intent document and its requirements. |
-| `plan-proof.md` | How to map each requirement to a runnable proof, and how to mark a proof as human. |
-| `read-evidence.md` | How to read a pack, and how to report the verdict without inflating it. |
+| `capture-intent` | How to record the intent document and its requirements. |
+| `plan-proof` | How to map each requirement to a runnable proof in `verification.json`, with a worked example your agent can copy. |
+| `read-evidence` | How to read a pack, and how to report the verdict without inflating it. |
+
+Each installs as `<name>/SKILL.md` with frontmatter, so your coding agent loads
+it when the task matches. If you use a coding agent, `plan-proof` is the one
+that fills in `verification.json` for you.
 
 One rule sits in all three files. An agent must never write a result that a
 tool did not produce.

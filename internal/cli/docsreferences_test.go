@@ -81,3 +81,37 @@ func TestDocumentationNamesNoCutFeature(t *testing.T) {
 		}
 	}
 }
+
+// TestAgentsFileMatchesTheCurrentDesign guards a stale instruction. AGENTS.md
+// paused the self-hosted workflow on a condition that v0 closing met, and it
+// cited a section of a design document that no longer exists.
+func TestAgentsFileMatchesTheCurrentDesign(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(data)
+
+	// The current design document holds 18 sections. A citation past that
+	// points at a document the authority section calls dead.
+	for _, dead := range []string{
+		"Section 26 of the SDD",
+		"Section 24 holds",
+		"Section 25 holds",
+		"shipproof-v0-sdd.md",
+		"Self-hosted workflow: paused",
+	} {
+		if strings.Contains(body, dead) {
+			t.Errorf("AGENTS.md still holds the stale reference %q", dead)
+		}
+	}
+	for _, want := range []string{"Section 14", "shipproof-sdd.md"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("AGENTS.md does not cite %q", want)
+		}
+	}
+}

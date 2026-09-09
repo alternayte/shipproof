@@ -26,7 +26,7 @@ func TestInstallWritesThreeInstructionFiles(t *testing.T) {
 			targetDirectory(root, target),
 		} {
 			names := listFiles(t, base)
-			want := []string{"capture-intent.md", "plan-proof.md", "read-evidence.md"}
+			want := []string{"capture-intent", "plan-proof", "read-evidence"}
 			if len(names) != len(want) {
 				t.Fatalf("%s holds %v, want %v", base, names, want)
 			}
@@ -47,11 +47,7 @@ func TestEveryInstructionFileHoldsTheRule(t *testing.T) {
 	}
 	base := filepath.Join(root, ".shipproof", "skills")
 	for _, name := range listFiles(t, base) {
-		data, err := os.ReadFile(filepath.Join(base, name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(string(data), neverWriteRule) {
+		if !strings.Contains(string(readInstruction(t, base, name)), neverWriteRule) {
 			t.Errorf("%s does not hold the rule that matters most", name)
 		}
 	}
@@ -102,11 +98,7 @@ func TestInstructionsNameOnlyTheSurface(t *testing.T) {
 	}
 	base := filepath.Join(root, ".shipproof", "skills")
 	for _, name := range listFiles(t, base) {
-		data, err := os.ReadFile(filepath.Join(base, name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, match := range commandPattern.FindAllStringSubmatch(string(data), -1) {
+		for _, match := range commandPattern.FindAllStringSubmatch(string(readInstruction(t, base, name)), -1) {
 			if !surface[match[1]] {
 				t.Errorf("%s names the command %q, which Section 4 does not hold", name, match[1])
 			}
@@ -114,6 +106,9 @@ func TestInstructionsNameOnlyTheSurface(t *testing.T) {
 	}
 }
 
+// listFiles names each installed instruction. SP-041 moved every instruction
+// into its own package, because a loose Markdown file in a skills directory is
+// not loaded by any harness. Section 8.2 still names three instructions.
 func listFiles(t *testing.T, base string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(base)
@@ -122,10 +117,20 @@ func listFiles(t *testing.T, base string) []string {
 	}
 	var names []string
 	for _, entry := range entries {
-		if entry.IsDir() {
-			t.Fatalf("%s holds the directory %s; Section 8.2 names three files", base, entry.Name())
+		if !entry.IsDir() {
+			t.Fatalf("%s holds the loose file %s, which no harness reads", base, entry.Name())
 		}
 		names = append(names, entry.Name())
 	}
 	return names
+}
+
+// readInstruction returns the body of one installed instruction.
+func readInstruction(t *testing.T, base, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(base, name, "SKILL.md"))
+	if err != nil {
+		t.Fatalf("read %s: %v", name, err)
+	}
+	return data
 }
