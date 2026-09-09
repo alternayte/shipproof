@@ -48,9 +48,13 @@ type RequirementRow struct {
 	ID        string   `json:"id"`
 	Statement string   `json:"statement,omitempty"`
 	ProofRefs []string `json:"proof_refs,omitempty"`
-	State     string   `json:"state"`
-	Grade     string   `json:"grade"`
-	Detail    string   `json:"detail,omitempty"`
+	// SourceAnchor is the line of the intent document that states this
+	// requirement. A reader can then see where it came from, rather than
+	// trusting an identifier.
+	SourceAnchor string `json:"source_anchor,omitempty"`
+	State        string `json:"state"`
+	Grade        string `json:"grade"`
+	Detail       string `json:"detail,omitempty"`
 }
 
 // AttestationEvidence holds the signature block. A local pack carries none,

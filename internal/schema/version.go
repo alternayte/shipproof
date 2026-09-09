@@ -1,3 +1,3 @@
 package schema
 
-const CurrentVersion = "0.3"
+const CurrentVersion = "0.4"

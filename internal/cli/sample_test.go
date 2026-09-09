@@ -7,7 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alternayte/shipproof/internal/schema"
+	"github.com/alternayte/shipproof/internal/change"
+	"github.com/alternayte/shipproof/internal/requirements"
 )
 
 func sampleRoot(t *testing.T) string {
@@ -66,19 +67,32 @@ func TestTheSampleProofIsRunnable(t *testing.T) {
 	}
 }
 
-// TestTheSamplePackIsComplete asserts that the committed pack answers to the
-// current schema. A sample that no longer validates teaches the wrong shape.
-func TestTheSamplePackIsComplete(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join(sampleRoot(t), ".shipproof", "changes", "SP-1", "evidence-pack.json"))
+// TestTheSampleChangeRecordIsLoadable asserts the committed inputs of the
+// sample. It does not read the generated pack: that file is not committed, so
+// a test that read it would pass on a build that never wrote one and fail on a
+// machine that holds a stale copy. That is the defect that turned the build
+// red once already.
+func TestTheSampleChangeRecordIsLoadable(t *testing.T) {
+	root := sampleRoot(t)
+	record, err := change.Load(root, "SP-1")
 	if err != nil {
-		t.Skip("the sample holds no pack yet")
+		t.Fatalf("load the sample change record: %v", err)
 	}
-	var pack schema.EvidencePack
-	if err := json.Unmarshal(data, &pack); err != nil {
-		t.Fatal(err)
+	if record.SourcePath == "" || record.SHA256 == "" {
+		t.Fatalf("the sample change record is incomplete: %+v", record)
 	}
-	if err := pack.Validate(); err != nil {
-		t.Fatalf("the sample pack does not validate: %v", err)
+	set, err := requirements.Load(root, "SP-1")
+	if err != nil {
+		t.Fatalf("load the sample requirement set: %v", err)
+	}
+	if len(set.Requirements) == 0 {
+		t.Fatal("the sample holds no requirement")
+	}
+	for _, requirement := range set.Requirements {
+		if requirement.SourceAnchor == "" {
+			t.Errorf("requirement %s carries no source anchor, so the report cannot show where it came from",
+				requirement.ID)
+		}
 	}
 }
 

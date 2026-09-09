@@ -31,6 +31,7 @@ func GenerateChangeReport(w io.Writer, root, changeID string) error {
 		Provenance:   buildReportProvenanceData(pack),
 		Unexplained:  buildUnexplainedData(pack),
 		Attestation:  buildAttestationData(pack),
+		Origin:       buildOriginData(pack),
 	}
 
 	return executeTemplate(w, "change_report.html", data)

@@ -3,6 +3,25 @@
 ShipProof follows semantic versioning. The schema version inside an evidence
 file moves on its own, and each artifact names the version it answers to.
 
+## Unreleased
+
+### Changed
+
+- **The report explains itself.** Three readers who had never used ShipProof
+  read the change report and every one stated the verdict correctly. Every one
+  then asked what the rest of the page meant. Each section now carries one
+  sentence that says what it is, before it shows a number. The verdict block
+  is unchanged: it passed the review.
+- The requirement rows show the line of the intent document each requirement
+  came from, and the page names that document.
+- The page states where it was produced: a developer machine or a build
+  system, and which revision it judged.
+- The unexplained-change section says what would measure a count it does not
+  know, rather than only reporting that it is unknown.
+- `schema_version` moves to `0.4`. `requirements[].source_anchor` is new and
+  optional. `schemas/v0.4/` is published, and a pack from an older version
+  still answers to the schema of its own version.
+
 ## v0.4.1 — 2026-09-09
 
 A patch release. v0.4.0 could not verify a real signature, so every pack that

@@ -327,10 +327,10 @@ func TestRecordedPacksValidate(t *testing.T) {
 // pack that breaks four rules at once.
 func TestTheCheckerRejectsAnInvalidPack(t *testing.T) {
 	body := `{
-	  "schema_version": "0.3",
+	  "schema_version": "0.4",
 	  "intent": {"snapshot_hash": "", "stale": false},
 	  "checks": [{"id": "a", "status": "bogus", "source": "s", "grade": "observed", "provenance": "observed"}],
-	  "provenance": {"generated_at": "now", "shipproof_version": "0.3"},
+	  "provenance": {"generated_at": "now", "shipproof_version": "0.4"},
 	  "surprise": true
 	}`
 	var value any

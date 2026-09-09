@@ -20,6 +20,7 @@ type changeReportData struct {
 	Provenance   reportProvenanceData
 	Unexplained  unexplainedData
 	Attestation  attestationData
+	Origin       originData
 }
 
 // verdictData holds the three-line block of Section 5. Class names the colour
@@ -66,8 +67,19 @@ type unexplainedData struct {
 
 type intentData struct {
 	SnapshotHash     string
+	SourcePath       string
+	CapturedAt       string
+	Stale            bool
 	RequirementCount int
 	Provenance       string
+}
+
+// originData answers the question every reader of the review asked: where in
+// the delivery flow was this page produced, and who produced it.
+type originData struct {
+	Revision string
+	ByBuild  bool
+	Sentence string
 }
 
 type verifyData struct {
@@ -123,6 +135,9 @@ type reportProvenanceData struct {
 func buildIntentData(pack schema.EvidencePack) intentData {
 	return intentData{
 		SnapshotHash:     pack.Intent.SnapshotHash,
+		SourcePath:       pack.Intent.SourcePath,
+		CapturedAt:       pack.Intent.CapturedAt,
+		Stale:            pack.Intent.Stale,
 		RequirementCount: len(pack.Requirements),
 		Provenance:       string(schema.ProvenanceObserved),
 	}
@@ -310,6 +325,36 @@ func buildAttestationData(pack schema.EvidencePack) attestationData {
 		Signed:  true,
 		Subject: pack.Attestation.Subject,
 		Digest:  pack.Attestation.Digest,
+	}
+}
+
+// buildOriginData states where the page came from. A reader who does not know
+// the tool cannot tell a local run from a build-system run, and all three
+// readers of the review guessed.
+func buildOriginData(pack schema.EvidencePack) originData {
+	revision := ""
+	if pack.Attestation != nil {
+		revision = pack.Attestation.Subject
+	}
+	if revision == "" && len(pack.Implementation.Commits) > 0 {
+		revision = pack.Implementation.Commits[0].Hash
+	}
+	if len(revision) > 12 {
+		revision = revision[:12]
+	}
+
+	signed := pack.Attestation != nil && pack.Attestation.Signature != ""
+	if signed {
+		return originData{
+			Revision: revision,
+			ByBuild:  true,
+			Sentence: "A build system produced this page and signed it. That is the record an auditor reads.",
+		}
+	}
+	return originData{
+		Revision: revision,
+		Sentence: "A person produced this page on a developer machine, so nothing signed it. " +
+			"A build system produces the signed version when a change reaches a pull request.",
 	}
 }
 

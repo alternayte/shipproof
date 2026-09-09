@@ -261,6 +261,13 @@ func requirementRows(root, changeID string, plan verification.Plan) []schema.Req
 		}
 	}
 
+	anchors := map[string]string{}
+	if set, err := requirements.Load(root, changeID); err == nil {
+		for _, requirement := range set.Requirements {
+			anchors[requirement.ID] = requirement.SourceAnchor
+		}
+	}
+
 	judged := map[string]coverage.Row{}
 	var matrixOrder []string
 	if requirements.Exists(root, changeID) {
@@ -279,11 +286,12 @@ func requirementRows(root, changeID string, plan verification.Plan) []schema.Req
 		}
 		seen[id] = true
 		row := schema.RequirementRow{
-			ID:        id,
-			ProofRefs: commands[id],
-			State:     string(coverage.Unproven),
-			Grade:     string(grade.Claimed),
-			Detail:    "no requirement sidecar records a result for this requirement",
+			ID:           id,
+			ProofRefs:    commands[id],
+			SourceAnchor: anchors[id],
+			State:        string(coverage.Unproven),
+			Grade:        string(grade.Claimed),
+			Detail:       "no requirement sidecar records a result for this requirement",
 		}
 		if found, ok := judged[id]; ok {
 			row.Statement = found.Statement

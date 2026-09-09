@@ -1,6 +1,6 @@
 # SP-039 — The report explains itself
 
-Status: proposed.
+Status: implemented.
 Source: `docs/changes/SP-036-comprehension-review.md`, the reader review of
 2026-09-09. Section 12 and Section 2 principle 4.
 

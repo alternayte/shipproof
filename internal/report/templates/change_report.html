@@ -54,6 +54,11 @@
   .verdict-reason { font-size: 1rem; margin-top: 0.5rem; }
   .verdict-next { font-size: 0.95rem; margin-top: 0.75rem; font-weight: 600; }
   .grade-note { font-size: 0.85rem; color: #475569; margin-bottom: 0.75rem; }
+  /* One sentence under every heading. A reader who never saw ShipProof must
+     learn what a section is before they read its numbers. */
+  .explain { font-size: 0.9rem; color: #475569; margin-bottom: 1rem; }
+  .explain code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  .origin { font-size: 0.85rem; color: #cbd5e1; margin-top: 0.5rem; }
 </style>
 </head>
 <body>
@@ -68,10 +73,19 @@
 <header style="border-radius:0;">
   <h1>Change {{.ChangeID}}</h1>
   <div class="meta">Generated {{.GeneratedAt}} &middot; ShipProof {{.Provenance.ShipProofVersion}}</div>
+  <div class="origin">{{.Origin.Sentence}}{{if .Origin.Revision}} It judged revision <code>{{.Origin.Revision}}</code>.{{end}}</div>
 </header>
 
 <section>
   <h2>Intent</h2>
+  <p class="explain">
+    Intent is what this change was meant to do.{{if .Intent.SourcePath}}
+    It was read from <code>{{.Intent.SourcePath}}</code>{{if .Intent.CapturedAt}} on {{.Intent.CapturedAt}}{{end}}.{{end}}
+    The hash below is a fingerprint of that document. ShipProof compares it
+    again later, so it can tell you whether the document changed since the
+    work started.{{if .Intent.Stale}} It did change, so no proof below
+    describes the document that now stands.{{end}}
+  </p>
   <div class="stat-grid">
     <div class="stat-card">
       <div class="stat-label">Snapshot Hash</div>
@@ -83,6 +97,13 @@
 
 <section>
   <h2>Requirements</h2>
+  <p class="explain">
+    One row per requirement{{if .Intent.SourcePath}} taken from <code>{{.Intent.SourcePath}}</code>{{end}}.
+    A proof is a command that exits 0 when the requirement holds. To add one,
+    put the command in <code>.shipproof/changes/{{.ChangeID}}/verification.json</code>
+    and run <code>shipproof pack {{.ChangeID}}</code> again. A requirement with
+    no proof is unproven, and it never counts as passed.
+  </p>
   {{if .Requirements.Rows}}
   <table>
   <thead>
@@ -91,7 +112,7 @@
   <tbody>
   {{range .Requirements.Rows}}
     <tr>
-      <td><code>{{.ID}}</code>{{if .Statement}}<div style="font-size:0.8rem;color:#64748b;">{{.Statement}}</div>{{end}}</td>
+      <td><code>{{.ID}}</code>{{if .Statement}}<div style="font-size:0.8rem;color:#64748b;">{{.Statement}}</div>{{end}}{{if .SourceAnchor}}<div style="font-size:0.75rem;color:#94a3b8;margin-top:0.2rem;">from the document: {{.SourceAnchor}}</div>{{end}}</td>
       <td>{{if .ProofRefs}}{{range .ProofRefs}}<div><code>{{.}}</code></div>{{end}}{{else}}<span class="nodata">no proof</span>{{end}}</td>
       <td>{{.State}}{{if .Detail}}<div style="font-size:0.8rem;color:#64748b;">{{.Detail}}</div>{{end}}</td>
       <td>{{gradeBadge .Grade}}</td>
@@ -106,6 +127,11 @@
 
 <section>
   <h2>Unexplained change</h2>
+  <p class="explain">
+    These are lines of code this change touched that no requirement in this
+    change explains. They are not a failure. They are the parts nobody asked
+    for, so somebody should look at them.
+  </p>
   {{if .Unexplained.Measured}}
   <p>No proof ran this code. The signal fails no change. It is review material.</p>
   <p style="margin-top:0.5rem;font-weight:600;">{{.Unexplained.TotalLines}} changed lines match no requirement.</p>
@@ -136,11 +162,22 @@
   {{else}}
   <p>The number of changed lines that match no requirement is not known.</p>
   <p class="nodata">{{.Unexplained.Reason}}</p>
+  <p class="explain">
+    ShipProof compares the code against a starting point to work this out. Give
+    it one with <code>shipproof pack {{.ChangeID}} --base &lt;revision&gt;</code>,
+    and this section fills in. It stays unknown rather than reading zero,
+    because zero would be a claim nothing measured.
+  </p>
   {{end}}
 </section>
 
 <section>
   <h2>Checks</h2>
+  <p class="explain">
+    A check is one thing ShipProof looked at: one test result, one analysis
+    rule, or one comparison it made itself. The grade says how much the result
+    is worth. The source says which tool reported it.
+  </p>
   {{if .Grades}}
   <div class="summary-bar">
     <span class="summary-pill pill-pass">{{.Verify.ProvenCheckCount}} passed</span>
@@ -172,6 +209,11 @@
 
 <section>
   <h2>Agent record</h2>
+  <p class="explain">
+    When an AI agent wrote this change, this section names the provider, the
+    model, the session, and what the run cost. It answers the audit question
+    "which model produced the change, and under which session?".
+  </p>
   {{if .AgentRun.Hides}}
   <p>No agent record exists for this change.</p>
   <p class="nodata">{{.AgentRun.Reason}}</p>
@@ -226,6 +268,9 @@
 
 <section>
   <h2>Implementation</h2>
+  <p class="explain">
+    What the change actually did to the code, as git reports it.
+  </p>
   <div class="stat-grid">
     <div class="stat-card">
       <div class="stat-label">Commits</div>
@@ -277,6 +322,10 @@
 
 <section>
   <h2>Signature</h2>
+  <p class="explain">
+    A signature proves this page was not edited after it was produced. Only a
+    build system can make one, because only it can prove who ran it.
+  </p>
   {{if .Attestation.Signed}}
   <p>The build system signed this pack.</p>
   <table style="margin-top:0.75rem;">
