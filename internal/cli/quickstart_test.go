@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -29,8 +30,11 @@ func TestTheREADMENamesNoRemovedConcept(t *testing.T) {
 		// a live `shipproof run` outcome, not a removed readiness state.
 		"`derived`", "`inferred`", "agent-inferred",
 		"derived, inferred",
-		// The skill catalog of SP-033.
+		// The skill catalog of SP-033. The instruction files replaced it, so
+		// no sentence may still send a reader to a skill.
 		"Agent Skills",
+		"the skill that",
+		"skill that handles",
 	} {
 		if strings.Contains(document, removed) {
 			t.Errorf("README.md still names the removed concept %q", removed)
@@ -143,6 +147,42 @@ func TestTheDownloadURLMatchesTheReleaseAssets(t *testing.T) {
 	for _, platform := range []string{"darwin_arm64", "darwin_amd64", "linux_arm64", "linux_amd64"} {
 		if !strings.Contains(readme, platform) {
 			t.Errorf("README.md never names the platform %q", platform)
+		}
+	}
+}
+
+// readmeCommandPattern reads every ShipProof command the README shows.
+var readmeCommandPattern = regexp.MustCompile(`shipproof ([a-z-]+)`)
+
+// TestTheREADMENamesOnlyRealCommands binds the README to the surface. A
+// quickstart that names a command the tool does not have is worse than no
+// quickstart.
+func TestTheREADMENamesOnlyRealCommands(t *testing.T) {
+	surface := map[string]bool{
+		"init": true, "start": true, "prove": true, "pack": true, "status": true,
+		"runner": true, "config": true, "run": true, "version": true,
+	}
+	for _, match := range readmeCommandPattern.FindAllStringSubmatch(readREADME(t), -1) {
+		if !surface[match[1]] {
+			t.Errorf("README.md names the command %q, which Section 4 does not hold", match[1])
+		}
+	}
+}
+
+// TestTheREADMEDocumentsTheOngoingLoop holds what the second reader review
+// asked for. A quickstart that stops after the first run leaves the reader
+// with no answer to "how do I add and track a requirement".
+func TestTheREADMEDocumentsTheOngoingLoop(t *testing.T) {
+	readme := readREADME(t)
+	for _, want := range []struct{ name, probe string }{
+		{"editing a proposal before confirming", "requirements-proposal.json"},
+		{"merging when the document changes", "--force"},
+		{"that a merge never deletes", "never deletes"},
+		{"the list of requirements needing a proof", "needs a proof"},
+		{"a proof whose program is missing", "broken proof"},
+	} {
+		if !strings.Contains(readme, want.probe) {
+			t.Errorf("README.md does not document %s (looked for %q)", want.name, want.probe)
 		}
 	}
 }

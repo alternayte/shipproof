@@ -36,7 +36,7 @@ go install github.com/alternayte/shipproof/cmd/shipproof@latest
 
 ## Quickstart
 
-Five steps, in your own repository. Each one prints what to do next.
+Four steps, in your own repository. Each one prints what to do next.
 
 **1. Set up.**
 
@@ -45,11 +45,10 @@ cd your-project
 shipproof init .
 ```
 
-It creates `.shipproof/`, and it picks a test command by looking for a
+It creates `.shipproof/` and picks your test command by looking for a
 `justfile`, a `Makefile`, a `package.json`, a `go.mod`, a `Cargo.toml`, or a
-`pyproject.toml`. It tells you which one it chose. If it found none, open
-`.shipproof/config.yaml` and put your test command under
-`verification.command`.
+`pyproject.toml`. It tells you which one it chose. If it found none, put your
+test command in `.shipproof/config.yaml` under `verification.command`.
 
 **2. Point it at what you meant to build.**
 
@@ -58,18 +57,41 @@ shipproof start SP-1 --intent docs/my-feature.md
 ```
 
 Any document works: an OpenSpec proposal, a Spec Kit specification, or a plain
-Markdown list. ShipProof records its hash, and it proposes the requirements it
-can read. Confirm them:
+Markdown list. ShipProof records its hash and proposes the requirements it can
+read.
 
-```bash
-shipproof start SP-1 --confirm-requirements
 ```
+Requirements: 1 proposed, 0 adopted.
+  SP-1-R1  MUST retry a failed charge.
+Read each line. ShipProof matched a pattern; it judged nothing.
+Confirm them with:
+  shipproof start SP-1 --confirm-requirements
+```
+
+A proposal is never a fact. Read the lines, then confirm them. To accept only
+some, edit `.shipproof/changes/SP-1/requirements-proposal.json` first and
+delete the rest.
 
 **3. Say how each requirement gets proven.**
 
 Open `.shipproof/changes/SP-1/verification.json` and give each requirement a
 command that exits 0 when it holds. Mark a requirement human when no command
 can judge it.
+
+Not sure what is left? Ask.
+
+```bash
+shipproof status SP-1
+```
+
+```
+needs a proof   SP-1-R1
+                add a command that exits 0 to .shipproof/changes/SP-1/verification.json
+```
+
+It also reports a `broken proof`: a command whose program is not installed.
+That is a broken proof, not a failed requirement, and ShipProof says so before
+it records anything.
 
 **4. Get the answer.**
 
@@ -86,14 +108,33 @@ VERDICT: NOT PROVEN
 NEXT: run `shipproof prove SP-1` after you add a proof for R3 and R5.
 ```
 
-**5. Check where you stand at any time.**
+`pack` runs the proofs for you, so `start` and `pack` are enough.
+
+## When the document changes
+
+Requirements move. Re-run `start` with `--force`:
 
 ```bash
-shipproof status SP-1
+shipproof start SP-1 --intent docs/my-feature.md --force
 ```
 
-That is the whole loop. `shipproof pack` runs step 4's proofs for you, so
-`start` and `pack` are enough.
+It merges. It adds what the document gained and keeps every requirement that
+stands, with the confirmation you already gave.
+
+```
+Requirements: added 1 from the document: SP-1-R2
+```
+
+It **never deletes**. A requirement the document no longer states is reported
+and left in place:
+
+```
+Requirements: the document no longer states SP-1-R2. Nothing was deleted.
+              Remove it yourself if it is out of scope.
+```
+
+Without this, a stale requirement set would sit behind a fresh document hash,
+and the pack would report on requirements nobody asked for any more.
 
 ## The verdict
 
@@ -163,13 +204,24 @@ overwrites a modified file.
 
 ```bash
 shipproof start SP-002 --intent docs/changes/SP-002-retries.md
+shipproof start SP-002 --confirm-requirements
 shipproof start SP-002 --intent docs/changes/SP-002-retries.md --force
 ```
 
-`start` records an immutable intent snapshot with its SHA-256 hash. It adopts
-the requirement set when the document names requirement identifiers, and it
-creates the verification plan for the agent to fill. `--force` re-snapshots a
-stale source document.
+`start` records an intent snapshot with its SHA-256 hash, and it creates the
+verification plan for the agent to fill.
+
+It adopts the requirement set when the document uses ShipProof's own heading
+format. For any other document it reads one documented pattern, a list item
+that states an obligation with MUST or SHALL, and writes a **proposal**. A
+pattern match is never a fact, so the proposal waits for
+`--confirm-requirements`. Edit
+`.shipproof/changes/<id>/requirements-proposal.json` first to accept a subset.
+
+`--force` re-snapshots the document and merges the requirement set with it. It
+adds what the document gained, keeps every requirement that stands with its
+confirmation, and never deletes. A requirement the document no longer states is
+reported and left in place.
 
 ### `prove`
 
@@ -203,10 +255,16 @@ shipproof status SP-002
 shipproof status SP-002 --json
 ```
 
-`status` derives the current phase from the artifacts on disk. It reports the
-phase, the blocker, the exact next command, the skill that handles it, and the
-requirement coverage. ShipProof stores no cursor, so the answer stays correct
-when an agent acts out of band.
+`status` opens with the verdict block, then reports the state, the exact next
+command, the instruction file that covers it, and the requirement coverage.
+
+It also names what stands between the change and a verdict: every requirement
+with no proof, and every planned proof whose program is not installed. A
+command that cannot run is a broken proof, not a failed requirement, and
+`status` says so before `prove` records anything.
+
+ShipProof stores no cursor, so the answer stays correct when an agent acts out
+of band.
 
 ### Agent instructions
 
